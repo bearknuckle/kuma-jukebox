@@ -26,7 +26,7 @@ nav{padding:14px;height:max-content;position:sticky;top:12px}nav h2{font-size:14
 .hand{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0}
 .playcard{width:76px;height:104px;border:2px solid #d6c7a5;border-radius:11px;background:var(--cream);box-shadow:0 4px 10px #00000012;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#493b2b;font:inherit}
 .playcard strong{font-size:27px}.playcard span{font-size:21px}.playcard small{font-size:10px}.playcard.selected{outline:4px solid #65aaa0;border-color:var(--teal);transform:translateY(-4px)}
-.colors{display:flex;gap:4px;justify-content:center;margin-top:5px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block}.c-blue{background:#4c83b8}.c-red{background:#c85d51}.c-green{background:#398c69}.c-yellow{background:#d9a52d}.c-black{background:#303b42}.c-purple{background:#8d70ad}
+.colors{display:flex;gap:4px;justify-content:center;margin-top:5px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block}.c-blue{background:#4c83b8}.c-red{background:#c85d51}.c-green{background:#398c69}.c-yellow{background:#d9a52d}.c-black{background:#303b42}.c-white{background:#fff;border:1px solid #aeb9bd}
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.btn{border:0;border-radius:11px;padding:12px 17px;background:var(--teal);color:white;font-weight:750;cursor:pointer;font-size:14px}.btn.secondary{background:#eaf1f1;color:var(--deep)}.btn:disabled{opacity:.45;cursor:not-allowed}
 .feedback{min-height:48px;padding:12px 14px;border-radius:11px;background:#f1f4f4;color:var(--muted);line-height:1.65;margin-top:12px}.feedback.good{background:#eaf7ee;color:#236442}.feedback.bad{background:#fff1ed;color:#934237}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.step{background:#f6f9f8;border:1px solid var(--line);padding:13px;border-radius:12px}.step b{display:block;color:var(--teal);font-size:12px;margin-bottom:5px}.step p{font-size:13px;line-height:1.6;margin:0}
@@ -46,7 +46,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
 <div id="stage"></div>
 <div class="actions"><button class="btn secondary" id="back">前へ</button><button class="btn" id="next">次へ進む</button></div>
 </div>
-<footer>学習用プロトタイプ · 実際のカード画像・全ルールの最終確認前の試作です</footer>
+<footer>学習用プロトタイプ · 公式説明書に基づく基本ルールの練習用プロトタイプです</footer>
 </section></main>
 <script>
 const lessons=[
@@ -61,13 +61,13 @@ const lessons=[
 <div class="steps"><div class="step"><b>1 · 選ぶ</b><p>手札からカードを1枚選び、自分の前に裏向きで置きます。</p></div><div class="step"><b>2 · 公開</b><p>全員が選んだら、一斉にカードを表向きにします。</p></div><div class="step"><b>3 · 順番に置く</b><p>出されたカードの数字が小さい人から順に配置します。</p></div></div>
 <div class="callout">カードを置くときは、必ず列の一番右（最後尾）に加えます。</div>
 <div class="gamebox"><b>順番の例</b><div class="hand"><div class="playcard"><strong>18</strong><span>🐂</span><small>1番目</small></div><div class="playcard"><strong>42</strong><span>🐂</span><small>2番目</small></div><div class="playcard"><strong>76</strong><span>🐂</span><small>3番目</small></div></div><p class="small">18 → 42 → 76 の順で配置します。</p></div>`},
-{title:"置く列を選ぼう",intro:"カードの数字は配置する順番を決めるためのものです。置く列は、最後尾カードの牛マークの色で決まります。実際に選んでみましょう。",interactive:"color"},
+{title:"置く列を選ぼう",intro:"カードの数字は配置する順番を決めます。置く列は、最後尾カードに描かれた牛マークの色で決まります。牛マークは青・黄・緑・赤・黒・白の6色です。実際に選んでみましょう。",interactive:"color"},
 {title:"牛マークの色を合わせよう",intro:"配置できる列は、列の最後尾カードに、自分のカードと同じ色の牛マークが1つ以上ある列です。条件に合う列が複数あれば、その中から選べます。",interactive:"color"},
 {title:"6枚目になったら列を引き取る",intro:"カードを置いて6枚目になる場合、その列の前の5枚をすべて引き取ります。今置いたカードは新しい列の1枚目になります。",interactive:"six"},
 {title:"同じ色の牛マークが6つ以上",intro:"カードを置いた結果、その列に同じ色の牛マークが6つ以上ある場合も、置いたカード以外の列のカードをすべて引き取ります。置いたカードは新しい列の1枚目になります。",interactive:"cows"},
 {title:"置ける列がないとき",intro:"どの列の最後尾にも自分のカードと同じ色の牛マークがない場合、列を1つ選んでその列のカードをすべて引き取ります。出したカードはその列の新しい1枚目になります。",interactive:"nomatch"},
 {title:"ゲーム終了と得点",intro:"自分の山札から最後のカードを引き、手札のカードをすべてプレイしたらゲーム終了です。",body:`
-<div class="callout"><b>得点の数え方</b><br>引き取ったカードは自分の前に表向きで置きます。カード上部の牛マークの数が失点です。牛マークの数はカードごとに異なります。</div>
+<div class="callout"><b>得点の数え方</b><br>引き取ったカードは自分の前に表向きで置きます。カード上部の牛マークの数が失点です。牛マークの数はカードごとに異なります。カードに描かれた色の種類は、青・黄・緑・赤・黒・白の6色です。</div>
 <div class="steps"><div class="step"><b>カードを集計</b><p>自分が引き取ったカードの牛マークを合計します。</p></div><div class="step"><b>全員を比較</b><p>全プレイヤーの失点を比べます。</p></div><div class="step"><b>勝者</b><p>失点が最も少ないプレイヤーが勝ちです。</p></div></div>
 <p class="small">あらかじめゲーム回数を決めて遊ぶ場合は、各ゲーム後に全員の失点を記録します。</p>`},
 {title:"基本ルールのおさらい",intro:"最後に、覚えたルールをクイズで確認しましょう。",quiz:true}
@@ -88,16 +88,24 @@ const scenarios={
 color:{rows:[[12,['blue']],[28,['red']],[43,['green','blue']],[67,['yellow']],[81,['black','blue']]],hand:55,colors:['blue'],valid:[2,4],success:'正解！最後尾に青い牛マークがある列なら、条件を満たします。複数あれば選べます。',wrong:'カードの牛マークと同じ色が、列の最後尾カードに少なくとも1つ必要です。'},
 six:{rows:[[12,['blue']],[28,['red']],[43,['green']],[67,['yellow']],[81,['black']]],hand:55,colors:['blue'],valid:[0],success:'正解！この列はすでに5枚。6枚目になるので、前の5枚を引き取り、55が新しい列の先頭になります。',wrong:'6枚目になる列を選びます。前の5枚を引き取ることになります。'},
 cows:{rows:[[12,['blue']],[28,['red']],[43,['green','blue','blue','blue','blue']],[67,['yellow']],[81,['black']]],hand:55,colors:['blue'],valid:[2],success:'正解！配置後に青い牛マークが6つ以上になるため、前のカードを引き取ります。',wrong:'この列に置いた後、同じ色の牛マークが6つ以上になるかを確認します。'},
-nomatch:{rows:[[12,['red']],[28,['green']],[43,['yellow']],[67,['black']],[81,['purple']]],hand:55,colors:['blue'],valid:[0,1,2,3,4],success:'その通り！どの列も最後尾に青い牛マークがありません。好きな列を1つ選び、そこを引き取ります。',wrong:'今回はどの列にも青い牛マークがありません。どの列を選んでも引き取りになります。'}
+nomatch:{rows:[[12,['red']],[28,['green']],[43,['yellow']],[67,['black']],[81,['white']]],hand:55,colors:['blue'],valid:[0,1,2,3,4],success:'その通り！どの列も最後尾に青い牛マークがありません。好きな列を1つ選び、そこを引き取ります。',wrong:'今回はどの列にも青い牛マークがありません。どの列を選んでも引き取りになります。'}
 };
 function renderInteractive(type){
 const s=scenarios[type];selectedRow=null;selectedCard=false;
-stage.innerHTML=`<div class="gamebox"><b>中央の5列</b><p class="small">列をタップして選択してください。</p><div class="rows">${s.rows.map((r,i)=>`<button class="rowcard" data-row="${i}"><span class="rowlabel">${i+1}列目</span><div class="stack">${card(r[0],r[1])}${type==='six'&&i===0?card(22,['red'] )+card(31,['green'])+card(38,['yellow'])+card(49,['blue']):''}${type==='cows'&&i===2?card(47,['blue']):''}</div></button>`).join('')}</div></div>
-<div class="gamebox"><b>あなたの手札から出すカード</b><div class="hand"><button class="playcard selected" id="practiceCard"><strong>${s.hand}</strong><span>🐂</span><div class="colors">${s.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>練習カード</small></button></div><p class="small">練習用にカードを選択済みです。次に置く列をタップしてください。</p></div>
-<div class="feedback" id="feedback">どの列に置くか選んでください。</div>
+const hand=[
+ {n:s.hand-17,colors:['red','yellow']},
+ {n:s.hand-5,colors:['green']},
+ {n:s.hand,colors:s.colors,target:true},
+ {n:s.hand+19,colors:['black','white']}
+];
+stage.innerHTML=`<div class="gamebox"><b>中央の5列</b><p class="small">カードを選んでから、置く列を選びます。</p><div class="rows">${s.rows.map((r,i)=>`<button class="rowcard" data-row="${i}"><span class="rowlabel">${i+1}列目</span><div class="stack">${card(r[0],r[1])}${type==='six'&&i===0?card(22,['red'])+card(31,['green'])+card(38,['yellow'])+card(49,['blue']):''}${type==='cows'&&i===2?card(47,['blue']):''}</div></button>`).join('')}</div></div>
+<div class="gamebox"><b>あなたの手札（4枚）</b><div class="hand">${hand.map((h,i)=>`<button class="playcard ${h.target?'selected':''}" data-hand="${i}"><strong>${h.n}</strong><span>🐂</span><div class="colors">${h.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>${h.target?'練習カード':'手札'}</small></button>`).join('')}</div><p class="small">練習問題では「練習カード」を選んでください。実際のゲームでは、手札4枚の中から1枚を選びます。</p></div>
+<div class="feedback" id="feedback">練習カードを選び、次に置く列を選んでください。</div>
 <button class="btn" id="check" style="margin-top:12px">この列に置く</button>`;
+let chosenHand=2;
+stage.querySelectorAll('.playcard[data-hand]').forEach(b=>b.onclick=()=>{chosenHand=+b.dataset.hand;stage.querySelectorAll('.playcard[data-hand]').forEach(x=>x.classList.toggle('selected',x===b));const f=document.getElementById('feedback');f.className='feedback';f.textContent=chosenHand===2?'練習カードを選択中です。置く列を選んでください。':'この練習では「練習カード」を選んでください。';});
 stage.querySelectorAll('.rowcard').forEach(b=>b.onclick=()=>{selectedRow=+b.dataset.row;stage.querySelectorAll('.rowcard').forEach(x=>x.classList.toggle('selected',x===b));document.getElementById('feedback').textContent=`${selectedRow+1}列目を選択中です。「この列に置く」を押してください。`;});
-document.getElementById('check').onclick=()=>{const f=document.getElementById('feedback');if(selectedRow===null){f.className='feedback bad';f.textContent='先に列を1つ選んでください。';return;}if(s.valid.includes(selectedRow)){f.className='feedback good';f.textContent=s.success;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('correct');document.getElementById('check').disabled=true;}else{f.className='feedback bad';f.textContent=s.wrong;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('wrong');}};
+document.getElementById('check').onclick=()=>{const f=document.getElementById('feedback');if(chosenHand!==2){f.className='feedback bad';f.textContent='まず練習カードを選んでください。';return;}if(selectedRow===null){f.className='feedback bad';f.textContent='先に列を1つ選んでください。';return;}if(s.valid.includes(selectedRow)){f.className='feedback good';f.textContent=s.success;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('correct');document.getElementById('check').disabled=true;}else{f.className='feedback bad';f.textContent=s.wrong;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('wrong');}};
 }
 function renderQuiz(){
 const qs=[{q:'全員がカードを公開した後、誰から配置しますか？',a:['数字の大きい順','数字の小さい順','順番は自由'],c:1,e:'数字の小さいカードを出したプレイヤーから順番に置きます。'},{q:'列の6枚目になるカードを置くときは？',a:['6枚目を含む列を引き取る','何もしない','手札に戻す'],c:0,e:'前の5枚を引き取り、今置いたカードが新しい列の先頭になります。'},{q:'置ける列が1つもない場合は？',a:['カードを出せない','好きな列を1つ引き取る','山札から引く'],c:1,e:'好きな列を1つ選んで全て引き取り、出したカードが新しい先頭になります。'}];

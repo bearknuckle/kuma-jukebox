@@ -49,7 +49,7 @@ def security_headers(response):
 
 @app.get("/")
 def home():
-    return send_from_directory(CONTENT_DIR, "draft.html")
+    return send_from_directory(CONTENT_DIR, "index.html")
 
 
 @app.get("/baron-nimmt")
@@ -75,7 +75,7 @@ def preview(token):
     expected = os.getenv("PREVIEW_URL_TOKEN", "")
     if not expected or not hmac.compare_digest(token, expected):
         abort(404)
-    return send_from_directory(CONTENT_DIR, "draft.html")
+    return send_from_directory(CONTENT_DIR, "index.html")
 
 
 @app.get("/healthz")

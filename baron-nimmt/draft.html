@@ -99,7 +99,7 @@ const hand=[
  {n:s.hand+19,colors:['black','white']}
 ];
 stage.innerHTML=`<div class="gamebox"><b>中央の5列</b><p class="small">カードを選んでから、置く列を選びます。</p><div class="rows">${s.rows.map((r,i)=>`<button class="rowcard" data-row="${i}"><span class="rowlabel">${i+1}列目</span><div class="stack">${card(r[0],r[1])}${type==='six'&&i===0?card(22,['red'])+card(31,['green'])+card(38,['yellow'])+card(49,['blue']):''}${type==='cows'&&i===2?card(47,['blue']):''}</div></button>`).join('')}</div></div>
-<div class="gamebox"><b>あなたの手札（4枚）</b><div class="hand">${hand.map((h,i)=>`<button class="playcard ${h.target?'selected':''}" data-hand="${i}"><strong>${h.n}</strong><span>🐂</span><div class="colors">${h.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>${h.target?'練習カード':'手札'}</small></button>`).join('')}</div><p class="small">練習問題では「練習カード」を選んでください。実際のゲームでは、手札4枚の中から1枚を選びます。</p></div>
+<div class="gamebox"><b>練習用カード（手札の一部を抜粋）</b><div class="hand">${hand.map((h,i)=>`<button class="playcard ${h.target?'selected':''}" data-hand="${i}"><strong>${h.n}</strong><span>🐂</span><div class="colors">${h.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>${h.target?'練習カード':'手札'}</small></button>`).join('')}</div><p class="small">実際の手札枚数はプレイ人数によって異なります（2人:24枚／3人:20枚／4〜6人:16枚／7〜8人:12枚／9〜10人:8枚）。実際のゲームでは、その手札から毎回1枚ずつ選びます。この画面では操作練習用に4枚だけ表示しています。</p></div>
 <div class="feedback" id="feedback">練習カードを選び、次に置く列を選んでください。</div>
 <div class="gamebox" id="outcome" hidden><b>配置後の状態</b><div id="outcomeText" class="small" style="margin-top:8px"></div></div>
 <button class="btn" id="check" style="margin-top:12px">この列に置く</button>`;

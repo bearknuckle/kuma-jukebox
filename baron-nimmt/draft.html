@@ -34,24 +34,30 @@ ul{line-height:1.9;padding-left:22px}.small{font-size:12px;color:var(--muted);li
 footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
 @media(max-width:700px){main{display:block;margin:14px auto}nav{position:static;margin-bottom:14px;padding:10px;overflow:auto;white-space:nowrap}nav h2{margin:3px 7px 7px}.navlist{display:flex;gap:4px}.lesson{width:auto;min-width:max-content;padding:8px}.lesson .label{font-size:12px}.panel{padding:17px}.rows{gap:5px}.rowcard{min-height:100px;padding:6px 2px}.mini{width:25px;height:37px;font-size:11px}.steps{grid-template-columns:1fr}.headrow{align-items:flex-start}}
 </style>
+
+<style>
+/* Visual consistency: clearer hierarchy, comfortable reading, and calmer spacing */
+body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spacing:0}.small,.note,.lead{line-height:1.8}.panel,.content,.gamebox{line-height:1.75}.btn,.action{letter-spacing:.01em}.btn:focus-visible,a:focus-visible,button:focus-visible{outline:3px solid #e7ae45;outline-offset:3px}
+@media(max-width:640px){header p{line-height:1.8}.content p,.intro{line-height:1.85}.btn{min-height:44px}.actions{gap:10px}}
+</style>
 </head>
 <body>
-<header><div class="brand">BARON NIMMT · LEARN BY PLAYING</div><div class="headrow"><h1>遊び方を体験しよう</h1><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill">チュートリアル</span><a id="cpuLink" href="/baron-nimmt/cpu" style="color:white;text-decoration:none;border:1px solid #ffffff80;border-radius:30px;padding:6px 10px;font-size:12px">CPU対戦を試す</a></div></div></header>
+<header><div class="brand">BARON NIMMT · LEARN BY PLAYING</div><div class="headrow"><h1>遊び方を体験しよう</h1><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill">チュートリアル</span><a id="cpuLink" href="/baron-nimmt/cpu" style="color:white;text-decoration:none;border:1px solid #ffffff80;border-radius:30px;padding:6px 10px;font-size:12px">CPU対戦へ</a></div></div></header>
 <main>
-<nav><h2>レッスン一覧</h2><div class="navlist" id="navlist"></div></nav>
+<nav><h2>学習ステップ</h2><div class="navlist" id="navlist"></div></nav>
 <section class="content">
 <div class="panel">
 <div class="eyebrow" id="eyebrow">LESSON 01</div><h2 class="title" id="title"></h2><p class="intro" id="intro"></p>
 <div class="progress"><span id="progress"></span></div>
 <div id="stage"></div>
-<div class="actions"><button class="btn secondary" id="back">前へ</button><button class="btn" id="next">次へ進む</button></div>
+<div class="actions"><button class="btn secondary" id="back">戻る</button><button class="btn" id="next">次のステップへ</button></div>
 </div>
 <footer>学習用プロトタイプ · 公式説明書に基づく基本ルールの練習用プロトタイプです</footer>
 </section></main>
 <script>
 const lessons=[
-{title:"ゲームの目的",intro:"カードを出して5つの列を作りながら、牛マークによる失点をできるだけ少なくするゲームです。",body:`
-<div class="callout"><b>目指すこと</b><br>ゲーム終了時、自分の前に集めたカードの牛マークの合計が最も少ないプレイヤーが勝ちます。</div>
+{title:"ゲームの目的",intro:"手札からカードを出し、列にカードを並べていくゲームです。引き取ったカードの牛マークが失点になります。",body:`
+<div class="callout"><b>目指すこと</b><br>ゲーム終了時に、引き取ったカードの牛マークの合計が最も少ないプレイヤーの勝ちです。</div>
 <div class="steps"><div class="step"><b>カードを出す</b><p>全員が手札から1枚を選び、同時に公開します。</p></div><div class="step"><b>列に置く</b><p>数字の小さいカードから順番に、5列のいずれかへ置きます。</p></div><div class="step"><b>牛マークに注意</b><p>列を引き取ると、そのカードの牛マークが失点になります。</p></div></div><p class="small">このチュートリアルでは、基本ルールを順番に練習します。</p>`},
 {title:"ゲームの準備",intro:"カードを人数に応じて配り、中央に5列を作ります。",body:`
 <div class="gamebox"><b>準備の流れ</b><ol><li>使用する牛カードをよく混ぜます。</li><li>プレイヤー人数に応じた枚数を各プレイヤーに配り、その全枚数を手札にします。</li><li>カードを5枚、表向きにしてテーブル中央に1枚ずつ並べ、5列のスタートにします。</li><li>残りのカードは箱に戻し、このゲームでは使いません。</li></ol></div>
@@ -60,11 +66,11 @@ const lessons=[
 <div class="steps"><div class="step"><b>1 · 選ぶ</b><p>手札からカードを1枚選び、自分の前に裏向きで置きます。</p></div><div class="step"><b>2 · 公開</b><p>全員が選んだら、一斉にカードを表向きにします。</p></div><div class="step"><b>3 · 順番に置く</b><p>出されたカードの数字が小さい人から順に配置します。</p></div></div>
 <div class="callout">カードを置くときは、必ず列の一番右（最後尾）に加えます。</div>
 <div class="gamebox"><b>順番の例</b><div class="hand"><div class="playcard"><strong>18</strong><span>🐂</span><small>1番目</small></div><div class="playcard"><strong>42</strong><span>🐂</span><small>2番目</small></div><div class="playcard"><strong>76</strong><span>🐂</span><small>3番目</small></div></div><p class="small">18 → 42 → 76 の順で配置します。</p></div>`},
-{title:"置く列を選ぼう",intro:"カードの数字は配置する順番を決めます。置く列は、最後尾カードに描かれた牛マークの色で決まります。牛マークは青・黄・緑・赤・黒・白の6色です。実際に選んでみましょう。",interactive:"color"},
+{title:"置く列を選ぼう",intro:"カードは数字の小さい順に処理します。置ける列は、出したカードと最後尾のカードに共通する牛マークの色で決まります。実際に列を選んでみましょう。",interactive:"color"},
 {title:"牛マークの色を合わせよう",intro:"配置できる列は、列の最後尾カードに、自分のカードと同じ色の牛マークが1つ以上ある列です。条件に合う列が複数あれば、その中から選べます。",interactive:"color"},
-{title:"6枚目になったら列を引き取る",intro:"カードを置いて6枚目になる場合、その列の前の5枚をすべて引き取ります。今置いたカードは新しい列の1枚目になります。",interactive:"six"},
+{title:"6枚目になったら列を引き取る",intro:"列にカードを置いて6枚目になると、もともとあった5枚をすべて引き取ります。今出したカードは、新しい列の先頭になります。",interactive:"six"},
 {title:"同じ色の牛マークが6つ以上",intro:"カードを置いた結果、その列に同じ色の牛マークが6つ以上ある場合も、置いたカード以外の列のカードをすべて引き取ります。置いたカードは新しい列の1枚目になります。",interactive:"cows"},
-{title:"置ける列がないとき",intro:"どの列の最後尾にも自分のカードと同じ色の牛マークがない場合、列を1つ選んでその列のカードをすべて引き取ります。出したカードはその列の新しい1枚目になります。",interactive:"nomatch"},
+{title:"置ける列がないとき",intro:"どの列にも同じ色の牛マークがない場合は、好きな列を1つ選んで引き取ります。出したカードは、その列の新しい先頭になります。",interactive:"nomatch"},
 {title:"ゲーム終了と得点",intro:"配られた手札のカードをすべてプレイしたらゲーム終了です。",body:`
 <div class="callout"><b>得点の数え方</b><br>引き取ったカードは自分の前に表向きで置きます。カード上部の牛マークの数が失点です。牛マークの数はカードごとに異なります。カードに描かれた色の種類は、青・黄・緑・赤・黒・白の6色です。</div>
 <div class="steps"><div class="step"><b>カードを集計</b><p>自分が引き取ったカードの牛マークを合計します。</p></div><div class="step"><b>全員を比較</b><p>全プレイヤーの失点を比べます。</p></div><div class="step"><b>勝者</b><p>失点が最も少ないプレイヤーが勝ちです。</p></div></div>

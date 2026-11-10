@@ -1,9 +1,8 @@
-import base64
 import hmac
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from flask import Flask, abort, make_response, request, send_from_directory
+from flask import Flask, abort, make_response, send_from_directory
 
 app = Flask(__name__)
 JST = ZoneInfo("Asia/Tokyo")
@@ -24,32 +23,18 @@ def is_public_now():
     return start_at < end_at and start_at <= now < end_at
 
 
-def valid_preview_auth():
-    configured_password = os.getenv("PREVIEW_PASSWORD", "")
-    if not configured_password:
-        return False
-    header = request.headers.get("Authorization", "")
-    if not header.startswith("Basic "):
-        return False
-    try:
-        decoded = base64.b64decode(header[6:], validate=True).decode("utf-8")
-        username, password = decoded.split(":", 1)
-    except (ValueError, UnicodeDecodeError):
-        return False
-    return username == "preview" and hmac.compare_digest(password, configured_password)
-
-
 @app.before_request
-def enforce_access():
-    # Preview access is separate from the scheduled public release.
-    if request.path == "/preview":
-        if not valid_preview_auth():
-            response = make_response("Preview authentication required", 401)
-            response.headers["WWW-Authenticate"] = 'Basic realm="Boardgame Tutorial Preview", charset="UTF-8"'
-            return response
+def enforce_public_window():
+    # Secret preview URLs are checked separately in the preview route.
+    if request_path_is_preview():
         return None
     if not is_public_now():
         abort(404)
+
+
+def request_path_is_preview():
+    from flask import request
+    return request.path.startswith("/preview/")
 
 
 @app.after_request
@@ -72,8 +57,11 @@ def tutorial():
     return send_from_directory(CONTENT_DIR, "draft.html")
 
 
-@app.get("/preview")
-def preview():
+@app.get("/preview/<token>")
+def preview(token):
+    expected = os.getenv("PREVIEW_URL_TOKEN", "")
+    if not expected or not hmac.compare_digest(token, expected):
+        abort(404)
     return send_from_directory(CONTENT_DIR, "draft.html")
 
 

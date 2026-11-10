@@ -73,7 +73,7 @@ def preview_cpu(token):
         abort(404)
     with open(os.path.join(CONTENT_DIR, "cpu.html"), encoding="utf-8") as file:
         html = file.read()
-    html = html.replace('href="/baron-nimmt"', '/preview/' + token + '/tutorial')
+    html = html.replace('href="/baron-nimmt"', 'href="/preview/' + token + '/tutorial"')
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 
@@ -83,7 +83,7 @@ def preview_tutorial(token):
         abort(404)
     with open(os.path.join(CONTENT_DIR, "draft.html"), encoding="utf-8") as file:
         html = file.read()
-    html = html.replace('href="/baron-nimmt/cpu"', '/preview/' + token + '/cpu')
+    html = html.replace('href="/baron-nimmt/cpu"', 'href="/preview/' + token + '/cpu"')
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 
@@ -93,8 +93,8 @@ def preview(token):
         abort(404)
     with open(os.path.join(CONTENT_DIR, "index.html"), encoding="utf-8") as file:
         html = file.read()
-    html = html.replace('href="/baron-nimmt"', '/preview/' + token + '/tutorial')
-    html = html.replace('href="/baron-nimmt/cpu"', '/preview/' + token + '/cpu')
+    html = html.replace('href="/baron-nimmt"', 'href="/preview/' + token + '/tutorial"')
+    html = html.replace('href="/baron-nimmt/cpu"', 'href="/preview/' + token + '/cpu"')
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 

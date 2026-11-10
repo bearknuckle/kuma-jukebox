@@ -57,6 +57,19 @@ def tutorial():
     return send_from_directory(CONTENT_DIR, "draft.html")
 
 
+@app.get("/baron-nimmt/cpu")
+def cpu_game():
+    return send_from_directory(CONTENT_DIR, "cpu.html")
+
+
+@app.get("/preview/<token>/cpu")
+def preview_cpu(token):
+    expected = os.getenv("PREVIEW_URL_TOKEN", "")
+    if not expected or not hmac.compare_digest(token, expected):
+        abort(404)
+    return send_from_directory(CONTENT_DIR, "cpu.html")
+
+
 @app.get("/preview/<token>")
 def preview(token):
     expected = os.getenv("PREVIEW_URL_TOKEN", "")

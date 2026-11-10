@@ -1,11 +1,14 @@
+import base64
+import hmac
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from flask import Flask, abort, make_response, send_from_directory
+from flask import Flask, abort, make_response, request, send_from_directory
 
 app = Flask(__name__)
 JST = ZoneInfo("Asia/Tokyo")
 CONTENT_DIR = os.path.join(os.path.dirname(__file__), "baron-nimmt")
+
 
 def is_public_now():
     start = os.getenv("PUBLIC_START_JST", "").strip()
@@ -20,10 +23,34 @@ def is_public_now():
     now = datetime.now(JST)
     return start_at < end_at and start_at <= now < end_at
 
+
+def valid_preview_auth():
+    configured_password = os.getenv("PREVIEW_PASSWORD", "")
+    if not configured_password:
+        return False
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Basic "):
+        return False
+    try:
+        decoded = base64.b64decode(header[6:], validate=True).decode("utf-8")
+        username, password = decoded.split(":", 1)
+    except (ValueError, UnicodeDecodeError):
+        return False
+    return username == "preview" and hmac.compare_digest(password, configured_password)
+
+
 @app.before_request
-def enforce_event_window():
+def enforce_access():
+    # Preview access is separate from the scheduled public release.
+    if request.path == "/preview":
+        if not valid_preview_auth():
+            response = make_response("Preview authentication required", 401)
+            response.headers["WWW-Authenticate"] = 'Basic realm="Boardgame Tutorial Preview", charset="UTF-8"'
+            return response
+        return None
     if not is_public_now():
         abort(404)
+
 
 @app.after_request
 def security_headers(response):
@@ -34,13 +61,21 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     return response
 
+
 @app.get("/")
 def home():
     return send_from_directory(CONTENT_DIR, "draft.html")
 
+
 @app.get("/baron-nimmt")
 def tutorial():
     return send_from_directory(CONTENT_DIR, "draft.html")
+
+
+@app.get("/preview")
+def preview():
+    return send_from_directory(CONTENT_DIR, "draft.html")
+
 
 @app.get("/healthz")
 def health():

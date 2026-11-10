@@ -85,7 +85,7 @@ renderNav();
 function card(n,colors){return `<div class="mini"><span>${n}</span><small>🐂</small><div class="colors">${colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div></div>`}
 const scenarios={
 
-color:{rows:[[12,['blue']],[28,['red']],[43,['green','blue']],[67,['yellow']],[81,['black','blue']]],hand:55,colors:['blue'],valid:[2,4],success:'正解！最後尾に青い牛マークがある列なら、条件を満たします。複数あれば選べます。',wrong:'カードの牛マークと同じ色が、列の最後尾カードに少なくとも1つ必要です。'},
+color:{rows:[[12,['blue']],[28,['red']],[43,['green','blue']],[67,['yellow']],[81,['black','blue']]],hand:55,colors:['blue'],valid:[0,2,4],success:'正解！最後尾に青い牛マークがある列なら、条件を満たします。複数あれば選べます。',wrong:'カードの牛マークと同じ色が、列の最後尾カードに少なくとも1つ必要です。'},
 six:{rows:[[12,['blue']],[28,['red']],[43,['green']],[67,['yellow']],[81,['black']]],hand:55,colors:['blue'],valid:[0],success:'正解！この列はすでに5枚。6枚目になるので、前の5枚を引き取り、55が新しい列の先頭になります。',wrong:'6枚目になる列を選びます。前の5枚を引き取ることになります。'},
 cows:{rows:[[12,['blue']],[28,['red']],[43,['green','blue','blue','blue','blue']],[67,['yellow']],[81,['black']]],hand:55,colors:['blue'],valid:[2],success:'正解！配置後に青い牛マークが6つ以上になるため、前のカードを引き取ります。',wrong:'この列に置いた後、同じ色の牛マークが6つ以上になるかを確認します。'},
 nomatch:{rows:[[12,['red']],[28,['green']],[43,['yellow']],[67,['black']],[81,['white']]],hand:55,colors:['blue'],valid:[0,1,2,3,4],success:'その通り！どの列も最後尾に青い牛マークがありません。好きな列を1つ選び、そこを引き取ります。',wrong:'今回はどの列にも青い牛マークがありません。どの列を選んでも引き取りになります。'}

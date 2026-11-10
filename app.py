@@ -62,20 +62,40 @@ def cpu_game():
     return send_from_directory(CONTENT_DIR, "cpu.html")
 
 
+def valid_preview_token(token):
+    expected = os.getenv("PREVIEW_URL_TOKEN", "")
+    return bool(expected) and hmac.compare_digest(token, expected)
+
+
 @app.get("/preview/<token>/cpu")
 def preview_cpu(token):
-    expected = os.getenv("PREVIEW_URL_TOKEN", "")
-    if not expected or not hmac.compare_digest(token, expected):
+    if not valid_preview_token(token):
         abort(404)
-    return send_from_directory(CONTENT_DIR, "cpu.html")
+    with open(os.path.join(CONTENT_DIR, "cpu.html"), encoding="utf-8") as file:
+        html = file.read()
+    html = html.replace('href="/baron-nimmt"', '/preview/' + token + '/tutorial')
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+
+@app.get("/preview/<token>/tutorial")
+def preview_tutorial(token):
+    if not valid_preview_token(token):
+        abort(404)
+    with open(os.path.join(CONTENT_DIR, "draft.html"), encoding="utf-8") as file:
+        html = file.read()
+    html = html.replace('href="/baron-nimmt/cpu"', '/preview/' + token + '/cpu')
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 
 @app.get("/preview/<token>")
 def preview(token):
-    expected = os.getenv("PREVIEW_URL_TOKEN", "")
-    if not expected or not hmac.compare_digest(token, expected):
+    if not valid_preview_token(token):
         abort(404)
-    return send_from_directory(CONTENT_DIR, "index.html")
+    with open(os.path.join(CONTENT_DIR, "index.html"), encoding="utf-8") as file:
+        html = file.read()
+    html = html.replace('href="/baron-nimmt"', '/preview/' + token + '/tutorial')
+    html = html.replace('href="/baron-nimmt/cpu"', '/preview/' + token + '/cpu')
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 
 @app.get("/healthz")

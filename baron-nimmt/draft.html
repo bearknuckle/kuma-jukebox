@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#087f8c">
+<title>ニムト男爵｜遊び方を体験しよう</title>
+<style>
+:root{--teal:#087f8c;--deep:#075b67;--cream:#fff8e9;--ink:#23343a;--muted:#65777d;--line:#d8e2e2;--gold:#e7ae45;--red:#c85d51;--green:#398c69;--blue:#4c83b8;--shadow:0 8px 24px #173c4614}
+*{box-sizing:border-box}body{margin:0;background:#f3f7f6;color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif}
+header{background:linear-gradient(120deg,var(--deep),var(--teal));color:white;padding:18px max(18px,calc((100vw - 980px)/2));}
+.brand{font-size:12px;letter-spacing:.12em;opacity:.85}.headrow{display:flex;align-items:center;justify-content:space-between;gap:12px}.headrow h1{font-size:clamp(22px,4vw,30px);margin:5px 0}.pill{border:1px solid #ffffff70;border-radius:30px;padding:6px 10px;font-size:12px;white-space:nowrap}
+main{max-width:980px;margin:22px auto;padding:0 16px 48px;display:grid;grid-template-columns:230px 1fr;gap:18px}
+nav,.panel{background:white;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+nav{padding:14px;height:max-content;position:sticky;top:12px}nav h2{font-size:14px;margin:4px 8px 12px;color:var(--muted)}
+.lesson{width:100%;text-align:left;background:transparent;border:0;border-radius:11px;padding:11px 10px;margin:2px 0;display:flex;gap:10px;align-items:center;color:var(--ink);cursor:pointer;font:inherit}
+.lesson:hover{background:#f1f8f7}.lesson.active{background:#e5f4f2;color:var(--deep);font-weight:700}.num{width:27px;height:27px;border-radius:50%;background:#edf1f1;display:grid;place-items:center;font-size:12px;flex:none}.active .num{background:var(--teal);color:white}
+.content{min-width:0}.panel{padding:clamp(17px,3vw,28px)}.eyebrow{color:var(--teal);font-size:12px;font-weight:800;letter-spacing:.08em}.title{font-size:clamp(22px,4vw,29px);margin:5px 0 8px}.intro{color:var(--muted);line-height:1.75;margin:0 0 20px}
+.progress{height:7px;background:#e8eeee;border-radius:20px;overflow:hidden;margin:0 0 22px}.progress span{display:block;height:100%;background:var(--teal);width:14%;transition:width .25s}
+.callout{background:#eef8f6;border-left:4px solid var(--teal);padding:13px 15px;border-radius:9px;line-height:1.7;margin:16px 0}
+.gamebox{background:#f7faf9;border:1px solid var(--line);border-radius:15px;padding:15px;margin:18px 0}
+.rows{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.rowcard{border:1px solid #d4dede;border-radius:12px;background:white;padding:8px 5px;min-height:110px;cursor:pointer;text-align:center;color:var(--ink);font:inherit;transition:.15s}
+.rowcard:hover{border-color:var(--teal);transform:translateY(-2px)}.rowcard.selected{outline:3px solid #5aa9a0;border-color:var(--teal);background:#eff9f7}.rowcard.correct{border-color:var(--green);background:#eff9f2}.rowcard.wrong{border-color:var(--red);background:#fff1ef}
+.rowlabel{font-size:11px;color:var(--muted);display:block;margin-bottom:6px}.stack{display:flex;flex-wrap:wrap;justify-content:center;gap:3px}
+.mini{width:30px;height:43px;border:1px solid #d8c9a8;border-radius:5px;background:var(--cream);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#493b2b;font-weight:800;font-size:13px;box-shadow:0 2px 3px #0000000c}.mini small{font-size:10px}
+.hand{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+.playcard{width:76px;height:104px;border:2px solid #d6c7a5;border-radius:11px;background:var(--cream);box-shadow:0 4px 10px #00000012;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#493b2b;font:inherit}
+.playcard strong{font-size:27px}.playcard span{font-size:21px}.playcard small{font-size:10px}.playcard.selected{outline:4px solid #65aaa0;border-color:var(--teal);transform:translateY(-4px)}
+.colors{display:flex;gap:4px;justify-content:center;margin-top:5px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block}.c-blue{background:#4c83b8}.c-red{background:#c85d51}.c-green{background:#398c69}.c-yellow{background:#d9a52d}.c-black{background:#303b42}.c-purple{background:#8d70ad}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.btn{border:0;border-radius:11px;padding:12px 17px;background:var(--teal);color:white;font-weight:750;cursor:pointer;font-size:14px}.btn.secondary{background:#eaf1f1;color:var(--deep)}.btn:disabled{opacity:.45;cursor:not-allowed}
+.feedback{min-height:48px;padding:12px 14px;border-radius:11px;background:#f1f4f4;color:var(--muted);line-height:1.65;margin-top:12px}.feedback.good{background:#eaf7ee;color:#236442}.feedback.bad{background:#fff1ed;color:#934237}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.step{background:#f6f9f8;border:1px solid var(--line);padding:13px;border-radius:12px}.step b{display:block;color:var(--teal);font-size:12px;margin-bottom:5px}.step p{font-size:13px;line-height:1.6;margin:0}
+ul{line-height:1.9;padding-left:22px}.small{font-size:12px;color:var(--muted);line-height:1.6}.score{font-size:34px;font-weight:850;color:var(--teal)}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
+@media(max-width:700px){main{display:block;margin:14px auto}nav{position:static;margin-bottom:14px;padding:10px;overflow:auto;white-space:nowrap}nav h2{margin:3px 7px 7px}.navlist{display:flex;gap:4px}.lesson{width:auto;min-width:max-content;padding:8px}.lesson .label{font-size:12px}.panel{padding:17px}.rows{gap:5px}.rowcard{min-height:100px;padding:6px 2px}.mini{width:25px;height:37px;font-size:11px}.steps{grid-template-columns:1fr}.headrow{align-items:flex-start}}
+</style>
+</head>
+<body>
+<header><div class="brand">BARON NIMMT · LEARN BY PLAYING</div><div class="headrow"><h1>遊び方を体験しよう</h1><span class="pill">チュートリアル</span></div></header>
+<main>
+<nav><h2>レッスン一覧</h2><div class="navlist" id="navlist"></div></nav>
+<section class="content">
+<div class="panel">
+<div class="eyebrow" id="eyebrow">LESSON 01</div><h2 class="title" id="title"></h2><p class="intro" id="intro"></p>
+<div class="progress"><span id="progress"></span></div>
+<div id="stage"></div>
+<div class="actions"><button class="btn secondary" id="back">前へ</button><button class="btn" id="next">次へ進む</button></div>
+</div>
+<footer>学習用プロトタイプ · 実際のカード画像・全ルールの最終確認前の試作です</footer>
+</section></main>
+<script>
+const lessons=[
+{title:"ゲームの目的",intro:"カードを出して5つの列を作りながら、牛マークによる失点をできるだけ少なくするゲームです。",body:`
+<div class="callout"><b>目指すこと</b><br>ゲーム終了時、自分の前に集めたカードの牛マークの合計が最も少ないプレイヤーが勝ちます。</div>
+<div class="steps"><div class="step"><b>カードを出す</b><p>全員が手札から1枚を選び、同時に公開します。</p></div><div class="step"><b>列に置く</b><p>数字の小さいカードから順番に、5列のいずれかへ置きます。</p></div><div class="step"><b>牛マークに注意</b><p>列を引き取ると、そのカードの牛マークが失点になります。</p></div></div><p class="small">このチュートリアルでは、基本ルールを順番に練習します。</p>`},
+{title:"ゲームの準備",intro:"カードを人数に応じて配り、中央に5列を作ります。",body:`
+<div class="gamebox"><b>準備の流れ</b><ol><li>使用する牛カードをよく混ぜます。</li><li>プレイヤー人数に応じた枚数を各プレイヤーに配り、各自の山札にします。</li><li>各プレイヤーは山札から4枚引き、手札にします。</li><li>カードを5枚、表向きにしてテーブル中央に1枚ずつ並べ、5列のスタートにします。</li><li>残りのカードは箱に戻し、このゲームでは使いません。</li></ol></div>
+<div class="callout"><b>大事なポイント</b><br>手札は4枚です。4枚すべてをプレイしたあとで、山札から新たに4枚引きます。途中で補充はしません。</div>
+<p class="small">人数別の配布枚数は説明書の表に従います。2人:24枚／3人:20枚／4〜6人:16枚／7〜8人:12枚／9〜10人:8枚。</p>`},
+{title:"カードを出す順番",intro:"全員が同時にカードを選び、公開後は数字の小さい順に処理します。",body:`
+<div class="steps"><div class="step"><b>1 · 選ぶ</b><p>手札からカードを1枚選び、自分の前に裏向きで置きます。</p></div><div class="step"><b>2 · 公開</b><p>全員が選んだら、一斉にカードを表向きにします。</p></div><div class="step"><b>3 · 順番に置く</b><p>出されたカードの数字が小さい人から順に配置します。</p></div></div>
+<div class="callout">カードを置くときは、必ず列の一番右（最後尾）に加えます。</div>
+<div class="gamebox"><b>順番の例</b><div class="hand"><div class="playcard"><strong>18</strong><span>🐂</span><small>1番目</small></div><div class="playcard"><strong>42</strong><span>🐂</span><small>2番目</small></div><div class="playcard"><strong>76</strong><span>🐂</span><small>3番目</small></div></div><p class="small">18 → 42 → 76 の順で配置します。</p></div>`},
+{title:"置く列を選ぼう",intro:"カードの数字は配置する順番を決めるためのものです。置く列は、最後尾カードの牛マークの色で決まります。実際に選んでみましょう。",interactive:"color"},
+{title:"牛マークの色を合わせよう",intro:"配置できる列は、列の最後尾カードに、自分のカードと同じ色の牛マークが1つ以上ある列です。条件に合う列が複数あれば、その中から選べます。",interactive:"color"},
+{title:"6枚目になったら列を引き取る",intro:"カードを置いて6枚目になる場合、その列の前の5枚をすべて引き取ります。今置いたカードは新しい列の1枚目になります。",interactive:"six"},
+{title:"同じ色の牛マークが6つ以上",intro:"カードを置いた結果、その列に同じ色の牛マークが6つ以上ある場合も、置いたカード以外の列のカードをすべて引き取ります。置いたカードは新しい列の1枚目になります。",interactive:"cows"},
+{title:"置ける列がないとき",intro:"どの列の最後尾にも自分のカードと同じ色の牛マークがない場合、列を1つ選んでその列のカードをすべて引き取ります。出したカードはその列の新しい1枚目になります。",interactive:"nomatch"},
+{title:"ゲーム終了と得点",intro:"自分の山札から最後のカードを引き、手札のカードをすべてプレイしたらゲーム終了です。",body:`
+<div class="callout"><b>得点の数え方</b><br>引き取ったカードは自分の前に表向きで置きます。カード上部の牛マークの数が失点です。牛マークの数はカードごとに異なります。</div>
+<div class="steps"><div class="step"><b>カードを集計</b><p>自分が引き取ったカードの牛マークを合計します。</p></div><div class="step"><b>全員を比較</b><p>全プレイヤーの失点を比べます。</p></div><div class="step"><b>勝者</b><p>失点が最も少ないプレイヤーが勝ちです。</p></div></div>
+<p class="small">あらかじめゲーム回数を決めて遊ぶ場合は、各ゲーム後に全員の失点を記録します。</p>`},
+{title:"基本ルールのおさらい",intro:"最後に、覚えたルールをクイズで確認しましょう。",quiz:true}
+];
+let current=0, selectedCard=false, selectedRow=null;
+const nav=document.getElementById('navlist'),stage=document.getElementById('stage');
+function renderNav(){nav.innerHTML=lessons.map((l,i)=>`<button class="lesson ${i===current?'active':''}" data-i="${i}"><span class="num">${i+1}</span><span class="label">${l.title}</span></button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.i));}
+function go(i){current=Math.max(0,Math.min(lessons.length-1,i));selectedCard=false;selectedRow=null;render();}
+function render(){
+const l=lessons[current];document.getElementById('eyebrow').textContent=`LESSON ${String(current+1).padStart(2,'0')} / ${lessons.length}`;document.getElementById('title').textContent=l.title;document.getElementById('intro').textContent=l.intro;document.getElementById('progress').style.width=((current+1)/lessons.length*100)+'%';
+document.getElementById('back').disabled=current===0;document.getElementById('next').textContent=current===lessons.length-1?'最初からやり直す':'次へ進む';
+if(l.interactive)renderInteractive(l.interactive);else if(l.quiz)renderQuiz();else stage.innerHTML=l.body;
+renderNav();
+}
+function card(n,colors){return `<div class="mini"><span>${n}</span><small>🐂</small><div class="colors">${colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div></div>`}
+const scenarios={
+
+color:{rows:[[12,['blue']],[28,['red']],[43,['green','blue']],[67,['yellow']],[81,['black','blue']]],hand:55,colors:['blue'],valid:[2,4],success:'正解！最後尾に青い牛マークがある列なら、条件を満たします。複数あれば選べます。',wrong:'カードの牛マークと同じ色が、列の最後尾カードに少なくとも1つ必要です。'},
+six:{rows:[[12,['blue']],[28,['red']],[43,['green']],[67,['yellow']],[81,['black']]],hand:55,colors:['blue'],valid:[0],success:'正解！この列はすでに5枚。6枚目になるので、前の5枚を引き取り、55が新しい列の先頭になります。',wrong:'6枚目になる列を選びます。前の5枚を引き取ることになります。'},
+cows:{rows:[[12,['blue']],[28,['red']],[43,['green','blue','blue','blue','blue']],[67,['yellow']],[81,['black']]],hand:55,colors:['blue'],valid:[2],success:'正解！配置後に青い牛マークが6つ以上になるため、前のカードを引き取ります。',wrong:'この列に置いた後、同じ色の牛マークが6つ以上になるかを確認します。'},
+nomatch:{rows:[[12,['red']],[28,['green']],[43,['yellow']],[67,['black']],[81,['purple']]],hand:55,colors:['blue'],valid:[0,1,2,3,4],success:'その通り！どの列も最後尾に青い牛マークがありません。好きな列を1つ選び、そこを引き取ります。',wrong:'今回はどの列にも青い牛マークがありません。どの列を選んでも引き取りになります。'}
+};
+function renderInteractive(type){
+const s=scenarios[type];selectedRow=null;selectedCard=false;
+stage.innerHTML=`<div class="gamebox"><b>中央の5列</b><p class="small">列をタップして選択してください。</p><div class="rows">${s.rows.map((r,i)=>`<button class="rowcard" data-row="${i}"><span class="rowlabel">${i+1}列目</span><div class="stack">${card(r[0],r[1])}${type==='six'&&i===0?card(22,['red'] )+card(31,['green'])+card(38,['yellow'])+card(49,['blue']):''}${type==='cows'&&i===2?card(47,['blue']):''}</div></button>`).join('')}</div></div>
+<div class="gamebox"><b>あなたの手札から出すカード</b><div class="hand"><button class="playcard selected" id="practiceCard"><strong>${s.hand}</strong><span>🐂</span><div class="colors">${s.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>練習カード</small></button></div><p class="small">練習用にカードを選択済みです。次に置く列をタップしてください。</p></div>
+<div class="feedback" id="feedback">どの列に置くか選んでください。</div>
+<button class="btn" id="check" style="margin-top:12px">この列に置く</button>`;
+stage.querySelectorAll('.rowcard').forEach(b=>b.onclick=()=>{selectedRow=+b.dataset.row;stage.querySelectorAll('.rowcard').forEach(x=>x.classList.toggle('selected',x===b));document.getElementById('feedback').textContent=`${selectedRow+1}列目を選択中です。「この列に置く」を押してください。`;});
+document.getElementById('check').onclick=()=>{const f=document.getElementById('feedback');if(selectedRow===null){f.className='feedback bad';f.textContent='先に列を1つ選んでください。';return;}if(s.valid.includes(selectedRow)){f.className='feedback good';f.textContent=s.success;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('correct');document.getElementById('check').disabled=true;}else{f.className='feedback bad';f.textContent=s.wrong;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('wrong');}};
+}
+function renderQuiz(){
+const qs=[{q:'全員がカードを公開した後、誰から配置しますか？',a:['数字の大きい順','数字の小さい順','順番は自由'],c:1,e:'数字の小さいカードを出したプレイヤーから順番に置きます。'},{q:'列の6枚目になるカードを置くときは？',a:['6枚目を含む列を引き取る','何もしない','手札に戻す'],c:0,e:'前の5枚を引き取り、今置いたカードが新しい列の先頭になります。'},{q:'置ける列が1つもない場合は？',a:['カードを出せない','好きな列を1つ引き取る','山札から引く'],c:1,e:'好きな列を1つ選んで全て引き取り、出したカードが新しい先頭になります。'}];
+stage.innerHTML=qs.map((q,i)=>`<div class="gamebox"><b>Q${i+1}. ${q.q}</b><div style="display:grid;gap:8px;margin-top:12px">${q.a.map((a,j)=>`<button class="btn secondary answer" data-q="${i}" data-a="${j}" style="text-align:left">${['A','B','C'][j]}. ${a}</button>`).join('')}</div><div class="feedback" id="qf${i}">答えを選んでください。</div></div>`).join('')+`<div class="callout" id="quizResult">3問すべてに答えてみましょう！</div>`;
+let score={};stage.querySelectorAll('.answer').forEach(b=>b.onclick=()=>{let q=+b.dataset.q,a=+b.dataset.a;score[q]=a;let item=qs[q],f=document.getElementById('qf'+q);f.className='feedback '+(a===item.c?'good':'bad');f.textContent=(a===item.c?'正解！':'もう一度確認しましょう。')+item.e;stage.querySelectorAll(`.answer[data-q="${q}"]`).forEach(x=>x.style.outline=+x.dataset.a===a?'2px solid var(--teal)':'none');let result=document.getElementById('quizResult');if(Object.keys(score).length===3){let n=qs.filter((x,i)=>score[i]===x.c).length;result.innerHTML=`<b>結果：${n} / 3 問正解</b><br>${n===3?'全問正解！基本ルールはばっちりです。':'間違えた問題をもう一度確認してみましょう。'}`;}});
+}
+document.getElementById('back').onclick=()=>go(current-1);
+document.getElementById('next').onclick=()=>{if(current===lessons.length-1)go(0);else go(current+1);};
+render();
+</script></body></html>

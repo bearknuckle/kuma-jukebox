@@ -56,26 +56,12 @@ body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spac
 </section></main>
 <script>
 const lessons=[
-{title:"ゲームの目的",intro:"カードを出して、牛マークを回避！失点を抑えて勝利を目指そう！",body:`
-<div class="callout"><b>目指すこと</b><br>ゲーム終了時に、引き取ったカードの牛マークの合計が最も少ないプレイヤーの勝ちです。</div>
-<div class="steps"><div class="step"><b>カードを出す</b><p>全員が手札から1枚を選び、同時に公開します。</p></div><div class="step"><b>列に置く</b><p>数字の小さいカードから順番に、5列のいずれかへ置きます。</p></div><div class="step"><b>牛マークに注意</b><p>列を引き取ると、そのカードの牛マークが失点になります。</p></div></div><p class="small">このチュートリアルでは、基本ルールを順番に練習します。</p>`},
-{title:"ゲームの準備",intro:"カードを人数に応じて配り、中央に5列を作ります。",body:`
-<div class="gamebox"><b>準備の流れ</b><ol><li>使用する牛カードをよく混ぜます。</li><li>プレイヤー人数に応じた枚数を各プレイヤーに配り、その全枚数を手札にします。</li><li>カードを5枚、表向きにしてテーブル中央に1枚ずつ並べ、5列のスタートにします。</li><li>残りのカードは箱に戻し、このゲームでは使いません。</li></ol></div>`},
-{title:"カードを出す順番",intro:"全員が同時にカードを選び、公開後は数字の小さい順に処理します。",body:`
-<div class="steps"><div class="step"><b>1 · 選ぶ</b><p>手札からカードを1枚選び、自分の前に裏向きで置きます。</p></div><div class="step"><b>2 · 公開</b><p>全員が選んだら、一斉にカードを表向きにします。</p></div><div class="step"><b>3 · 順番に置く</b><p>出されたカードの数字が小さい人から順に配置します。</p></div></div>
-<div class="callout">カードを置くときは、必ず列の一番右（最後尾）に加えます。</div>
-<div class="gamebox"><b>順番の例</b><div class="hand"><div class="playcard"><strong>18</strong><span>🐂</span><small>1番目</small></div><div class="playcard"><strong>42</strong><span>🐂</span><small>2番目</small></div><div class="playcard"><strong>76</strong><span>🐂</span><small>3番目</small></div></div><p class="small">18 → 42 → 76 の順で配置します。</p></div>`},
-{title:"置く列を選ぼう",intro:"カードは数字の小さい順に処理します。置ける列は、出したカードと最後尾のカードに共通する牛マークの色で決まります。実際に列を選んでみましょう。",interactive:"color"},
-{title:"牛マークの色を合わせよう",intro:"配置できる列は、列の最後尾カードに、自分のカードと同じ色の牛マークが1つ以上ある列です。条件に合う列が複数あれば、その中から選べます。",interactive:"color"},
-{title:"6枚目になったら列を引き取る",intro:"列にカードを置いて6枚目になると、もともとあった5枚をすべて引き取ります。今出したカードは、新しい列の先頭になります。",interactive:"six"},
-{title:"同じ色の牛マークが6つ以上",intro:"カードを置いた結果、その列に同じ色の牛マークが6つ以上ある場合も、置いたカード以外の列のカードをすべて引き取ります。置いたカードは新しい列の1枚目になります。",interactive:"cows"},
-{title:"置ける列がないとき",intro:"どの列にも同じ色の牛マークがない場合は、好きな列を1つ選んで引き取ります。出したカードは、その列の新しい先頭になります。",interactive:"nomatch"},
-{title:"ゲーム終了と得点",intro:"配られた手札のカードをすべてプレイしたらゲーム終了です。",body:`
-<div class="callout"><b>得点の数え方</b><br>引き取ったカードは、自分の前に表向きで置いておきます。ゲーム終了後、引き取ったカードの牛マークをすべて合計します。この合計が失点となり、最も少ないプレイヤーが勝ちです。</div>
-<div class="steps"><div class="step"><b>カードを集計</b><p>自分が引き取ったカードの牛マークを合計します。</p></div><div class="step"><b>全員を比較</b><p>全プレイヤーの失点を比べます。</p></div><div class="step"><b>勝者</b><p>失点が最も少ないプレイヤーが勝ちです。</p></div></div>
-<p class="small">あらかじめゲーム回数を決めて遊ぶ場合は、各ゲーム後に全員の失点を記録します。</p>`},
-{title:"実戦チャレンジ",intro:"ここまで覚えたルールを使って、実際の場面を判断してみましょう。",challenge:true},
-{title:"基本ルールのおさらい",intro:"最後に、覚えたルールをクイズで確認しましょう。",quiz:true}
+{title:"青いカードを置こう",intro:"青い牛マークのカードです。置く列を選んでください。",interactive:"color"},
+{title:"6枚目を置こう",intro:"どの列も5枚並んでいます。カードを置く列を選んでください。",interactive:"six"},
+{title:"牛マークに注目！",intro:"置くと同じ色の牛マークが6つ以上になる列があります。カードを置く列を選んでください。",interactive:"cows"},
+{title:"置ける列がない！",intro:"どの列の最後尾にも青い牛マークがありません。どうする？列を選んでください。",interactive:"nomatch"},
+{title:"実戦チャレンジ",intro:"4つの場面に挑戦！正しい判断を選んでください。",challenge:true},
+{title:"もう一度プレイ",intro:"最初から練習できます。",interactive:"color"}
 ];
 let current=0, selectedCard=false, selectedRow=null;
 const nav=document.getElementById('navlist'),stage=document.getElementById('stage');

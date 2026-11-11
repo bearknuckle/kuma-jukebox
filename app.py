@@ -56,6 +56,11 @@ def home():
     return send_from_directory(CONTENT_DIR, "home.html")
 
 
+@app.get("/catan")
+def catan_tutorial():
+    return send_from_directory(CONTENT_DIR, "catan.html")
+
+
 @app.get("/acquire")
 def acquire_tutorial():
     return send_from_directory(CONTENT_DIR, "acquire.html")

@@ -56,12 +56,7 @@ body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spac
 </section></main>
 <script>
 const lessons=[
-{title:"青いカードを置こう",intro:"青い牛マークのカードです。置く列を選んでください。",interactive:"color"},
-{title:"6枚目を置こう",intro:"どの列も5枚並んでいます。カードを置く列を選んでください。",interactive:"six"},
-{title:"牛マークに注目！",intro:"置くと同じ色の牛マークが6つ以上になる列があります。カードを置く列を選んでください。",interactive:"cows"},
-{title:"置ける列がない！",intro:"どの列の最後尾にも青い牛マークがありません。どうする？列を選んでください。",interactive:"nomatch"},
-{title:"実戦チャレンジ",intro:"4つの場面に挑戦！正しい判断を選んでください。",challenge:true},
-{title:"もう一度プレイ",intro:"最初から練習できます。",interactive:"color"}
+{title:"ニムト男爵クイズ",intro:"問題に答えて、ルールをマスターしよう！",quiz:true}
 ];
 let current=0, selectedCard=false, selectedRow=null;
 const nav=document.getElementById('navlist'),stage=document.getElementById('stage');

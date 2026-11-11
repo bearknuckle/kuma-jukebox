@@ -18,7 +18,7 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 <section class="panel hidden" id="gamePanel">
   <div class="row" style="align-items:center"><h2 style="margin:0;font-size:19px;flex:2">対戦中 <span class="host" id="turnLabel">第1ターン</span></h2><button class="btn alt" id="gameLeaveBtn">退出</button></div>
   <div class="status" id="gameStatus">手札からカードを1枚選んでください。</div>
-  <h3 style="font-size:15px;margin:14px 0 8px">場の5列</h3><div class="board" id="onlineBoard"></div>
+  <h3 style="font-size:15px;margin:14px 0 8px">場の5列</h3><div class="board" id="onlineBoard"></div><div class="status hidden" id="laneChoice"></div>
   <h3 style="font-size:15px;margin:18px 0 8px">プレイヤー</h3><div id="onlinePlayers"></div>
   <h3 style="font-size:15px;margin:18px 0 8px">あなたの手札</h3><div class="hand" id="onlineHand"></div>
   <button class="btn" id="submitCardBtn" style="width:100%" disabled>このカードを提出</button>
@@ -54,12 +54,21 @@ function cardHtml(c){return '<div class="played">'+c.n+'<div class="color-dots">
 function renderGame(g){
  latestGame=g;$("lobby").classList.add("hidden");$("gamePanel").classList.remove("hidden");$("turnLabel").textContent="第"+(g.turn+1)+"ターン";
  $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
+ const choice=$("laneChoice");
+ if(g.must_choose_lane){
+   choice.classList.remove("hidden");
+   choice.innerHTML="<b>置ける列がありません。</b><br>引き取る列を選んでください。<div class='row' style='margin-top:10px'>"+g.lanes.map((lane,i)=>"<button class='btn alt' data-lane='"+i+"'>"+(i+1)+"列目を引き取る</button>").join("")+"</div>";
+   choice.querySelectorAll("button").forEach(btn=>btn.onclick=async()=>{btn.disabled=true;try{const d=await api("/api/rooms/"+code+"/choose-lane",{player_id:playerId,lane_index:+btn.dataset.lane});renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message;btn.disabled=false}});
+ }else{
+   choice.classList.toggle("hidden",!g.pending_choice);
+   choice.textContent=g.pending_choice?(g.pending_player_name+"さんが引き取る列を選択しています。"):"";
+ }
  $("onlinePlayers").innerHTML=g.players.map(p=>'<div class="player '+(p.id===playerId?"me":"")+'"><strong>'+escapeHtml(p.name)+(p.id===playerId?"（あなた）":"")+'</strong><div class="small">手札 '+p.hand_count+'枚 / 獲得 '+p.taken_count+'枚 / 失点 '+p.score+'点</div><div class="small">'+(p.submitted?"カード提出済み":"選択中")+'</div></div>').join("");
  $("onlineHand").innerHTML=g.my_hand.map(c=>'<button class="handcard '+(selectedCard===c.n?"selected":"")+'" data-n="'+c.n+'" '+(g.my_submitted||g.status==="finished"?"disabled":"")+'>'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div><div class="small">'+c.penalty+'点</div></button>').join("");
  $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;renderGame(g)});
  $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished";
  $("submitCardBtn").textContent=g.my_submitted?"提出済み・他のプレイヤーを待っています":"このカードを提出";
- $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":"手札から1枚選んで提出してください。全員が提出すると自動で公開されます。";
+ $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんが引き取る列を選択しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":"手札から1枚選んで提出してください。全員が提出すると数字の小さい順に処理されます。";
  $("turnLog").innerHTML=g.last_log.length?'<b>前のターンの結果</b><br>'+g.last_log.map(escapeHtml).join("<br>"):"";
  if(g.status==="finished"){$("onlineResult").classList.remove("hidden");$("onlineResult").innerHTML="<b>ゲーム終了！</b><br>"+g.players.slice().sort((a,b)=>a.score-b.score).map((p,i)=>(i+1)+"位："+escapeHtml(p.name)+" — "+p.score+"点").join("<br>")+"<br><br>勝者："+g.winner.map(escapeHtml).join("、");}
 }

@@ -7,7 +7,7 @@
 <main><nav><h2>学習ステップ</h2><div class="navlist" id="navlist"></div></nav><section class="panel"><div class="eyebrow" id="eyebrow"></div><h2 class="title" id="title"></h2><p class="intro" id="intro"></p><div class="progress"><span id="progress"></span></div><div id="stage"></div><div class="actions"><button class="btn secondary" id="back">戻る</button><button class="btn" id="next">次へ</button></div></section></main><footer>カタン 基本セット（3〜4人用）学習用 · 拡張セットのルールは含みません</footer>
 <script>
 const lessons=[
-{t:"カタン実戦プレイ",i:"資源の獲得・交易・建設・盗賊への対応を、場面ごとに選択して体験しよう。",practice:true}
+{t:"カタンクイズ",i:"問題に答えて、資源・建設・勝利条件をマスターしよう！",q:true}
 ];
 let current=0;const nav=document.getElementById('navlist'),stage=document.getElementById('stage');
 function render(){const l=lessons[current];document.getElementById('eyebrow').textContent='LESSON '+String(current+1).padStart(2,'0')+' / '+lessons.length;document.getElementById('title').textContent=l.t;document.getElementById('intro').textContent=l.i;document.getElementById('progress').style.width=((current+1)/lessons.length*100)+'%';document.getElementById('back').disabled=current===0;document.getElementById('next').textContent=current===lessons.length-1?'最初に戻る':'次へ';nav.innerHTML=lessons.map((x,i)=>'<button class="lesson '+(i===current?'active':'')+'" data-i="'+i+'"><span class="num">'+(i+1)+'</span><span>'+x.t+'</span></button>').join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.i));stage.innerHTML=l.q?quiz():(l.practice?practice():l.h);if(l.practice)drawPractice();}

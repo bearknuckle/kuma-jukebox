@@ -206,10 +206,142 @@ def start_room(code):
             return jsonify(error="開始できるのはルーム作成者です。"), 403
         if len(room["players"]) < 2:
             return jsonify(error="対戦には2人以上必要です。"), 409
-        room["status"] = "starting"
+        start_baron_game(room)
         room["updated"] = time.time()
         return jsonify(room=public_room(room))
 
+
+
+def load_baron_cards():
+    import json
+    with open(os.path.join(CONTENT_DIR, "cards.json"), encoding="utf-8") as f:
+        raw = json.load(f)
+    return [{"n": row[0], "penalty": row[1], "cs": [raw["colors"][i] for i in row[2]]} for row in raw["cards"]]
+
+def game_public_state(room, player_id):
+    game = room.get("game")
+    if not game:
+        return None
+    me = next((p for p in room["players"] if p["id"] == player_id), None)
+    if not me:
+        return None
+    return {
+        "turn": game["turn"],
+        "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"],
+                     "hand_count": len(game["hands"].get(p["id"], [])),
+                     "taken_count": len(game["taken"].get(p["id"], [])),
+                     "score": sum(c["penalty"] for c in game["taken"].get(p["id"], [])),
+                     "submitted": p["id"] in game["submissions"]} for p in room["players"]],
+        "lanes": game["lanes"],
+        "my_hand": game["hands"].get(player_id, []),
+        "my_submitted": player_id in game["submissions"],
+        "submitted_count": len(game["submissions"]),
+        "status": room["status"],
+        "last_log": game.get("last_log", []),
+        "winner": game.get("winner")
+    }
+
+def start_baron_game(room):
+    cards = load_baron_cards()
+    import random
+    random.SystemRandom().shuffle(cards)
+    count = len(room["players"])
+    hand_size = {2:24, 3:20, 4:16, 5:16, 6:16, 7:12, 8:12, 9:8, 10:8}[count]
+    hands = {}
+    for p in room["players"]:
+        hands[p["id"]] = sorted(cards[:hand_size], key=lambda c: c["n"])
+        del cards[:hand_size]
+    lanes = [[cards.pop()] for _ in range(5)]
+    room["game"] = {"turn": 0, "hands": hands, "lanes": lanes,
+                    "taken": {p["id"]: [] for p in room["players"]},
+                    "submissions": {}, "last_log": [], "winner": None}
+    room["status"] = "playing"
+
+def resolve_online_turn(room):
+    game = room["game"]
+    ordered = sorted(
+        [(next(p for p in room["players"] if p["id"] == pid), card)
+         for pid, card in game["submissions"].items()],
+        key=lambda item: item[1]["n"]
+    )
+    logs = []
+    for player, card in ordered:
+        pid = player["id"]
+        eligible = [i for i, lane in enumerate(game["lanes"])
+                    if set(lane[-1]["cs"]) & set(card["cs"])]
+        if not eligible:
+            chosen = min(range(5), key=lambda i: sum(c["penalty"] for c in game["lanes"][i]))
+            game["taken"][pid].extend(game["lanes"][chosen])
+            game["lanes"][chosen] = [card]
+            logs.append(player["name"] + "：置ける列なし → " + str(chosen + 1) + "列目を引き取り")
+            continue
+        chosen = min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i])))
+        lane = game["lanes"][chosen]
+        if len(lane) >= 5:
+            game["taken"][pid].extend(lane)
+            game["lanes"][chosen] = [card]
+            logs.append(player["name"] + "：6枚目 → " + str(chosen + 1) + "列目を引き取り")
+            continue
+        lane.append(card)
+        color_totals = {color: sum(c["cs"].count(color) for c in lane)
+                        for color in ("red", "blue", "green", "yellow", "black", "white")}
+        if max(color_totals.values(), default=0) >= 6:
+            game["taken"][pid].extend(lane[:-1])
+            game["lanes"][chosen] = [card]
+            logs.append(player["name"] + "：同色6つ以上 → " + str(chosen + 1) + "列目を引き取り")
+        else:
+            logs.append(player["name"] + "：" + str(card["n"]) + "を" + str(chosen + 1) + "列目へ配置")
+    game["submissions"] = {}
+    game["turn"] += 1
+    if all(not game["hands"].get(p["id"]) for p in room["players"]):
+        scores = {p["id"]: sum(c["penalty"] for c in game["taken"][p["id"]]) for p in room["players"]}
+        best = min(scores.values())
+        game["winner"] = [p["name"] for p in room["players"] if scores[p["id"]] == best]
+        room["status"] = "finished"
+    game["last_log"] = logs
+    room["updated"] = time.time()
+
+@app.get("/api/rooms/<code>/game")
+def get_online_game(code):
+    player_id = request.args.get("player_id", "")
+    with ROOM_LOCK:
+        clean_rooms()
+        room = ROOMS.get(code.upper())
+        if not room:
+            return jsonify(error="ルームが見つかりません。"), 404
+        state = game_public_state(room, player_id)
+        if state is None:
+            return jsonify(error="参加者情報を確認できません。"), 403
+        return jsonify(game=state)
+
+@app.post("/api/rooms/<code>/play")
+def submit_online_card(code):
+    data = request.get_json(silent=True) or {}
+    player_id = str(data.get("player_id", ""))
+    try:
+        card_number = int(data.get("card_number"))
+    except (TypeError, ValueError):
+        return jsonify(error="カードを選択してください。"), 400
+    with ROOM_LOCK:
+        clean_rooms()
+        room = ROOMS.get(code.upper())
+        if not room or room.get("status") not in ("playing",):
+            return jsonify(error="現在プレイできるゲームがありません。"), 409
+        game = room.get("game", {})
+        hand = game.get("hands", {}).get(player_id)
+        if hand is None:
+            return jsonify(error="参加者情報を確認できません。"), 403
+        if player_id in game["submissions"]:
+            return jsonify(error="このターンはすでにカードを提出しています。"), 409
+        card = next((c for c in hand if c["n"] == card_number), None)
+        if card is None:
+            return jsonify(error="そのカードは手札にありません。"), 400
+        hand.remove(card)
+        game["submissions"][player_id] = card
+        room["updated"] = time.time()
+        if len(game["submissions"]) == len(room["players"]):
+            resolve_online_turn(room)
+        return jsonify(game=game_public_state(room, player_id))
 
 @app.get("/baron-nimmt/cpu")
 def cpu_game():

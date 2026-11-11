@@ -25,6 +25,10 @@ def is_public_now():
 
 @app.before_request
 def enforce_public_window():
+    # Set PUBLIC_WINDOW_ENABLED=true to re-enable the scheduled public period.
+    # Until then, the site remains publicly accessible.
+    if os.getenv("PUBLIC_WINDOW_ENABLED", "false").strip().lower() not in ("1", "true", "yes", "on"):
+        return None
     # Secret preview URLs are checked separately in the preview route.
     if request_path_is_preview():
         return None

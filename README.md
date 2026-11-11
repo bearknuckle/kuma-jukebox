@@ -15,8 +15,12 @@
 ```text
 boardgame-tutorial/
 ├── README.md
+├── app.py
 ├── baron-nimmt/
-│   └── index.html
+│   ├── home.html  # ゲーム一覧トップ
+│   ├── index.html # ニムト男爵のモード選択
+│   ├── draft.html
+│   └── cpu.html
 ├── shared/
 │   └── （共通スタイル・共通スクリプト）
 └── server/

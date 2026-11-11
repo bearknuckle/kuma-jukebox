@@ -35,7 +35,7 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .blue{background:#4c83b8}.red{background:#c85d51}.green{background:#398c69}.yellow{background:#d9a52d}.black{background:#303b42}.white{background:white;border:1px solid #aeb9bd}
 .hand{display:flex;gap:7px;overflow-x:auto;padding:8px 2px 13px}
-.lane.target{border:2px solid var(--teal);background:#eaf6f4;cursor:pointer;box-shadow:0 0 0 2px #087f8c22}
+.lane.target{border:2px solid var(--teal);background:#eaf6f4;cursor:pointer;box-shadow:0 0 0 2px #087f8c22}.lane.chosen{border:3px solid #d49a18;background:#fff0bf;box-shadow:0 0 0 3px #d49a1833,0 4px 12px #8a641b25}
 .lane.target:after{content:"ここに置く";display:block;color:var(--deep);font-size:10px;font-weight:800;margin-top:5px}
 .handcard{flex:0 0 62px;border:2px solid #d5c6a4;border-radius:9px;background:#fff8e9;padding:8px 3px;text-align:center;font-weight:800;font-size:20px;color:#493b2b}
 .handcard.selected{outline:3px solid #65aaa0;border-color:var(--teal);transform:translateY(-3px)}
@@ -68,7 +68,7 @@ function renderGame(g){
  latestGame=g;$("lobby").classList.add("hidden");$("gamePanel").classList.remove("hidden");$("turnLabel").textContent="第"+(g.turn+1)+"ターン";
  const selectedForLane=g.my_hand.find(c=>c.n===selectedCard);
  const eligibleLanes=selectedForLane?g.lanes.map((lane,i)=>({lane,i})).filter(x=>x.lane[x.lane.length-1].cs.some(color=>selectedForLane.cs.includes(color))).map(x=>x.i):[];
- $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane '+(eligibleLanes.includes(i)&&!g.my_submitted?"target":"")+'" data-target-lane="'+i+'"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
+ $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane '+(eligibleLanes.includes(i)&&!g.my_submitted?"target":"")+(selectedLane===i?" chosen":"")+'" data-target-lane="'+i+'"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
  $("onlineBoard").querySelectorAll(".target").forEach(el=>el.onclick=()=>{selectedLane=+el.dataset.targetLane;renderGame(g)});
  const choice=$("laneChoice");
  if(g.must_choose_lane){

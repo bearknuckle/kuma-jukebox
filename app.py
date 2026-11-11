@@ -216,6 +216,11 @@ def cpu_game():
     return send_from_directory(CONTENT_DIR, "cpu.html")
 
 
+@app.get("/baron-nimmt/cards.json")
+def baron_cards():
+    return send_from_directory(CONTENT_DIR, "cards.json", mimetype="application/json")
+
+
 def valid_preview_token(token):
     expected = os.getenv("PREVIEW_URL_TOKEN", "")
     return bool(expected) and hmac.compare_digest(token, expected)

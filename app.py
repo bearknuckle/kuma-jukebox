@@ -225,6 +225,7 @@ def game_public_state(room, player_id):
     me = next((p for p in room["players"] if p["id"] == player_id), None)
     if not me:
         return None
+    pending = game.get("pending_choice")
     return {
         "turn": game["turn"],
         "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"],
@@ -238,7 +239,10 @@ def game_public_state(room, player_id):
         "submitted_count": len(game["submissions"]),
         "status": room["status"],
         "last_log": game.get("last_log", []),
-        "winner": game.get("winner")
+        "winner": game.get("winner"),
+        "must_choose_lane": bool(pending and pending["player_id"] == player_id),
+        "pending_choice": bool(pending),
+        "pending_player_name": next((p["name"] for p in room["players"] if pending and p["id"] == pending["player_id"]), None)
     }
 
 def start_baron_game(room):
@@ -254,33 +258,35 @@ def start_baron_game(room):
     lanes = [[cards.pop()] for _ in range(5)]
     room["game"] = {"turn": 0, "hands": hands, "lanes": lanes,
                     "taken": {p["id"]: [] for p in room["players"]},
-                    "submissions": {}, "last_log": [], "winner": None}
+                    "submissions": {}, "last_log": [], "winner": None,
+                    "resolution_queue": [], "pending_choice": None}
     room["status"] = "playing"
 
-def resolve_online_turn(room):
+def finish_online_game_if_needed(room):
     game = room["game"]
-    ordered = sorted(
-        [(next(p for p in room["players"] if p["id"] == pid), card)
-         for pid, card in game["submissions"].items()],
-        key=lambda item: item[1]["n"]
-    )
-    logs = []
-    for player, card in ordered:
-        pid = player["id"]
+    if all(not game["hands"].get(p["id"]) for p in room["players"]):
+        scores = {p["id"]: sum(c["penalty"] for c in game["taken"][p["id"]]) for p in room["players"]}
+        best = min(scores.values())
+        game["winner"] = [p["name"] for p in room["players"] if scores[p["id"]] == best]
+        room["status"] = "finished"
+
+def continue_online_resolution(room):
+    game = room["game"]
+    while game["resolution_queue"]:
+        pid, card = game["resolution_queue"][0]
+        player = next(p for p in room["players"] if p["id"] == pid)
         eligible = [i for i, lane in enumerate(game["lanes"])
                     if set(lane[-1]["cs"]) & set(card["cs"])]
         if not eligible:
-            chosen = min(range(5), key=lambda i: sum(c["penalty"] for c in game["lanes"][i]))
-            game["taken"][pid].extend(game["lanes"][chosen])
-            game["lanes"][chosen] = [card]
-            logs.append(player["name"] + "：置ける列なし → " + str(chosen + 1) + "列目を引き取り")
-            continue
+            game["pending_choice"] = {"player_id": pid, "card": card}
+            return
+        game["resolution_queue"].pop(0)
         chosen = min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i])))
         lane = game["lanes"][chosen]
         if len(lane) >= 5:
             game["taken"][pid].extend(lane)
             game["lanes"][chosen] = [card]
-            logs.append(player["name"] + "：6枚目 → " + str(chosen + 1) + "列目を引き取り")
+            game["last_log"].append(player["name"] + "：" + str(chosen + 1) + "列目を引き取り（6枚目）")
             continue
         lane.append(card)
         color_totals = {color: sum(c["cs"].count(color) for c in lane)
@@ -288,18 +294,55 @@ def resolve_online_turn(room):
         if max(color_totals.values(), default=0) >= 6:
             game["taken"][pid].extend(lane[:-1])
             game["lanes"][chosen] = [card]
-            logs.append(player["name"] + "：同色6つ以上 → " + str(chosen + 1) + "列目を引き取り")
+            game["last_log"].append(player["name"] + "：" + str(chosen + 1) + "列目を引き取り（同色6つ以上）")
         else:
-            logs.append(player["name"] + "：" + str(card["n"]) + "を" + str(chosen + 1) + "列目へ配置")
+            game["last_log"].append(player["name"] + "：" + str(card["n"]) + "を" + str(chosen + 1) + "列目へ配置")
+    game["pending_choice"] = None
+    finish_online_game_if_needed(room)
+
+def resolve_online_turn(room):
+    game = room["game"]
+    game["resolution_queue"] = sorted(
+        [(pid, card) for pid, card in game["submissions"].items()],
+        key=lambda item: item[1]["n"]
+    )
     game["submissions"] = {}
+    game["last_log"] = []
     game["turn"] += 1
-    if all(not game["hands"].get(p["id"]) for p in room["players"]):
-        scores = {p["id"]: sum(c["penalty"] for c in game["taken"][p["id"]]) for p in room["players"]}
-        best = min(scores.values())
-        game["winner"] = [p["name"] for p in room["players"] if scores[p["id"]] == best]
-        room["status"] = "finished"
-    game["last_log"] = logs
+    continue_online_resolution(room)
+    game["last_log"] = game["last_log"][-20:]
     room["updated"] = time.time()
+
+@app.post("/api/rooms/<code>/choose-lane")
+def choose_online_lane(code):
+    data = request.get_json(silent=True) or {}
+    player_id = str(data.get("player_id", ""))
+    try:
+        lane_index = int(data.get("lane_index"))
+    except (TypeError, ValueError):
+        return jsonify(error="列を選択してください。"), 400
+    with ROOM_LOCK:
+        room = ROOMS.get(code.upper())
+        if not room or room.get("status") != "playing":
+            return jsonify(error="ゲームが見つかりません。"), 404
+        game = room["game"]
+        pending = game.get("pending_choice")
+        if not pending or pending["player_id"] != player_id:
+            return jsonify(error="列を選択する順番ではありません。"), 403
+        if not 0 <= lane_index < 5:
+            return jsonify(error="列の指定が正しくありません。"), 400
+        card = pending["card"]
+        player = next(p for p in room["players"] if p["id"] == player_id)
+        game["taken"][player_id].extend(game["lanes"][lane_index])
+        game["lanes"][lane_index] = [card]
+        game["last_log"].append(player["name"] + "：置ける列がないため" + str(lane_index + 1) + "列目を選んで引き取り")
+        game["pending_choice"] = None
+        if game["resolution_queue"]:
+            game["resolution_queue"].pop(0)
+        continue_online_resolution(room)
+        game["last_log"] = game["last_log"][-20:]
+        room["updated"] = time.time()
+        return jsonify(game=game_public_state(room, player_id))
 
 @app.get("/api/rooms/<code>/game")
 def get_online_game(code):

@@ -73,7 +73,7 @@ def acquire_tutorial():
 
 @app.get("/baron-nimmt")
 def tutorial():
-    return send_from_directory(CONTENT_DIR, "draft.html")
+    return send_from_directory(CONTENT_DIR, "cpu.html")
 
 
 @app.get("/baron-nimmt/cpu")

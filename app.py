@@ -31,7 +31,7 @@ def public_room(room):
         "host_id": room["host_id"],
         "host_name": room["host_name"],
         "max_players": room["max_players"],
-        "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"]} for p in room["players"]],
+        "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"], "is_cpu": p.get("is_cpu", False), "is_cpu": p.get("is_cpu", False)} for p in room["players"]],
         "status": room["status"],
         "created": room["created"]
     }
@@ -204,8 +204,11 @@ def start_room(code):
             return jsonify(error="ルームが見つかりません。"), 404
         if player_id != room["host_id"]:
             return jsonify(error="開始できるのはルーム作成者です。"), 403
-        if len(room["players"]) < 2:
-            return jsonify(error="対戦には2人以上必要です。"), 409
+        if room["status"] != "waiting":
+            return jsonify(error="このルームは開始済みです。"), 409
+        while len(room["players"]) < room["max_players"]:
+            cpu_number = 1 + sum(1 for p in room["players"] if p.get("is_cpu"))
+            room["players"].append({"id": "cpu_" + secrets.token_urlsafe(10), "name": "CPU " + str(cpu_number), "joined": time.time(), "is_cpu": True})
         start_baron_game(room)
         room["updated"] = time.time()
         return jsonify(room=public_room(room))
@@ -261,6 +264,32 @@ def start_baron_game(room):
                     "submissions": {}, "last_log": [], "winner": None,
                     "resolution_queue": [], "pending_choice": None}
     room["status"] = "playing"
+    submit_cpu_cards(room)
+
+def choose_cpu_online_card(room, player):
+    game = room["game"]
+    hand = game["hands"].get(player["id"], [])
+    if not hand:
+        return None
+    def value(card):
+        eligible = [lane for lane in game["lanes"] if set(lane[-1]["cs"]) & set(card["cs"])]
+        if not eligible:
+            return 100 + min(sum(c["penalty"] for c in lane) for lane in game["lanes"])
+        lane = min(eligible, key=lambda x: (len(x), sum(c["penalty"] for c in x)))
+        return (30 if len(lane) >= 5 else 0) + sum(c["penalty"] for c in lane) + len(lane) * 0.4 + card["penalty"] * 0.15
+    return min(hand, key=value)
+
+def submit_cpu_cards(room):
+    game = room.get("game")
+    if not game or room.get("status") != "playing" or game.get("pending_choice"):
+        return
+    for player in room["players"]:
+        if not player.get("is_cpu") or player["id"] in game["submissions"]:
+            continue
+        card = choose_cpu_online_card(room, player)
+        if card is not None:
+            game["hands"][player["id"]].remove(card)
+            game["submissions"][player["id"]] = card
 
 def finish_online_game_if_needed(room):
     game = room["game"]
@@ -278,6 +307,13 @@ def continue_online_resolution(room):
         eligible = [i for i, lane in enumerate(game["lanes"])
                     if set(lane[-1]["cs"]) & set(card["cs"])]
         if not eligible:
+            if player.get("is_cpu"):
+                chosen = min(range(5), key=lambda i: (sum(c["penalty"] for c in game["lanes"][i]), len(game["lanes"][i])))
+                game["taken"][pid].extend(game["lanes"][chosen])
+                game["lanes"][chosen] = [card]
+                game["last_log"].append(player["name"] + "：置ける列がないため" + str(chosen + 1) + "列目を引き取り")
+                game["resolution_queue"].pop(0)
+                continue
             game["pending_choice"] = {"player_id": pid, "card": card}
             return
         game["resolution_queue"].pop(0)
@@ -310,6 +346,8 @@ def resolve_online_turn(room):
     game["last_log"] = []
     game["turn"] += 1
     continue_online_resolution(room)
+    if room["status"] == "playing":
+        submit_cpu_cards(room)
     game["last_log"] = game["last_log"][-20:]
     room["updated"] = time.time()
 
@@ -340,6 +378,8 @@ def choose_online_lane(code):
         if game["resolution_queue"]:
             game["resolution_queue"].pop(0)
         continue_online_resolution(room)
+        if room["status"] == "playing":
+            submit_cpu_cards(room)
         game["last_log"] = game["last_log"][-20:]
         room["updated"] = time.time()
         return jsonify(game=game_public_state(room, player_id))

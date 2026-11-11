@@ -163,6 +163,10 @@ def join_room(code):
             return jsonify(error="このルームは満員です。"), 409
         player_id = secrets.token_urlsafe(18)
         room["players"].append({"id": player_id, "name": name, "joined": time.time()})
+        host = next((p for p in room["players"] if p["id"] == room["host_id"]), None)
+        if host and host.get("is_cpu"):
+            room["host_id"] = player_id
+            room["host_name"] = name
         room["updated"] = time.time()
         return jsonify(room=public_room(room), player_id=player_id)
 
@@ -186,12 +190,50 @@ def leave_room(code):
         room = ROOMS.get(code.upper())
         if not room:
             return jsonify(ok=True)
-        room["players"] = [p for p in room["players"] if p["id"] != player_id]
-        if not room["players"] or player_id == room["host_id"]:
-            ROOMS.pop(code.upper(), None)
-        else:
-            room["updated"] = time.time()
-        return jsonify(ok=True)
+        player = next((p for p in room["players"] if p["id"] == player_id), None)
+        if not player:
+            return jsonify(ok=True)
+
+        # Keep the seat and game state, but hand control to a CPU.
+        cpu_number = 1 + sum(1 for p in room["players"] if p.get("is_cpu"))
+        player["name"] = "CPU " + str(cpu_number)
+        player["is_cpu"] = True
+        player["joined"] = time.time()
+
+        # If the host leaves, transfer host privileges to a remaining human.
+        if player_id == room["host_id"]:
+            next_host = next((p for p in room["players"] if not p.get("is_cpu")), None)
+            room["host_id"] = next_host["id"] if next_host else player_id
+            room["host_name"] = next_host["name"] if next_host else player["name"]
+
+        game = room.get("game")
+        if game and room.get("status") == "playing":
+            pending = game.get("pending_choice")
+            if pending and pending["player_id"] == player_id:
+                # Resolve an outstanding lane choice automatically for the new CPU.
+                lane_index = min(
+                    range(5),
+                    key=lambda i: (
+                        sum(c["penalty"] for c in game["lanes"][i]),
+                        len(game["lanes"][i])
+                    )
+                )
+                card = pending["card"]
+                game["taken"][player_id].extend(game["lanes"][lane_index])
+                game["lanes"][lane_index] = [card]
+                game["last_log"].append(player["name"] + "：CPUが" + str(lane_index + 1) + "列目を選んで引き取り")
+                game["pending_choice"] = None
+                if game["resolution_queue"]:
+                    game["resolution_queue"].pop(0)
+                continue_online_resolution(room)
+
+            if room.get("status") == "playing":
+                submit_cpu_cards(room)
+                if not game.get("pending_choice") and len(game["submissions"]) == len(room["players"]):
+                    resolve_online_turn(room)
+
+        room["updated"] = time.time()
+        return jsonify(ok=True, replaced_by_cpu=True)
 
 
 @app.post("/api/rooms/<code>/start")

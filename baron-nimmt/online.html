@@ -35,6 +35,8 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .blue{background:#4c83b8}.red{background:#c85d51}.green{background:#398c69}.yellow{background:#d9a52d}.black{background:#303b42}.white{background:white;border:1px solid #aeb9bd}
 .hand{display:flex;gap:7px;overflow-x:auto;padding:8px 2px 13px}
+.lane.target{border:2px solid var(--teal);background:#eaf6f4;cursor:pointer;box-shadow:0 0 0 2px #087f8c22}
+.lane.target:after{content:"ここに置く";display:block;color:var(--deep);font-size:10px;font-weight:800;margin-top:5px}
 .handcard{flex:0 0 62px;border:2px solid #d5c6a4;border-radius:9px;background:#fff8e9;padding:8px 3px;text-align:center;font-weight:800;font-size:20px;color:#493b2b}
 .handcard.selected{outline:3px solid #65aaa0;border-color:var(--teal);transform:translateY(-3px)}
 .player.me{border-color:var(--teal);background:#eef8f6}
@@ -49,7 +51,7 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-const $=id=>document.getElementById(id);let code=null,playerId=null,isHost=false,pollHandle=null,lastStatus="",selectedCard=null,latestGame=null,retryDelay=1500,refreshBusy=false;
+const $=id=>document.getElementById(id);let code=null,playerId=null,isHost=false,pollHandle=null,lastStatus="",selectedCard=null,selectedLane=null,latestGame=null,retryDelay=1500,refreshBusy=false;
 const SESSION_KEY="baronNimmtOnlineSession";
 function saveSession(){if(code&&playerId)localStorage.setItem(SESSION_KEY,JSON.stringify({code,playerId,isHost}));}
 function clearSession(){localStorage.removeItem(SESSION_KEY);}
@@ -64,7 +66,10 @@ function renderRoom(room){$("memberCount").textContent=room.players.length+" / "
 function cardHtml(c){return '<div class="played">'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div></div>'}
 function renderGame(g){
  latestGame=g;$("lobby").classList.add("hidden");$("gamePanel").classList.remove("hidden");$("turnLabel").textContent="第"+(g.turn+1)+"ターン";
- $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
+ const selectedForLane=g.my_hand.find(c=>c.n===selectedCard);
+ const eligibleLanes=selectedForLane?g.lanes.map((lane,i)=>({lane,i})).filter(x=>x.lane[x.lane.length-1].cs.some(color=>selectedForLane.cs.includes(color))).map(x=>x.i):[];
+ $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane '+(eligibleLanes.includes(i)&&!g.my_submitted?"target":"")+'" data-target-lane="'+i+'"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
+ $("onlineBoard").querySelectorAll(".target").forEach(el=>el.onclick=()=>{selectedLane=+el.dataset.targetLane;renderGame(g)});
  const choice=$("laneChoice");
  if(g.must_choose_lane){
    choice.classList.remove("hidden");
@@ -76,10 +81,10 @@ function renderGame(g){
  }
  $("onlinePlayers").innerHTML=g.players.map(p=>'<div class="player '+(p.id===playerId?"me":"")+'"><strong>'+escapeHtml(p.name)+(p.id===playerId?"（あなた）":"")+'</strong><div class="small">手札 '+p.hand_count+'枚 / 獲得 '+p.taken_count+'枚 / 失点 '+p.score+'点</div><div class="small">'+(p.submitted?"カード提出済み":"選択中")+'</div></div>').join("");
  $("onlineHand").innerHTML=g.my_hand.map(c=>'<button class="handcard '+(selectedCard===c.n?"selected":"")+'" data-n="'+c.n+'" '+(g.my_submitted||g.status==="finished"?"disabled":"")+'>'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div><div class="small">'+c.penalty+'点</div></button>').join("");
- $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;renderGame(g)});
- $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished";
- $("submitCardBtn").textContent=g.my_submitted?"提出済み・他のプレイヤーを待っています":"このカードを提出";
- $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんが引き取る列を選択しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":"手札から1枚選んで提出してください。全員が提出すると数字の小さい順に処理されます。";
+ $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;selectedLane=null;renderGame(g)});
+ $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||(eligibleLanes.length>0&&selectedLane===null);
+ $("submitCardBtn").textContent=g.my_submitted?"提出済み・他のプレイヤーを待っています":eligibleLanes.length>0?(selectedLane===null?"場の列を選んでください":"選んだ列にカードを提出"):"このカードを提出（配置できる列なし）";
+ $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんが引き取る列を選択しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":selectedCard===null?"手札からカードを選んでください。":eligibleLanes.length>0?"カードを置く列を選んでください。":"置ける列がありません。カードを提出すると、引き取る列を選びます。";
  $("turnLog").innerHTML=g.last_log.length?'<b>前のターンの結果</b><br>'+g.last_log.map(escapeHtml).join("<br>"):"";
  if(g.status==="finished"){$("onlineResult").classList.remove("hidden");$("onlineResult").innerHTML="<b>ゲーム終了！</b><br>"+g.players.slice().sort((a,b)=>a.score-b.score).map((p,i)=>(i+1)+"位："+escapeHtml(p.name)+" — "+p.score+"点").join("<br>")+"<br><br>勝者："+g.winner.map(escapeHtml).join("、");}
 }
@@ -92,7 +97,7 @@ $("createBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms
 $("joinBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms/"+$("joinCode").value.trim().toUpperCase()+"/join",{name:$("joinName").value});code=d.room.code;playerId=d.player_id;isHost=false;saveSession();enterLobby(d.room)}catch(e){showError(e.message)}};
 $("copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(code);$("copyBtn").textContent="コピーしました！"}catch(e){$("copyBtn").textContent="番号："+code}};
 $("startBtn").onclick=async()=>{try{await api("/api/rooms/"+code+"/start",{player_id:playerId});await refresh()}catch(e){showError(e.message,"lobbyError")}};
-$("submitCardBtn").onclick=async()=>{if(selectedCard===null)return;try{const d=await api("/api/rooms/"+code+"/play",{player_id:playerId,card_number:selectedCard});selectedCard=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message}};
+$("submitCardBtn").onclick=async()=>{if(selectedCard===null)return;try{const card=latestGame.my_hand.find(c=>c.n===selectedCard);const eligible=card?latestGame.lanes.map((lane,i)=>({lane,i})).filter(x=>x.lane[x.lane.length-1].cs.some(color=>card.cs.includes(color))).map(x=>x.i):[];const d=await api("/api/rooms/"+code+"/play",{player_id:playerId,card_number:selectedCard,lane_index:eligible.length?selectedLane:-1});selectedCard=null;selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message}};
 $("leaveBtn").onclick=leave;$("gameLeaveBtn").onclick=leave;
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&code)refresh();});
 window.addEventListener("online",()=>{if(code){connectionState("通信復旧。再接続中…","retry");refresh();}});

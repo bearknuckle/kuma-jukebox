@@ -74,6 +74,7 @@ const lessons=[
 <div class="callout"><b>得点の数え方</b><br>引き取ったカードは、自分の前に表向きで置いておきます。ゲーム終了後、引き取ったカードの牛マークをすべて合計します。この合計が失点となり、最も少ないプレイヤーが勝ちです。</div>
 <div class="steps"><div class="step"><b>カードを集計</b><p>自分が引き取ったカードの牛マークを合計します。</p></div><div class="step"><b>全員を比較</b><p>全プレイヤーの失点を比べます。</p></div><div class="step"><b>勝者</b><p>失点が最も少ないプレイヤーが勝ちです。</p></div></div>
 <p class="small">あらかじめゲーム回数を決めて遊ぶ場合は、各ゲーム後に全員の失点を記録します。</p>`},
+{title:"実戦チャレンジ",intro:"ここまで覚えたルールを使って、実際の場面を判断してみましょう。",challenge:true},
 {title:"基本ルールのおさらい",intro:"最後に、覚えたルールをクイズで確認しましょう。",quiz:true}
 ];
 let current=0, selectedCard=false, selectedRow=null;
@@ -83,7 +84,7 @@ function go(i){current=Math.max(0,Math.min(lessons.length-1,i));selectedCard=fal
 function render(){
 const l=lessons[current];document.getElementById('eyebrow').textContent=`LESSON ${String(current+1).padStart(2,'0')} / ${lessons.length}`;document.getElementById('title').textContent=l.title;document.getElementById('intro').textContent=l.intro;document.getElementById('progress').style.width=((current+1)/lessons.length*100)+'%';
 document.getElementById('back').disabled=current===0;document.getElementById('next').textContent=current===lessons.length-1?'最初からやり直す':'次へ進む';
-if(l.interactive)renderInteractive(l.interactive);else if(l.quiz)renderQuiz();else stage.innerHTML=l.body;
+if(l.interactive)renderInteractive(l.interactive);else if(l.challenge)renderChallenge();else if(l.quiz)renderQuiz();else stage.innerHTML=l.body;
 renderNav();
 }
 function card(n,colors){return `<div class="mini"><span>${n}</span><small>🐂</small><div class="colors">${colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div></div>`}
@@ -105,6 +106,15 @@ let chosenHand=2;
 stage.querySelectorAll('.rowcard').forEach(b=>b.onclick=()=>{selectedRow=+b.dataset.row;stage.querySelectorAll('.rowcard').forEach(x=>x.classList.toggle('selected',x===b));document.getElementById('feedback').textContent=`${selectedRow+1}列目を選択中です。「この列に置く」を押してください。`;});
 document.getElementById('check').onclick=()=>{const f=document.getElementById('feedback');if(chosenHand!==2){f.className='feedback bad';f.textContent='今回出すカードを確認してください。';return;}if(selectedRow===null){f.className='feedback bad';f.textContent='先に列を1つ選んでください。';return;}if(s.valid.includes(selectedRow)){f.className='feedback good';f.textContent=s.success;const chosen=stage.querySelectorAll('.rowcard')[selectedRow];chosen.classList.add('correct');const outcome=document.getElementById('outcome');const outcomeText=document.getElementById('outcomeText');outcome.hidden=false;if(type==='six'||type==='cows'){const taken=chosen.querySelector('.stack').innerHTML;chosen.querySelector('.stack').innerHTML=card(s.hand,s.colors);chosen.querySelector('.rowlabel').textContent=(selectedRow+1)+'列目・新しい列';outcomeText.innerHTML='<b>引き取ったカード</b><div class="stack" style="justify-content:flex-start;margin:8px 0">'+taken+'</div>引き取ったカードは自分の前に置きます。今出したカードが新しい列の先頭になります。';}else if(type==='nomatch'){const taken=chosen.querySelector('.stack').innerHTML;chosen.querySelector('.stack').innerHTML=card(s.hand,s.colors);chosen.querySelector('.rowlabel').textContent=(selectedRow+1)+'列目・新しい列';outcomeText.innerHTML='<b>引き取った列</b><div class="stack" style="justify-content:flex-start;margin:8px 0">'+taken+'</div>列のカードをすべて引き取り、今出したカードが新しい列の先頭になります。';}else{chosen.querySelector('.stack').insertAdjacentHTML('beforeend',card(s.hand,s.colors));outcomeText.textContent='選んだ列の最後尾にカードを加えました。列の最後尾カードの色と、出したカードの色が一致しているため配置できます。';}document.getElementById('check').disabled=true;}else{f.className='feedback bad';f.textContent=s.wrong;stage.querySelectorAll('.rowcard')[selectedRow].classList.add('wrong');}};
 }
+
+const challenges=[
+{q:'あなたのカードは青い牛マーク。列の最後尾に青い牛がある列が2つあります。どうする？',a:['どちらか好きな列を選ぶ','必ずカード枚数が少ない列','どちらにも置けない'],c:0,e:'同じ色の牛マークが最後尾にある列なら、複数の中から好きな列を選べます。'},
+{q:'カードを置くと、列のカードが6枚になります。どうなる？',a:['6枚目のカードだけを引き取る','前の5枚を引き取り、出したカードを新しい先頭にする','列をそのままにする'],c:1,e:'6枚目になったら、それまでの5枚を引き取ります。今出したカードは新しい列の先頭です。'},
+{q:'置いた結果、列に同じ色の牛マークが6つ以上になりました。',a:['その列のカードを引き取る','何も起きない','他の列も全部引き取る'],c:0,e:'同じ色の牛マークが6つ以上になった場合も、置いたカード以外を引き取ります。'},
+{q:'どの列の最後尾にも、自分のカードと同じ色の牛マークがありません。',a:['カードを出さずに次のターン','好きな列を1つ引き取る','山札からカードを引く'],c:1,e:'置ける列がないときは、好きな列を1つ選んで引き取ります。出したカードが新しい列の先頭になります。'}
+];
+function renderChallenge(){let answers={};stage.innerHTML='<div class="callout"><b>実戦チャレンジ</b><br>4つの状況を判断してみましょう。選択すると、その場で結果と解説が表示されます。</div>'+challenges.map((q,i)=>'<div class="gamebox"><div class="eyebrow">CHALLENGE '+(i+1)+' / '+challenges.length+'</div><b>'+q.q+'</b><div style="display:grid;gap:8px;margin-top:12px">'+q.a.map((a,j)=>'<button class="btn secondary challenge-answer" data-q="'+i+'" data-a="'+j+'" style="text-align:left">'+a+'</button>').join('')+'</div><div class="feedback" id="cf'+i+'">選択してください。</div></div>').join('')+'<div class="callout" id="challengeResult">4問すべてに挑戦してください。</div>';stage.querySelectorAll('.challenge-answer').forEach(b=>b.onclick=()=>{const qi=+b.dataset.q,ai=+b.dataset.a,q=challenges[qi];answers[qi]=ai;const f=document.getElementById('cf'+qi);f.className='feedback '+(ai===q.c?'good':'bad');f.textContent=(ai===q.c?'正解！ ':'惜しい！ ')+q.e;stage.querySelectorAll('.challenge-answer[data-q="'+qi+'"]').forEach(x=>{x.disabled=true;if(+x.dataset.a===q.c)x.style.border='2px solid var(--green)';});if(Object.keys(answers).length===challenges.length){const n=challenges.filter((x,i)=>answers[i]===x.c).length;document.getElementById('challengeResult').innerHTML='<b>チャレンジ結果：'+n+' / 4 問正解</b><br>'+(n===4?'全問正解！実戦でも落ち着いて判断できそうです。':'解説を読み返して、もう一度チャレンジしてみましょう。');}});}
+
 function renderQuiz(){
 const qs=[{q:'全員がカードを公開した後、誰から配置しますか？',a:['数字の大きい順','数字の小さい順','順番は自由'],c:1,e:'数字の小さいカードを出したプレイヤーから順番に置きます。'},{q:'列の6枚目になるカードを置くときは？',a:['6枚目を含む列を引き取る','何もしない','手札に戻す'],c:0,e:'前の5枚を引き取り、今置いたカードが新しい列の先頭になります。'},{q:'置ける列が1つもない場合は？',a:['カードを出せない','好きな列を1つ引き取る','山札から引く'],c:1,e:'好きな列を1つ選んで全て引き取り、出したカードが新しい先頭になります。'}];
 stage.innerHTML=qs.map((q,i)=>`<div class="gamebox"><b>Q${i+1}. ${q.q}</b><div style="display:grid;gap:8px;margin-top:12px">${q.a.map((a,j)=>`<button class="btn secondary answer" data-q="${i}" data-a="${j}" style="text-align:left">${['A','B','C'][j]}. ${a}</button>`).join('')}</div><div class="feedback" id="qf${i}">答えを選んでください。</div></div>`).join('')+`<div class="callout" id="quizResult">3問すべてに答えてみましょう！</div>`;

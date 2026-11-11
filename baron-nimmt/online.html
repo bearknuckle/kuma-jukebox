@@ -14,22 +14,61 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 <div id="joinForm" class="hidden"><label for="joinName">あなたの名前</label><input class="field" id="joinName" maxlength="16" placeholder="プレイヤー名"><label for="joinCode">ルーム番号（6桁）</label><input class="field" id="joinCode" maxlength="6" autocomplete="off" placeholder="例：A2BCDE" style="text-transform:uppercase;letter-spacing:.12em"><button class="btn" id="joinBtn" style="width:100%;margin-top:16px">このルームに参加</button></div>
 <div class="error" id="error" role="alert"></div><p class="hint">ルーム番号を知っている友達だけが参加できます。参加者が2人以上になると、作成者が開始できます。</p>
 </section>
-<section class="panel hidden" id="lobby"><h2 style="margin:0;font-size:19px">待機ルーム</h2><div class="roomcode" id="roomCode"></div><button class="btn alt" id="copyBtn" style="width:100%">ルーム番号をコピー</button><div class="status" id="lobbyStatus">参加者を待っています。</div><h3 style="font-size:15px;margin:18px 0 8px">参加メンバー <span class="small" id="memberCount"></span></h3><div id="members"></div><div class="row" style="margin-top:18px"><button class="btn" id="startBtn">ゲーム開始</button><button class="btn danger" id="leaveBtn">退出する</button></div><p class="small">この段階では待機室まで利用できます。ゲーム本体のリアルタイム同期は次の実装段階で追加します。</p><div class="error" id="lobbyError"></div></section>
+<section class="panel hidden" id="lobby"><h2 style="margin:0;font-size:19px">待機ルーム</h2><div class="roomcode" id="roomCode"></div><button class="btn alt" id="copyBtn" style="width:100%">ルーム番号をコピー</button><div class="status" id="lobbyStatus">参加者を待っています。</div><h3 style="font-size:15px;margin:18px 0 8px">参加メンバー <span class="small" id="memberCount"></span></h3><div id="members"></div><div class="row" style="margin-top:18px"><button class="btn" id="startBtn">ゲーム開始</button><button class="btn danger" id="leaveBtn">退出する</button></div><p class="small">全員がカードを選ぶと同時に公開され、数字の小さい順に処理されます。</p><div class="error" id="lobbyError"></div></section>
+<section class="panel hidden" id="gamePanel">
+  <div class="row" style="align-items:center"><h2 style="margin:0;font-size:19px;flex:2">対戦中 <span class="host" id="turnLabel">第1ターン</span></h2><button class="btn alt" id="gameLeaveBtn">退出</button></div>
+  <div class="status" id="gameStatus">手札からカードを1枚選んでください。</div>
+  <h3 style="font-size:15px;margin:14px 0 8px">場の5列</h3><div class="board" id="onlineBoard"></div>
+  <h3 style="font-size:15px;margin:18px 0 8px">プレイヤー</h3><div id="onlinePlayers"></div>
+  <h3 style="font-size:15px;margin:18px 0 8px">あなたの手札</h3><div class="hand" id="onlineHand"></div>
+  <button class="btn" id="submitCardBtn" style="width:100%" disabled>このカードを提出</button>
+  <div class="status" id="turnLog"></div>
+  <div class="result hidden" id="onlineResult"></div>
+</section>
 </main>
+<style>
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.lane{min-width:0;background:#f7faf9;border:1px solid var(--line);border-radius:10px;padding:6px 3px;text-align:center}
+.lane h4{font-size:11px;color:var(--muted);margin:0 0 6px}
+.played{background:#fff8e9;border:1px solid #d8c9a8;border-radius:6px;padding:5px 2px;margin:4px auto;max-width:55px;font-weight:800;font-size:14px}
+.color-dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.blue{background:#4c83b8}.red{background:#c85d51}.green{background:#398c69}.yellow{background:#d9a52d}.black{background:#303b42}.white{background:white;border:1px solid #aeb9bd}
+.hand{display:flex;gap:7px;overflow-x:auto;padding:8px 2px 13px}
+.handcard{flex:0 0 62px;border:2px solid #d5c6a4;border-radius:9px;background:#fff8e9;padding:8px 3px;text-align:center;font-weight:800;font-size:20px;color:#493b2b}
+.handcard.selected{outline:3px solid #65aaa0;border-color:var(--teal);transform:translateY(-3px)}
+.player.me{border-color:var(--teal);background:#eef8f6}
+@media(max-width:480px){.board{gap:3px}.lane{padding:4px 1px}.played{font-size:12px}.lane h4{font-size:9px}.handcard{flex-basis:56px}}
+</style>
 <script>
-const $=id=>document.getElementById(id);let code=null,playerId=null,isHost=false,pollHandle=null,lastStatus="";
+const $=id=>document.getElementById(id);let code=null,playerId=null,isHost=false,pollHandle=null,lastStatus="",selectedCard=null,latestGame=null;
 function showError(msg,where="error"){$(where).textContent=msg||""}
 function tab(which){$("createForm").classList.toggle("hidden",which!=="create");$("joinForm").classList.toggle("hidden",which!=="join");$("createTab").classList.toggle("active",which==="create");$("joinTab").classList.toggle("active",which==="join");showError("")}
-async function api(url,body){const r=await fetch(url,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw new Error(d.error||"通信に失敗しました。");return d}
-function enterLobby(room){$("entry").classList.add("hidden");$("lobby").classList.remove("hidden");$("roomCode").textContent=room.code;renderRoom(room);if(pollHandle)clearInterval(pollHandle);pollHandle=setInterval(refresh,1800)}
-function renderRoom(room){$("memberCount").textContent=room.players.length+" / "+room.max_players+"人";$("members").innerHTML=room.players.map(p=>'<div class="player"><strong>'+escapeHtml(p.name)+'</strong>'+(p.is_host?'<span class="host">ルーム作成者</span>':'')+'</div>').join("");$("startBtn").disabled=!isHost||room.players.length<2||room.status!=="waiting";$("startBtn").textContent=room.status==="starting"?"ゲーム開始済み":"ゲーム開始";$("lobbyStatus").textContent=room.status==="starting"?"参加者が揃いました。次の段階で対戦画面へ接続します。":room.players.length<2?"友達にルーム番号を共有して、参加を待ちましょう。":"参加者が揃っています。作成者はゲームを開始できます。"}
+async function api(url,body){const r=await fetch(url,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined,cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"通信に失敗しました。");return d}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-async function refresh(){if(!code)return;try{const d=await api("/api/rooms/"+code);renderRoom(d.room);if(d.room.status==="starting"&&lastStatus!=="starting"){lastStatus="starting";$("lobbyStatus").textContent="開始準備ができました。ゲーム画面は次の実装段階で接続します。"}}catch(e){showError(e.message,"lobbyError");clearInterval(pollHandle);pollHandle=null}}
+function enterLobby(room){$("entry").classList.add("hidden");$("lobby").classList.remove("hidden");$("roomCode").textContent=room.code;renderRoom(room);if(pollHandle)clearInterval(pollHandle);pollHandle=setInterval(refresh,1000)}
+function renderRoom(room){$("memberCount").textContent=room.players.length+" / "+room.max_players+"人";$("members").innerHTML=room.players.map(p=>'<div class="player"><strong>'+escapeHtml(p.name)+'</strong>'+(p.is_host?'<span class="host">ルーム作成者</span>':'')+'</div>').join("");$("startBtn").disabled=!isHost||room.players.length<2||room.status!=="waiting";$("startBtn").textContent=room.status==="waiting"?"ゲーム開始":"ゲーム開始済み";$("lobbyStatus").textContent=room.status==="waiting"?(room.players.length<2?"友達にルーム番号を共有して、参加を待ちましょう。":"参加者が揃っています。作成者はゲームを開始できます。"):"ゲームを準備しています。"}
+function cardHtml(c){return '<div class="played">'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div></div>'}
+function renderGame(g){
+ latestGame=g;$("lobby").classList.add("hidden");$("gamePanel").classList.remove("hidden");$("turnLabel").textContent="第"+(g.turn+1)+"ターン";
+ $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
+ $("onlinePlayers").innerHTML=g.players.map(p=>'<div class="player '+(p.id===playerId?"me":"")+'"><strong>'+escapeHtml(p.name)+(p.id===playerId?"（あなた）":"")+'</strong><div class="small">手札 '+p.hand_count+'枚 / 獲得 '+p.taken_count+'枚 / 失点 '+p.score+'点</div><div class="small">'+(p.submitted?"カード提出済み":"選択中")+'</div></div>').join("");
+ $("onlineHand").innerHTML=g.my_hand.map(c=>'<button class="handcard '+(selectedCard===c.n?"selected":"")+'" data-n="'+c.n+'" '+(g.my_submitted||g.status==="finished"?"disabled":"")+'>'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div><div class="small">'+c.penalty+'点</div></button>').join("");
+ $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;renderGame(g)});
+ $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished";
+ $("submitCardBtn").textContent=g.my_submitted?"提出済み・他のプレイヤーを待っています":"このカードを提出";
+ $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":"手札から1枚選んで提出してください。全員が提出すると自動で公開されます。";
+ $("turnLog").innerHTML=g.last_log.length?'<b>前のターンの結果</b><br>'+g.last_log.map(escapeHtml).join("<br>"):"";
+ if(g.status==="finished"){$("onlineResult").classList.remove("hidden");$("onlineResult").innerHTML="<b>ゲーム終了！</b><br>"+g.players.slice().sort((a,b)=>a.score-b.score).map((p,i)=>(i+1)+"位："+escapeHtml(p.name)+" — "+p.score+"点").join("<br>")+"<br><br>勝者："+g.winner.map(escapeHtml).join("、");}
+}
+async function refresh(){if(!code)return;try{const d=await api("/api/rooms/"+code);renderRoom(d.room);if(d.room.status==="playing"||d.room.status==="finished"){const gd=await api("/api/rooms/"+code+"/game?player_id="+encodeURIComponent(playerId));renderGame(gd.game);}}catch(e){showError(e.message,"lobbyError");$("gameStatus").textContent=e.message;if(pollHandle)clearInterval(pollHandle);pollHandle=null}}
+async function leave(){try{await api("/api/rooms/"+code+"/leave",{player_id:playerId})}catch(e){}if(pollHandle)clearInterval(pollHandle);code=null;playerId=null;location.reload()}
 $("createTab").onclick=()=>tab("create");$("joinTab").onclick=()=>tab("join");
 $("createBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms",{name:$("createName").value,max_players:$("maxPlayers").value});code=d.room.code;playerId=d.player_id;isHost=true;enterLobby(d.room)}catch(e){showError(e.message)}};
 $("joinBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms/"+$("joinCode").value.trim().toUpperCase()+"/join",{name:$("joinName").value});code=d.room.code;playerId=d.player_id;isHost=false;enterLobby(d.room)}catch(e){showError(e.message)}};
 $("copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(code);$("copyBtn").textContent="コピーしました！"}catch(e){$("copyBtn").textContent="番号："+code}};
-$("startBtn").onclick=async()=>{try{const d=await api("/api/rooms/"+code+"/start",{player_id:playerId});renderRoom(d.room)}catch(e){showError(e.message,"lobbyError")}};
-$("leaveBtn").onclick=async()=>{try{await api("/api/rooms/"+code+"/leave",{player_id:playerId})}catch(e){}if(pollHandle)clearInterval(pollHandle);code=null;playerId=null;location.reload()};
+$("startBtn").onclick=async()=>{try{await api("/api/rooms/"+code+"/start",{player_id:playerId});await refresh()}catch(e){showError(e.message,"lobbyError")}};
+$("submitCardBtn").onclick=async()=>{if(selectedCard===null)return;try{const d=await api("/api/rooms/"+code+"/play",{player_id:playerId,card_number:selectedCard});selectedCard=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message}};
+$("leaveBtn").onclick=leave;$("gameLeaveBtn").onclick=leave;
 window.addEventListener("beforeunload",()=>{if(code&&playerId)navigator.sendBeacon("/api/rooms/"+code+"/leave",new Blob([JSON.stringify({player_id:playerId})],{type:"application/json"}))});
 </script></body></html>

@@ -303,7 +303,7 @@ def start_baron_game(room):
     lanes = [[cards.pop()] for _ in range(5)]
     room["game"] = {"turn": 0, "hands": hands, "lanes": lanes,
                     "taken": {p["id"]: [] for p in room["players"]},
-                    "submissions": {}, "last_log": [], "winner": None,
+                    "submissions": {}, "submission_lanes": {}, "last_log": [], "winner": None,
                     "resolution_queue": [], "pending_choice": None}
     room["status"] = "playing"
     submit_cpu_cards(room)
@@ -332,6 +332,8 @@ def submit_cpu_cards(room):
         if card is not None:
             game["hands"][player["id"]].remove(card)
             game["submissions"][player["id"]] = card
+            eligible = [i for i, lane in enumerate(game["lanes"]) if set(lane[-1]["cs"]) & set(card["cs"])]
+            game.setdefault("submission_lanes", {})[player["id"]] = min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i]))) if eligible else None
 
 def finish_online_game_if_needed(room):
     game = room["game"]
@@ -344,7 +346,7 @@ def finish_online_game_if_needed(room):
 def continue_online_resolution(room):
     game = room["game"]
     while game["resolution_queue"]:
-        pid, card = game["resolution_queue"][0]
+        pid, card, requested_lane = game["resolution_queue"][0]
         player = next(p for p in room["players"] if p["id"] == pid)
         eligible = [i for i, lane in enumerate(game["lanes"])
                     if set(lane[-1]["cs"]) & set(card["cs"])]
@@ -359,7 +361,7 @@ def continue_online_resolution(room):
             game["pending_choice"] = {"player_id": pid, "card": card}
             return
         game["resolution_queue"].pop(0)
-        chosen = min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i])))
+        chosen = requested_lane if requested_lane in eligible else min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i])))
         lane = game["lanes"][chosen]
         if len(lane) >= 5:
             game["taken"][pid].extend(lane)
@@ -381,10 +383,11 @@ def continue_online_resolution(room):
 def resolve_online_turn(room):
     game = room["game"]
     game["resolution_queue"] = sorted(
-        [(pid, card) for pid, card in game["submissions"].items()],
+        [(pid, card, game.get("submission_lanes", {}).get(pid)) for pid, card in game["submissions"].items()],
         key=lambda item: item[1]["n"]
     )
     game["submissions"] = {}
+    game["submission_lanes"] = {}
     game["last_log"] = []
     game["turn"] += 1
     continue_online_resolution(room)
@@ -461,8 +464,18 @@ def submit_online_card(code):
         card = next((c for c in hand if c["n"] == card_number), None)
         if card is None:
             return jsonify(error="そのカードは手札にありません。"), 400
+        eligible = [i for i, lane in enumerate(game["lanes"]) if set(lane[-1]["cs"]) & set(card["cs"])]
+        try:
+            lane_index = int(data.get("lane_index"))
+        except (TypeError, ValueError):
+            lane_index = -1
+        if eligible and lane_index not in eligible:
+            return jsonify(error="配置できる列を選択してください。"), 400
+        if not eligible and lane_index not in (-1,):
+            return jsonify(error="このカードはどの列にも配置できません。"), 400
         hand.remove(card)
         game["submissions"][player_id] = card
+        game.setdefault("submission_lanes", {})[player_id] = lane_index if lane_index in eligible else None
         room["updated"] = time.time()
         if len(game["submissions"]) == len(room["players"]):
             resolve_online_turn(room)

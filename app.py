@@ -61,6 +61,11 @@ def catan_tutorial():
     return send_from_directory(CONTENT_DIR, "catan.html")
 
 
+@app.get("/carcassonne")
+def carcassonne_quiz():
+    return send_from_directory(CONTENT_DIR, "carcassonne.html")
+
+
 @app.get("/acquire")
 def acquire_tutorial():
     return send_from_directory(CONTENT_DIR, "acquire.html")

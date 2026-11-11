@@ -49,7 +49,7 @@ def security_headers(response):
 
 @app.get("/")
 def home():
-    return send_from_directory(CONTENT_DIR, "index.html")
+    return send_from_directory(CONTENT_DIR, "home.html")
 
 
 @app.get("/baron-nimmt")
@@ -65,6 +65,17 @@ def cpu_game():
 def valid_preview_token(token):
     expected = os.getenv("PREVIEW_URL_TOKEN", "")
     return bool(expected) and hmac.compare_digest(token, expected)
+
+
+@app.get("/preview/<token>/baron-nimmt")
+def preview_baron_nimmt(token):
+    if not valid_preview_token(token):
+        abort(404)
+    with open(os.path.join(CONTENT_DIR, "index.html"), encoding="utf-8") as file:
+        html = file.read()
+    html = html.replace('href="/baron-nimmt"', 'href="/preview/' + token + '/tutorial"')
+    html = html.replace('href="/baron-nimmt/cpu"', 'href="/preview/' + token + '/cpu"')
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 
 @app.get("/preview/<token>/cpu")
@@ -91,10 +102,9 @@ def preview_tutorial(token):
 def preview(token):
     if not valid_preview_token(token):
         abort(404)
-    with open(os.path.join(CONTENT_DIR, "index.html"), encoding="utf-8") as file:
+    with open(os.path.join(CONTENT_DIR, "home.html"), encoding="utf-8") as file:
         html = file.read()
-    html = html.replace('href="/baron-nimmt"', 'href="/preview/' + token + '/tutorial"')
-    html = html.replace('href="/baron-nimmt/cpu"', 'href="/preview/' + token + '/cpu"')
+    html = html.replace('href="/baron-nimmt"', 'href="/preview/' + token + '/baron-nimmt"')
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 

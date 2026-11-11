@@ -8,8 +8,8 @@ main{max-width:680px;margin:34px auto 60px;padding:0 17px}.section-title{text-al
 </style></head><body>
 <header><div class="brand">BOARD GAME PLAYGROUND</div><h1>ボードゲームで遊ぼう！</h1><p>遊びたいゲームを選んでください。</p></header>
 <main><h2 class="section-title">ゲームを選択</h2><p class="lead">遊びたいゲームをプルダウンから選んでください。</p>
-<section class="selector" aria-label="ゲーム選択"><label for="game-select">遊ぶゲーム</label><select id="game-select" class="game-select"><option value="">ゲームを選択してください</option><option value="/baron-nimmt">ニムト男爵</option><option value="/acquire">アクワイア</option><option value="/catan">カタン</option><option value="/carcassonne">カルカソンヌ</option></select><button id="start-game" class="action" type="button" disabled>このゲームで遊ぶ</button><p class="hint">ゲームを選択すると、遊べるようになります。</p></section>
-<div class="coming">ゲームは順次追加予定です。追加されたゲームは、このプルダウンから選べるようになります。</div></main>
+<section class="selector" aria-label="ゲーム選択"><label for="game-select">遊ぶゲーム</label><select id="game-select" class="game-select"><option value="">ゲームを選択してください</option><option value="/baron-nimmt/cpu">ニムト男爵（CPU対戦）</option></select><button id="start-game" class="action" type="button" disabled>このゲームで遊ぶ</button><p class="hint">ゲームを選択すると、遊べるようになります。</p></section>
+<div class="coming">まずはニムト男爵のCPU対戦から公開準備を進めます。他のゲームは順次追加予定です。</div></main>
 <script>
 const select = document.getElementById('game-select');
 const button = document.getElementById('start-game');

@@ -56,6 +56,11 @@ def home():
     return send_from_directory(CONTENT_DIR, "home.html")
 
 
+@app.get("/acquire")
+def acquire_tutorial():
+    return send_from_directory(CONTENT_DIR, "acquire.html")
+
+
 @app.get("/baron-nimmt")
 def tutorial():
     return send_from_directory(CONTENT_DIR, "draft.html")

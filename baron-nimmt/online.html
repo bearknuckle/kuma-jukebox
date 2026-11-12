@@ -18,7 +18,7 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 <section class="panel hidden" id="gamePanel">
   <div class="row" style="align-items:center"><h2 style="margin:0;font-size:19px;flex:2">対戦中 <span class="host" id="turnLabel">第1ターン</span></h2><button class="btn alt" id="gameLeaveBtn">退出</button></div>
   <div class="status" id="connectionStatus" role="status">接続中</div><div class="status" id="gameStatus">手札からカードを1枚選んでください。</div><div class="status hidden" id="resolutionReveal"></div>
-  <h3 style="font-size:15px;margin:14px 0 8px">場の5列</h3><div class="board" id="onlineBoard"></div><div class="status hidden" id="laneChoice"></div>
+  <h3 style="font-size:15px;margin:14px 0 8px">場の5列</h3><div class="board" id="onlineBoard"></div><div class="status hidden" id="laneChoice"></div><div class="current-play hidden" id="currentPlay"></div>
   <h3 style="font-size:15px;margin:18px 0 8px">プレイヤー</h3><div id="onlinePlayers"></div>
   <h3 style="font-size:15px;margin:18px 0 8px">あなたの手札</h3><div class="hand" id="onlineHand"></div>
   <button class="btn" id="submitCardBtn" style="width:100%" disabled>このカードを提出</button>
@@ -30,7 +30,7 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
 .board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .lane{min-width:0;background:#f7faf9;border:1px solid var(--line);border-radius:10px;padding:6px 3px;text-align:center}
 .lane h4{font-size:11px;color:var(--muted);margin:0 0 6px}
-.played{background:#fff8e9;border:1px solid #d8c9a8;border-radius:6px;padding:5px 2px;margin:4px auto;max-width:55px;font-weight:800;font-size:14px}
+.current-play{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-top:8px;border:2px solid #d49a18;border-radius:10px;background:#fff7df}.current-play .played{min-width:58px;min-height:68px;font-size:21px}.played{background:#fff8e9;border:1px solid #d8c9a8;border-radius:6px;padding:5px 2px;margin:4px auto;max-width:55px;font-weight:800;font-size:14px}
 .color-dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:4px}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .blue{background:#4c83b8}.red{background:#c85d51}.green{background:#398c69}.yellow{background:#d9a52d}.black{background:#303b42}.white{background:white;border:1px solid #aeb9bd}
@@ -71,6 +71,12 @@ function renderGame(g){
  const choosingNow=g.must_choose_lane&&g.pending_choice_mode==="place";
  $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane '+(choosingNow&&eligibleLanes.includes(i)?"target":"")+(selectedLane===i?" chosen":"")+'" data-target-lane="'+i+'"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
  $("onlineBoard").querySelectorAll(".target").forEach(el=>el.onclick=async()=>{const lane=+el.dataset.targetLane;el.style.opacity=".6";try{const d=await api("/api/rooms/"+code+"/choose-lane",{player_id:playerId,lane_index:lane});selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message;renderGame(g)}});
+ const currentPlay=$("currentPlay");
+ if(g.must_choose_lane&&g.pending_choice_mode==="place"){
+   const activeCard=g.my_hand.find(c=>c.n===g.pending_card_number);
+   currentPlay.classList.remove("hidden");
+   currentPlay.innerHTML="<b>今回置くカード</b>"+(activeCard?cardHtml(activeCard):"<strong>"+g.pending_card_number+"</strong>");
+ }else{currentPlay.classList.add("hidden");currentPlay.textContent="";}
  const choice=$("laneChoice");
  if(g.must_choose_lane&&g.pending_choice_mode==="take"){
    choice.classList.remove("hidden");

@@ -87,7 +87,7 @@ function renderGame(g){
  $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;selectedLane=null;renderGame(g)});
  $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||g.must_choose_lane;
  $("submitCardBtn").textContent=g.my_submitted?"提出済み・処理順を待っています":"このカードを提出";
- $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんが引き取る列を選択しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":selectedCard===null?"手札からカードを選んでください。":eligibleLanes.length>0?"カードを置く列を選んでください。":"置ける列がありません。カードを提出すると、引き取る列を選びます。";
+ $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane&&g.pending_choice_mode==="place"?"あなたのカード（"+g.pending_card_number+"）を処理する番です。置く列を選んでください。":g.must_choose_lane&&g.pending_choice_mode==="take"?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんのカードを処理しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの提出と処理順を待っています。":selectedCard===null?"手札からカードを1枚選んでください。":"カードを選んで提出してください。全員の提出後、数字の小さい順に処理し、自分の番に置く列を選びます。";
  $("turnLog").innerHTML=g.last_log.length?'<b>前のターンの結果</b><br>'+g.last_log.map(escapeHtml).join("<br>"):"";
  if(g.status==="finished"){$("onlineResult").classList.remove("hidden");$("onlineResult").innerHTML="<b>ゲーム終了！</b><br>"+g.players.slice().sort((a,b)=>a.score-b.score).map((p,i)=>(i+1)+"位："+escapeHtml(p.name)+" — "+p.score+"点").join("<br>")+"<br><br>勝者："+g.winner.map(escapeHtml).join("、");}
 }

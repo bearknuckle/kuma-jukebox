@@ -73,7 +73,7 @@ function renderGame(g){
  $("onlineBoard").querySelectorAll(".target").forEach(el=>el.onclick=async()=>{const lane=+el.dataset.targetLane;el.style.opacity=".6";try{const d=await api("/api/rooms/"+code+"/choose-lane",{player_id:playerId,lane_index:lane});selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message;renderGame(g)}});
  const currentPlay=$("currentPlay");
  if(g.must_choose_lane&&g.pending_choice_mode==="place"){
-   const activeCard=g.my_hand.find(c=>c.n===g.pending_card_number);
+   const activeCard=g.pending_card;
    currentPlay.classList.remove("hidden");
    currentPlay.innerHTML="<b>今回置くカード</b>"+(activeCard?cardHtml(activeCard):"<strong>"+g.pending_card_number+"</strong>");
  }else{currentPlay.classList.add("hidden");currentPlay.textContent="";}

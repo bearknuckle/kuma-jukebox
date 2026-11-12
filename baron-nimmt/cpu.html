@@ -14,7 +14,7 @@ body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spac
 <header><div class="brand">BARON NIMMT · CPU MATCH <span class="version">v0.2.0</span></div><div class="head"><h1>CPUと対戦</h1><div class="nav"><a href="/baron-nimmt/online">オンライン対戦</a><a href="/baron-nimmt">トップへ戻る</a></div></div></header>
 <main>
 <section class="panel" id="setupPanel"><div class="setup"><div class="field"><label for="count">プレイ人数（あなたを含む）</label><select id="count"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div><button class="btn" id="start">対戦を始める</button></div><div class="status" id="setupNote">人数を選び、「対戦を始める」を押してください。手札枚数は2人:24枚／3人:20枚／4〜6人:16枚／7〜8人:12枚／9〜10人:8枚です。</div><p class="small">※実物カード110枚の番号・失点数・色別牛マークを登録したカードデータを使用しています。</p></section>
-<section class="panel hidden" id="game"><div class="head"><h2 style="margin:0 0 10px;font-size:18px">場のカード列 <span class="tag" id="round">第1ターン</span></h2><button class="btn alt" id="restart" disabled>最初からやり直す</button></div><div class="board" id="board"></div><div class="result" id="message">手札からカードを1枚選んでください。</div></section>
+<section class="panel hidden" id="game"><div class="head"><h2 style="margin:0 0 10px;font-size:18px">場のカード列 <span class="tag" id="round">第1ターン</span></h2><button class="btn alt" id="restart" disabled>最初からやり直す</button></div><div class="board" id="board"></div><div class="result" id="message">手札からカードを1枚選んでください。</div><div class="status" id="resolutionReveal"></div></section>
 <section class="panel hidden" id="handPanel"><h2 style="font-size:18px;margin:0">手札 <span class="tag" id="handCount"></span></h2><div class="hand" id="hand"></div><div class="actions"><button class="btn" id="play" disabled>このカードを出す</button></div><p class="small">手札からカードを1枚選び、「このカードを出す」を押してください。CPUもカードを選び、数字の小さい順に処理します。</p></section>
 <section class="panel hidden" id="scorePanel"><h2 style="font-size:18px;margin:0 0 10px">対戦状況</h2><div class="players" id="players"></div></section>
 <section class="panel hidden" id="endPanel"><h2 style="font-size:20px;margin:0">対戦終了</h2><div id="final"></div><div class="actions"><button class="btn" id="again">もう一度遊ぶ</button></div></section>
@@ -59,6 +59,7 @@ function playTurn(){
  players[0].hand=players[0].hand.filter(c=>c.n!==selected);
  for(let i=1;i<players.length;i++){const c=chooseCpuCard(players[i]);players[i].hand=players[i].hand.filter(x=>x.n!==c.n);pendingMoves.push({p:players[i],c});}
  pendingMoves.sort((x,y)=>x.c.n-y.c.n);pendingIndex=0;turnLogs=[];selected=null;selectedLane=null;turn++;
+ $('resolutionReveal').innerHTML='<b>公開カード・処理順</b><br>'+pendingMoves.map((m,i)=>(i+1)+'. '+m.p.name+'：<b>'+m.c.n+'</b>').join('　／　');
  continueTurn();
 }
 function continueTurn(){

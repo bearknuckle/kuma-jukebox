@@ -476,6 +476,29 @@ def submit_online_card(code):
             resolve_online_turn(room)
         return jsonify(game=game_public_state(room, player_id))
 
+@app.post("/api/rooms/<code>/cancel")
+def cancel_online_submission(code):
+    data = request.get_json(silent=True) or {}
+    player_id = str(data.get("player_id", ""))
+    with ROOM_LOCK:
+        clean_rooms()
+        room = ROOMS.get(code.upper())
+        if not room or room.get("status") != "playing":
+            return jsonify(error="現在カードを取り消せるゲームがありません。"), 409
+        game = room.get("game", {})
+        if player_id not in game.get("hands", {}):
+            return jsonify(error="参加者情報を確認できません。"), 403
+        submissions = game.get("submissions", {})
+        if player_id not in submissions:
+            return jsonify(error="取り消すカードがありません。"), 409
+        if len(submissions) >= len(room["players"]):
+            return jsonify(error="全員のカード提出が完了したため、取り消せません。"), 409
+        card = submissions.pop(player_id)
+        game.setdefault("hands", {}).setdefault(player_id, []).append(card)
+        game["hands"][player_id].sort(key=lambda c: c["n"])
+        game.get("submission_lanes", {}).pop(player_id, None)
+        room["updated"] = time.time()
+        return jsonify(game=game_public_state(room, player_id))
 @app.get("/baron-nimmt/cpu")
 def cpu_game():
     return send_from_directory(CONTENT_DIR, "cpu.html")

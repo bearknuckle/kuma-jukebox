@@ -20,7 +20,7 @@ main{max-width:760px;margin:22px auto;padding:0 14px 50px}.panel{background:whit
   <div class="status" id="connectionStatus" role="status">接続中</div><div class="status" id="gameStatus">手札からカードを1枚選んでください。</div><div class="status hidden" id="resolutionReveal"></div>
   <h3 style="font-size:15px;margin:14px 0 8px">場の5列</h3><div class="board" id="onlineBoard"></div><div class="status hidden" id="laneChoice"></div><div class="current-play hidden" id="currentPlay"></div>
   <h3 style="font-size:15px;margin:18px 0 8px">あなたの手札</h3><div class="hand" id="onlineHand"></div>
-  <button class="btn" id="submitCardBtn" style="width:100%" disabled>このカードを提出</button>
+  <button class="btn" id="submitCardBtn" style="width:100%" disabled>このカードを提出</button><button class="btn danger hidden" id="cancelCardBtn" style="width:100%;margin-top:8px">提出したカードを取り消す</button>
   <h3 style="font-size:15px;margin:18px 0 8px">プレイヤー</h3><div id="onlinePlayers"></div>
   <div class="status" id="turnLog"></div>
   <div class="result hidden" id="onlineResult"></div>
@@ -95,6 +95,10 @@ function renderGame(g){
  $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;selectedLane=null;renderGame(g)});
  $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||g.must_choose_lane;
  $("submitCardBtn").textContent=g.my_submitted?"提出済み・処理順を待っています":"このカードを提出";
+ const cancelBtn=$("cancelCardBtn");
+ const canCancel=g.my_submitted&&g.submitted_count<g.players.length&&g.status==="playing"&&!g.must_choose_lane;
+ cancelBtn.classList.toggle("hidden",!canCancel);
+ cancelBtn.disabled=!canCancel;
  $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane&&g.pending_choice_mode==="place"?"あなたのカード（"+g.pending_card_number+"）を処理する番です。置く列を選んでください。":g.must_choose_lane&&g.pending_choice_mode==="take"?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんのカードを処理しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの提出と処理順を待っています。":selectedCard===null?"手札からカードを1枚選んでください。":"カードを選んで提出してください。全員の提出後、数字の小さい順に処理し、自分の番に置く列を選びます。";
  $("turnLog").innerHTML=g.last_log.length?'<b>前のターンの結果</b><br>'+g.last_log.map(escapeHtml).join("<br>"):"";
  if(g.status==="finished"){$("onlineResult").classList.remove("hidden");$("onlineResult").innerHTML="<b>ゲーム終了！</b><br>"+g.players.slice().sort((a,b)=>a.score-b.score).map((p,i)=>(i+1)+"位："+escapeHtml(p.name)+" — "+p.score+"点").join("<br>")+"<br><br>勝者："+g.winner.map(escapeHtml).join("、");}
@@ -109,6 +113,7 @@ $("joinBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms/"
 $("copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(code);$("copyBtn").textContent="コピーしました！"}catch(e){$("copyBtn").textContent="番号："+code}};
 $("startBtn").onclick=async()=>{try{await api("/api/rooms/"+code+"/start",{player_id:playerId});await refresh()}catch(e){showError(e.message,"lobbyError")}};
 $("submitCardBtn").onclick=async()=>{if(selectedCard===null)return;try{const d=await api("/api/rooms/"+code+"/play",{player_id:playerId,card_number:selectedCard});selectedCard=null;selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message}};
+$("cancelCardBtn").onclick=async()=>{const btn=$("cancelCardBtn");btn.disabled=true;try{const d=await api("/api/rooms/"+code+"/cancel",{player_id:playerId});selectedCard=null;selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message;btn.disabled=false;refresh()}};
 $("leaveBtn").onclick=leave;$("gameLeaveBtn").onclick=leave;
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&code)refresh();});
 window.addEventListener("online",()=>{if(code){connectionState("通信復旧。再接続中…","retry");refresh();}});

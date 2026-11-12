@@ -67,14 +67,17 @@ function cardHtml(c){return '<div class="played">'+c.n+'<div class="color-dots">
 function renderGame(g){
  latestGame=g;$("lobby").classList.add("hidden");$("gamePanel").classList.remove("hidden");$("turnLabel").textContent="第"+(g.turn+1)+"ターン";
  const selectedForLane=g.my_hand.find(c=>c.n===selectedCard);
- const eligibleLanes=selectedForLane?g.lanes.map((lane,i)=>({lane,i})).filter(x=>x.lane[x.lane.length-1].cs.some(color=>selectedForLane.cs.includes(color))).map(x=>x.i):[];
- $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane '+(eligibleLanes.includes(i)&&!g.my_submitted?"target":"")+(selectedLane===i?" chosen":"")+'" data-target-lane="'+i+'"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
- $("onlineBoard").querySelectorAll(".target").forEach(el=>el.onclick=()=>{selectedLane=+el.dataset.targetLane;renderGame(g)});
+ const eligibleLanes=g.must_choose_lane&&g.pending_choice_mode==="place"?g.pending_lanes:(selectedForLane?g.lanes.map((lane,i)=>({lane,i})).filter(x=>x.lane[x.lane.length-1].cs.some(color=>selectedForLane.cs.includes(color))).map(x=>x.i):[]);
+ const choosingNow=g.must_choose_lane&&g.pending_choice_mode==="place";
+ $("onlineBoard").innerHTML=g.lanes.map((lane,i)=>'<div class="lane '+(choosingNow&&eligibleLanes.includes(i)?"target":"")+(selectedLane===i?" chosen":"")+'" data-target-lane="'+i+'"><h4>'+ (i+1)+'列目 · '+lane.length+'枚</h4>'+lane.map(cardHtml).join("")+'</div>').join("");
+ $("onlineBoard").querySelectorAll(".target").forEach(el=>el.onclick=async()=>{const lane=+el.dataset.targetLane;el.style.opacity=".6";try{const d=await api("/api/rooms/"+code+"/choose-lane",{player_id:playerId,lane_index:lane});selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message;renderGame(g)}});
  const choice=$("laneChoice");
- if(g.must_choose_lane){
+ if(g.must_choose_lane&&g.pending_choice_mode==="take"){
    choice.classList.remove("hidden");
    choice.innerHTML="<b>置ける列がありません。</b><br>引き取る列を選んでください。<div class='row' style='margin-top:10px'>"+g.lanes.map((lane,i)=>"<button class='btn alt' data-lane='"+i+"'>"+(i+1)+"列目を引き取る</button>").join("")+"</div>";
    choice.querySelectorAll("button").forEach(btn=>btn.onclick=async()=>{btn.disabled=true;try{const d=await api("/api/rooms/"+code+"/choose-lane",{player_id:playerId,lane_index:+btn.dataset.lane});renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message;btn.disabled=false}});
+ }else if(g.must_choose_lane&&g.pending_choice_mode==="place"){
+   choice.classList.remove("hidden");choice.textContent="あなたのカード（"+g.pending_card_number+"）を処理する番です。置く列を選んでください。";
  }else{
    choice.classList.toggle("hidden",!g.pending_choice);
    choice.textContent=g.pending_choice?(g.pending_player_name+"さんが引き取る列を選択しています。"):"";
@@ -82,8 +85,8 @@ function renderGame(g){
  $("onlinePlayers").innerHTML=g.players.map(p=>'<div class="player '+(p.id===playerId?"me":"")+'"><strong>'+escapeHtml(p.name)+(p.id===playerId?"（あなた）":"")+'</strong><div class="small">手札 '+p.hand_count+'枚 / 獲得 '+p.taken_count+'枚 / 失点 '+p.score+'点</div><div class="small">'+(p.submitted?"カード提出済み":"選択中")+'</div></div>').join("");
  $("onlineHand").innerHTML=g.my_hand.map(c=>'<button class="handcard '+(selectedCard===c.n?"selected":"")+'" data-n="'+c.n+'" '+(g.my_submitted||g.status==="finished"?"disabled":"")+'>'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div><div class="small">'+c.penalty+'点</div></button>').join("");
  $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;selectedLane=null;renderGame(g)});
- $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||(eligibleLanes.length>0&&selectedLane===null);
- $("submitCardBtn").textContent=g.my_submitted?"提出済み・他のプレイヤーを待っています":eligibleLanes.length>0?(selectedLane===null?"場の列を選んでください":"選んだ列にカードを提出"):"このカードを提出（配置できる列なし）";
+ $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||g.must_choose_lane;
+ $("submitCardBtn").textContent=g.my_submitted?"提出済み・処理順を待っています":"このカードを提出";
  $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんが引き取る列を選択しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの選択を待っています。":selectedCard===null?"手札からカードを選んでください。":eligibleLanes.length>0?"カードを置く列を選んでください。":"置ける列がありません。カードを提出すると、引き取る列を選びます。";
  $("turnLog").innerHTML=g.last_log.length?'<b>前のターンの結果</b><br>'+g.last_log.map(escapeHtml).join("<br>"):"";
  if(g.status==="finished"){$("onlineResult").classList.remove("hidden");$("onlineResult").innerHTML="<b>ゲーム終了！</b><br>"+g.players.slice().sort((a,b)=>a.score-b.score).map((p,i)=>(i+1)+"位："+escapeHtml(p.name)+" — "+p.score+"点").join("<br>")+"<br><br>勝者："+g.winner.map(escapeHtml).join("、");}
@@ -97,7 +100,7 @@ $("createBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms
 $("joinBtn").onclick=async()=>{showError("");try{const d=await api("/api/rooms/"+$("joinCode").value.trim().toUpperCase()+"/join",{name:$("joinName").value});code=d.room.code;playerId=d.player_id;isHost=false;saveSession();enterLobby(d.room)}catch(e){showError(e.message)}};
 $("copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(code);$("copyBtn").textContent="コピーしました！"}catch(e){$("copyBtn").textContent="番号："+code}};
 $("startBtn").onclick=async()=>{try{await api("/api/rooms/"+code+"/start",{player_id:playerId});await refresh()}catch(e){showError(e.message,"lobbyError")}};
-$("submitCardBtn").onclick=async()=>{if(selectedCard===null)return;try{const card=latestGame.my_hand.find(c=>c.n===selectedCard);const eligible=card?latestGame.lanes.map((lane,i)=>({lane,i})).filter(x=>x.lane[x.lane.length-1].cs.some(color=>card.cs.includes(color))).map(x=>x.i):[];const d=await api("/api/rooms/"+code+"/play",{player_id:playerId,card_number:selectedCard,lane_index:eligible.length?selectedLane:-1});selectedCard=null;selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message}};
+$("submitCardBtn").onclick=async()=>{if(selectedCard===null)return;try{const d=await api("/api/rooms/"+code+"/play",{player_id:playerId,card_number:selectedCard});selectedCard=null;selectedLane=null;renderGame(d.game)}catch(e){$("gameStatus").textContent=e.message}};
 $("leaveBtn").onclick=leave;$("gameLeaveBtn").onclick=leave;
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&code)refresh();});
 window.addEventListener("online",()=>{if(code){connectionState("通信復旧。再接続中…","retry");refresh();}});

@@ -22,14 +22,28 @@ body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spac
 <script>
 const COLORS=['blue','red','green','yellow','black','white'];
 const HAND={2:24,3:20,4:16,5:16,6:16,7:12,8:12,9:8,10:8};
-let players=[],lanes=[],selected=null,selectedLane=null,turn=0,finished=false,deck=[],CARD_DATA=[];
+let players=[],lanes=[],selected=null,selectedLane=null,turn=0,finished=false,deck=[],CARD_DATA=[],pendingMoves=[],pendingIndex=0,turnLogs=[];
 const $=id=>document.getElementById(id);
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-async function start(){let count=+$('count').value,handSize=HAND[count];$('start').disabled=true;$('restart').disabled=true;$('setupNote').textContent='正式カードデータを読み込んでいます…';try{if(!CARD_DATA.length){const response=await fetch('/baron-nimmt/cards.json',{cache:'no-store'});if(!response.ok)throw new Error('カードデータを読み込めませんでした');const raw=await response.json();CARD_DATA=raw.cards.map(([n,penalty,ids])=>({n,penalty,cs:ids.map(i=>raw.colors[i]),special:n===52||n===104}));}if(CARD_DATA.length!==110)throw new Error('カードデータが110枚ではありません');deck=shuffle(CARD_DATA.map(c=>({...c,cs:[...c.cs]})));}catch(e){$('setupNote').textContent=e.message;$('start').disabled=false;return;}finally{$('start').disabled=false;$('restart').disabled=false;}players=Array.from({length:count},(_,i)=>({name:i===0?'あなた':'CPU '+i,hand:deck.splice(0,handSize).sort((a,b)=>a.n-b.n),taken:[],isMe:i===0}));lanes=Array.from({length:5},()=>[deck.pop()]);turn=0;selected=null;selectedLane=null;finished=false;$('setupPanel').classList.add('hidden');$('game').classList.remove('hidden');$('handPanel').classList.remove('hidden');$('scorePanel').classList.remove('hidden');$('endPanel').classList.add('hidden');$('restart').disabled=false;render();$('message').textContent='手札からカードを1枚選んでください。';}
+async function start(){let count=+$('count').value,handSize=HAND[count];$('start').disabled=true;$('restart').disabled=true;$('setupNote').textContent='正式カードデータを読み込んでいます…';try{if(!CARD_DATA.length){const response=await fetch('/baron-nimmt/cards.json',{cache:'no-store'});if(!response.ok)throw new Error('カードデータを読み込めませんでした');const raw=await response.json();CARD_DATA=raw.cards.map(([n,penalty,ids])=>({n,penalty,cs:ids.map(i=>raw.colors[i]),special:n===52||n===104}));}if(CARD_DATA.length!==110)throw new Error('カードデータが110枚ではありません');deck=shuffle(CARD_DATA.map(c=>({...c,cs:[...c.cs]})));}catch(e){$('setupNote').textContent=e.message;$('start').disabled=false;return;}finally{$('start').disabled=false;$('restart').disabled=false;}players=Array.from({length:count},(_,i)=>({name:i===0?'あなた':'CPU '+i,hand:deck.splice(0,handSize).sort((a,b)=>a.n-b.n),taken:[],isMe:i===0}));lanes=Array.from({length:5},()=>[deck.pop()]);turn=0;selected=null;selectedLane=null;finished=false;pendingMoves=[];pendingIndex=0;turnLogs=[];$('setupPanel').classList.add('hidden');$('game').classList.remove('hidden');$('handPanel').classList.remove('hidden');$('scorePanel').classList.remove('hidden');$('endPanel').classList.add('hidden');$('restart').disabled=false;render();$('message').textContent='手札からカードを1枚選んでください。';}
 function bullCount(card){return card.penalty}
 function scoreCards(cards){return cards.reduce((s,c)=>s+c.penalty,0)}
 function cardHTML(c){return '<div class="card"><b>'+c.n+'</b><span>🐂</span><div class="bulls">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join('')+'</div></div>'}
-function render(){ $('round').textContent='第'+(turn+1)+'ターン';const chosenCard=players[0]?.hand.find(c=>c.n===selected);const eligible=chosenCard?matchingRows(chosenCard):[];$('board').innerHTML=lanes.map((l,i)=>'<div class="lane '+(eligible.includes(i)?'target':'')+(selectedLane===i?' chosen':'')+'" data-lane="'+i+'"><h3>'+ (i+1)+'列目 · '+l.length+'枚</h3><div class="cards">'+l.map(cardHTML).join('')+'</div></div>').join('');$('board').querySelectorAll('.target').forEach(el=>el.onclick=()=>{selectedLane=+el.dataset.lane;render();});$('handCount').textContent=players[0].hand.length+'枚';$('hand').innerHTML=players[0].hand.map(c=>'<button class="handcard '+(selected===c.n?'selected':'')+'" data-n="'+c.n+'"><b>'+c.n+'</b><span>🐂</span><div class="bulls">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join('')+'</div></button>').join('');$('hand').querySelectorAll('button').forEach(b=>b.onclick=()=>{selected=+b.dataset.n;selectedLane=null;render();});$('play').disabled=selected===null||finished||(eligible.length>0&&selectedLane===null);$('play').textContent=eligible.length>0?(selectedLane===null?'置く列を選んでください':'選んだ列にカードを出す'):'このカードを出す（列を引き取り）';renderPlayers();}
+function render(){
+ $('round').textContent='第'+(turn+1)+'ターン';
+ const active=pendingMoves[pendingIndex];
+ const focusCard=active&&active.p.isMe?active.c:players[0]?.hand.find(c=>c.n===selected);
+ const eligible=focusCard?matchingRows(focusCard):[];
+ $('board').innerHTML=lanes.map((l,i)=>'<div class="lane '+(eligible.includes(i)?'target':'')+(selectedLane===i?' chosen':'')+'" data-lane="'+i+'"><h3>'+(i+1)+'列目 · '+l.length+'枚</h3><div class="cards">'+l.map(cardHTML).join('')+'</div></div>').join('');
+ $('board').querySelectorAll('.target').forEach(el=>el.onclick=()=>{const lane=+el.dataset.lane;if(active&&active.p.isMe){const log=resolveCard(active.p,active.c,lane);turnLogs.push(log);pendingIndex++;selectedLane=null;continueTurn();}else{selectedLane=lane;render();}});
+ $('handCount').textContent=players[0].hand.length+'枚';
+ $('hand').innerHTML=players[0].hand.map(c=>'<button class="handcard '+(selected===c.n?'selected':'')+'" data-n="'+c.n+'" '+(pendingMoves.length?'disabled':'')+'><b>'+c.n+'</b><span>🐂</span><div class="bulls">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join('')+'</div></button>').join('');
+ $('hand').querySelectorAll('button').forEach(btn=>btn.onclick=()=>{selected=+btn.dataset.n;selectedLane=null;render();});
+ $('play').disabled=selected===null||finished||pendingMoves.length>0;
+ $('play').textContent='このカードを出す';
+ if(active&&active.p.isMe){$('message').textContent='あなたのカード（'+active.c.n+'）を処理します。置く列を選んでください。';}
+ renderPlayers();
+}
 function matchingRows(card){return lanes.map((l,i)=>l[l.length-1].cs.some(c=>card.cs.includes(c))?i:-1).filter(i=>i>=0)}
 function lanePenalty(lane,card){let same=card.cs.filter(c=>lane[lane.length-1].cs.includes(c)).length;return scoreCards(lane)+same*2}
 function chooseCpuCard(p){let best=p.hand[0],bestVal=Infinity;for(const c of p.hand){let rows=matchingRows(c);let val;if(!rows.length)val=100+Math.min(...lanes.map(l=>scoreCards(l)));else val=Math.min(...rows.map(i=>{let l=lanes[i];return l.length>=5?scoreCards(l)+20:scoreCards(l)+l.length*.35}));if(val<bestVal){bestVal=val;best=c}}return best}
@@ -38,7 +52,25 @@ function resolveCard(player,card,manualLane=null){let rows=matchingRows(card);le
 chosen=manualLane!==null&&rows.includes(manualLane)?manualLane:rows.sort((a,b)=>lanes[a].length-lanes[b].length||scoreCards(lanes[a])-scoreCards(lanes[b]))[0];let lane=lanes[chosen];if(lane.length>=5){let n=takeLane(chosen,player,card,'sixth');return player.name+'：6枚目 → '+(chosen+1)+'列目を引き取り（'+n+'枚）';}
 lane.push(card);let totals=COLORS.map(color=>lane.reduce((s,c)=>s+c.cs.filter(x=>x===color).length,0));if(Math.max(...totals)>=6){let n=takeLane(chosen,player,card,'color');return player.name+'：同色6つ以上 → '+(chosen+1)+'列目を引き取り（'+n+'枚）';}
 return player.name+'：'+card.n+'を'+(chosen+1)+'列目へ配置';}
-function playTurn(){if(selected===null||finished)return;let chosen=players[0].hand.find(c=>c.n===selected);let humanLane=matchingRows(chosen).length?selectedLane:null;let moves=[{p:players[0],c:chosen,lane:humanLane}];players[0].hand=players[0].hand.filter(c=>c.n!==selected);for(let i=1;i<players.length;i++){let c=chooseCpuCard(players[i]);players[i].hand=players[i].hand.filter(x=>x.n!==c.n);moves.push({p:players[i],c});}moves.sort((a,b)=>a.c.n-b.c.n);let logs=[];for(const m of moves)logs.push(resolveCard(m.p,m.c,m.lane??null));turn++;selected=null;selectedLane=null;render();$('message').innerHTML='<b>今回の処理結果</b><br>'+logs.join('<br>');if(players[0].hand.length===0){finished=true;showEnd();}else $('play').disabled=true;}
+function playTurn(){
+ if(selected===null||finished||pendingMoves.length)return;
+ const chosen=players[0].hand.find(c=>c.n===selected);
+ pendingMoves=[{p:players[0],c:chosen}];
+ players[0].hand=players[0].hand.filter(c=>c.n!==selected);
+ for(let i=1;i<players.length;i++){const c=chooseCpuCard(players[i]);players[i].hand=players[i].hand.filter(x=>x.n!==c.n);pendingMoves.push({p:players[i],c});}
+ pendingMoves.sort((x,y)=>x.c.n-y.c.n);pendingIndex=0;turnLogs=[];selected=null;selectedLane=null;turn++;
+ continueTurn();
+}
+function continueTurn(){
+ while(pendingIndex<pendingMoves.length){
+  const move=pendingMoves[pendingIndex];
+  if(move.p.isMe&&matchingRows(move.c).length){render();return;}
+  turnLogs.push(resolveCard(move.p,move.c,null));pendingIndex++;
+ }
+ pendingMoves=[];pendingIndex=0;selectedLane=null;render();
+ $('message').innerHTML='<b>今回の処理結果</b><br>'+turnLogs.join('<br>');
+ if(players[0].hand.length===0){finished=true;showEnd();}
+}
 function renderPlayers(){$('players').innerHTML=players.map(p=>'<div class="player '+(p.isMe?'me':'')+'"><strong>'+p.name+'</strong><p>手札：'+p.hand.length+'枚</p><p>獲得カード：'+p.taken.length+'枚</p><p>失点：'+scoreCards(p.taken)+'</p></div>').join('');}
 function showEnd(){ $('handPanel').classList.add('hidden');$('endPanel').classList.remove('hidden');let ranking=players.map(p=>({p,s:scoreCards(p.taken)})).sort((a,b)=>a.s-b.s);$('final').innerHTML='<div class="result">'+ranking.map((x,i)=>(i+1)+'位：'+x.p.name+' — '+x.s+'点').join('<br>')+'<br><br><b>'+(ranking[0].p.isMe?'あなたの勝ち！':ranking[0].p.name+'の勝ち！')+'</b></div>';renderPlayers();}
 $('start').onclick=start;$('restart').onclick=start;$('play').onclick=playTurn;$('again').onclick=start;

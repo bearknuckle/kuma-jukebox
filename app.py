@@ -290,6 +290,7 @@ def game_public_state(room, player_id):
         "pending_choice_mode": pending.get("mode") if pending and pending["player_id"] == player_id else None,
         "pending_lanes": pending_lanes,
         "pending_card_number": pending["card"]["n"] if pending and pending["player_id"] == player_id else None,
+        "revealed_cards": [{"player_name": next((p["name"] for p in room["players"] if p["id"] == pid), "プレイヤー"), "card_number": card["n"]} for pid, card, _ in game.get("resolution_queue", [])],
         "pending_choice": bool(pending),
         "pending_player_name": next((p["name"] for p in room["players"] if pending and p["id"] == pending["player_id"]), None)
     }

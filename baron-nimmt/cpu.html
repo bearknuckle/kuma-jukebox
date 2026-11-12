@@ -35,7 +35,7 @@ function render(){
  const focusCard=active&&active.p.isMe?active.c:players[0]?.hand.find(c=>c.n===selected);
  const eligible=focusCard?(matchingRows(focusCard).length?matchingRows(focusCard):[0,1,2,3,4]):[];
  const taking=!!(active&&active.p.isMe&&matchingRows(active.c).length===0);
- $('board').innerHTML=lanes.map((l,i)=>'<div class="lane '+(eligible.includes(i)?'target':'')+(selectedLane===i?' chosen':'')+'" data-action="'+(taking?'ここを引き取る':'ここに置く')+'" data-lane="'+i+'"><h3>'+(i+1)+'列目 · '+l.length+'枚</h3><div class="cards">'+l.map(cardHTML).join('')+'</div></div>').join('');
+ $('board').innerHTML=lanes.map((l,i)=>'<div class="lane '+(eligible.includes(i)?'target':'')+(taking&&selectedLane===i?' chosen':'')+'" data-action="'+(taking?'ここを引き取る':'ここに置く')+'" data-lane="'+i+'"><h3>'+(i+1)+'列目 · '+l.length+'枚</h3><div class="cards">'+l.map(cardHTML).join('')+'</div></div>').join('');
  $('board').querySelectorAll('.target').forEach(el=>el.onclick=()=>{const lane=+el.dataset.lane;if(active&&active.p.isMe){const log=resolveCard(active.p,active.c,lane);turnLogs.push(log);pendingIndex++;selectedLane=null;continueTurn();}else{selectedLane=lane;render();}});
  $('handCount').textContent=players[0].hand.length+'枚';
  $('hand').innerHTML=players[0].hand.map(c=>'<button class="handcard '+(selected===c.n?'selected':'')+'" data-n="'+c.n+'" '+(pendingMoves.length?'disabled':'')+'><b>'+c.n+'</b><span>🐂</span><div class="bulls">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join('')+'</div></button>').join('');

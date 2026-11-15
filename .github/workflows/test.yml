@@ -1,0 +1,40 @@
+name: Tests
+
+# Runs the test suite on every pull request and on pushes to main.
+# Render can be set to deploy only after these checks pass
+# (Settings > Build & Deploy > Auto-Deploy: "After CI Checks Pass").
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Check that the app imports
+        run: python -c "import app"
+
+      - name: Run tests
+        run: pytest -q

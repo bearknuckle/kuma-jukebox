@@ -42,3 +42,12 @@ boardgame-tutorial/
 現在は期間制限を無効にし、通常アクセスで閲覧できる設定です。
 
 期間制限を再度有効にする場合は、Renderの環境変数に `PUBLIC_WINDOW_ENABLED=true` を設定し、`PUBLIC_START_JST` と `PUBLIC_END_JST` に日本時間の開始・終了日時を設定します。
+
+## テスト
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+Pull Request と `main` への push のたびに、GitHub Actions（`.github/workflows/test.yml`）で同じテストが自動で実行されます。

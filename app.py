@@ -31,7 +31,7 @@ def public_room(room):
         "host_id": room["host_id"],
         "host_name": room["host_name"],
         "max_players": room["max_players"],
-        "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"], "is_cpu": p.get("is_cpu", False), "is_cpu": p.get("is_cpu", False)} for p in room["players"]],
+        "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"], "is_cpu": p.get("is_cpu", False)} for p in room["players"]],
         "status": room["status"],
         "created": room["created"]
     }
@@ -192,6 +192,19 @@ def leave_room(code):
             return jsonify(ok=True)
         player = next((p for p in room["players"] if p["id"] == player_id), None)
         if not player:
+            return jsonify(ok=True)
+
+        # Before the game starts, free the seat instead of filling it with a CPU.
+        if room["status"] == "waiting":
+            room["players"].remove(player)
+            humans = [p for p in room["players"] if not p.get("is_cpu")]
+            if not humans:
+                ROOMS.pop(room["code"], None)
+                return jsonify(ok=True, room_closed=True)
+            if player_id == room["host_id"]:
+                room["host_id"] = humans[0]["id"]
+                room["host_name"] = humans[0]["name"]
+            room["updated"] = time.time()
             return jsonify(ok=True)
 
         # Keep the seat and game state, but hand control to a CPU.
@@ -462,6 +475,8 @@ def submit_online_card(code):
         hand = game.get("hands", {}).get(player_id)
         if hand is None:
             return jsonify(error="参加者情報を確認できません。"), 403
+        if game.get("pending_choice") or game.get("resolution_queue"):
+            return jsonify(error="前のターンのカードを処理中です。処理が終わるまでお待ちください。"), 409
         if player_id in game["submissions"]:
             return jsonify(error="このターンはすでにカードを提出しています。"), 409
         card = next((c for c in hand if c["n"] == card_number), None)
@@ -488,6 +503,8 @@ def cancel_online_submission(code):
         game = room.get("game", {})
         if player_id not in game.get("hands", {}):
             return jsonify(error="参加者情報を確認できません。"), 403
+        if game.get("pending_choice") or game.get("resolution_queue"):
+            return jsonify(error="カードの処理中は取り消せません。"), 409
         submissions = game.get("submissions", {})
         if player_id not in submissions:
             return jsonify(error="取り消すカードがありません。"), 409

@@ -224,17 +224,8 @@ def leave_room(code):
             pending = game.get("pending_choice")
             if pending and pending["player_id"] == player_id:
                 # Resolve an outstanding lane choice automatically for the new CPU.
-                lane_index = min(
-                    range(5),
-                    key=lambda i: (
-                        sum(c["penalty"] for c in game["lanes"][i]),
-                        len(game["lanes"][i])
-                    )
-                )
                 card = pending["card"]
-                game["taken"][player_id].extend(game["lanes"][lane_index])
-                game["lanes"][lane_index] = [card]
-                game["last_log"].append(player["name"] + "：CPUが" + str(lane_index + 1) + "列目を選んで引き取り")
+                play_card_to_lane(game, player, card, cpu_lane_choice(game["lanes"], card))
                 game["pending_choice"] = None
                 if game["resolution_queue"]:
                     game["resolution_queue"].pop(0)
@@ -276,6 +267,52 @@ def load_baron_cards():
         raw = json.load(f)
     return [{"n": row[0], "penalty": row[1], "cs": [raw["colors"][i] for i in row[2]]} for row in raw["cards"]]
 
+
+# ---- Lane rules (shared by CPU resolution, human choices and leaving players) ----
+
+def lane_penalty(lane):
+    return sum(c["penalty"] for c in lane)
+
+def matching_lanes(lanes, card):
+    """Indexes of lanes whose last card shares at least one color with card."""
+    return [i for i, lane in enumerate(lanes) if set(lane[-1]["cs"]) & set(card["cs"])]
+
+def cpu_lane_choice(lanes, card):
+    """Shortest/cheapest matching lane, or the cheapest lane to take if none match."""
+    eligible = matching_lanes(lanes, card)
+    if eligible:
+        return min(eligible, key=lambda i: (len(lanes[i]), lane_penalty(lanes[i])))
+    return min(range(len(lanes)), key=lambda i: (lane_penalty(lanes[i]), len(lanes[i])))
+
+def play_card_to_lane(game, player, card, lane_index, chosen_by_player=False):
+    """Apply card to lane_index and log the result.
+
+    The caller must pass a matching lane when one exists; when no lane
+    matches, lane_index is the lane the player takes.
+    """
+    lanes = game["lanes"]
+    taken = game["taken"][player["id"]]
+    lane = lanes[lane_index]
+    label = player["name"] + "：" + str(lane_index + 1) + "列目"
+    log = game["last_log"]
+    if not matching_lanes(lanes, card):
+        taken.extend(lane)
+        lanes[lane_index] = [card]
+        verb = "を選んで引き取り" if chosen_by_player else "を引き取り"
+        log.append(player["name"] + "：置ける列がないため" + str(lane_index + 1) + "列目" + verb)
+    elif len(lane) >= 5:
+        taken.extend(lane)
+        lanes[lane_index] = [card]
+        log.append(label + "を引き取り（6枚目）")
+    else:
+        lane.append(card)
+        if any(sum(c["cs"].count(color) for c in lane) >= 6 for color in {x for c in lane for x in c["cs"]}):
+            taken.extend(lane[:-1])
+            lanes[lane_index] = [card]
+            log.append(label + "を引き取り（同色6つ以上）")
+        else:
+            log.append(player["name"] + "：" + str(card["n"]) + "を" + str(lane_index + 1) + "列目へ配置")
+
 def game_public_state(room, player_id):
     game = room.get("game")
     if not game:
@@ -284,7 +321,7 @@ def game_public_state(room, player_id):
     if not me:
         return None
     pending = game.get("pending_choice")
-    pending_lanes = [i for i, lane in enumerate(game["lanes"]) if pending and pending["player_id"] == player_id and pending.get("mode") == "place" and set(lane[-1]["cs"]) & set(pending["card"]["cs"])]
+    pending_lanes = matching_lanes(game["lanes"], pending["card"]) if pending and pending["player_id"] == player_id and pending.get("mode") == "place" else []
     return {
         "turn": game["turn"],
         "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"],
@@ -333,11 +370,11 @@ def choose_cpu_online_card(room, player):
     if not hand:
         return None
     def value(card):
-        eligible = [lane for lane in game["lanes"] if set(lane[-1]["cs"]) & set(card["cs"])]
-        if not eligible:
-            return 100 + min(sum(c["penalty"] for c in lane) for lane in game["lanes"])
-        lane = min(eligible, key=lambda x: (len(x), sum(c["penalty"] for c in x)))
-        return (30 if len(lane) >= 5 else 0) + sum(c["penalty"] for c in lane) + len(lane) * 0.4 + card["penalty"] * 0.15
+        lanes = game["lanes"]
+        if not matching_lanes(lanes, card):
+            return 100 + min(lane_penalty(lane) for lane in lanes)
+        lane = lanes[cpu_lane_choice(lanes, card)]
+        return (30 if len(lane) >= 5 else 0) + lane_penalty(lane) + len(lane) * 0.4 + card["penalty"] * 0.15
     return min(hand, key=value)
 
 def submit_cpu_cards(room):
@@ -351,8 +388,6 @@ def submit_cpu_cards(room):
         if card is not None:
             game["hands"][player["id"]].remove(card)
             game["submissions"][player["id"]] = card
-            eligible = [i for i, lane in enumerate(game["lanes"]) if set(lane[-1]["cs"]) & set(card["cs"])]
-            game.setdefault("submission_lanes", {})[player["id"]] = min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i]))) if eligible else None
 
 def finish_online_game_if_needed(room):
     game = room["game"]
@@ -367,27 +402,11 @@ def continue_online_resolution(room):
     while game["resolution_queue"]:
         pid, card, _requested_lane = game["resolution_queue"][0]
         player = next(p for p in room["players"] if p["id"] == pid)
-        eligible = [i for i, lane in enumerate(game["lanes"]) if set(lane[-1]["cs"]) & set(card["cs"])]
         if not player.get("is_cpu"):
-            game["pending_choice"] = {"player_id": pid, "card": card, "mode": "place" if eligible else "take"}
+            mode = "place" if matching_lanes(game["lanes"], card) else "take"
+            game["pending_choice"] = {"player_id": pid, "card": card, "mode": mode}
             return
-        if not eligible:
-            chosen = min(range(5), key=lambda i: (sum(c["penalty"] for c in game["lanes"][i]), len(game["lanes"][i])))
-            game["taken"][pid].extend(game["lanes"][chosen]); game["lanes"][chosen] = [card]
-            game["last_log"].append(player["name"] + "：置ける列がないため" + str(chosen + 1) + "列目を引き取り")
-            game["resolution_queue"].pop(0); continue
-        chosen = min(eligible, key=lambda i: (len(game["lanes"][i]), sum(c["penalty"] for c in game["lanes"][i])))
-        lane = game["lanes"][chosen]
-        if len(lane) >= 5:
-            game["taken"][pid].extend(lane); game["lanes"][chosen] = [card]
-            game["last_log"].append(player["name"] + "：" + str(chosen + 1) + "列目を引き取り（6枚目）")
-            game["resolution_queue"].pop(0); continue
-        lane.append(card)
-        color_totals = {color: sum(c["cs"].count(color) for c in lane) for color in ("red", "blue", "green", "yellow", "black", "white")}
-        if max(color_totals.values(), default=0) >= 6:
-            game["taken"][pid].extend(lane[:-1]); game["lanes"][chosen] = [card]
-            game["last_log"].append(player["name"] + "：" + str(chosen + 1) + "列目を引き取り（同色6つ以上）")
-        else: game["last_log"].append(player["name"] + "：" + str(card["n"]) + "を" + str(chosen + 1) + "列目へ配置")
+        play_card_to_lane(game, player, card, cpu_lane_choice(game["lanes"], card))
         game["resolution_queue"].pop(0)
     game["pending_choice"] = None
     finish_online_game_if_needed(room)
@@ -421,23 +440,10 @@ def choose_online_lane(code):
         if not pending or pending["player_id"] != player_id: return jsonify(error="列を選択する順番ではありません。"), 403
         if not 0 <= lane_index < 5: return jsonify(error="列の指定が正しくありません。"), 400
         card = pending["card"]; player = next(p for p in room["players"] if p["id"] == player_id)
-        if pending.get("mode") == "place":
-            eligible = [i for i, lane in enumerate(game["lanes"]) if set(lane[-1]["cs"]) & set(card["cs"])]
-            if lane_index not in eligible: return jsonify(error="その列には配置できません。"), 400
-            lane = game["lanes"][lane_index]
-            if len(lane) >= 5:
-                game["taken"][player_id].extend(lane); game["lanes"][lane_index] = [card]
-                game["last_log"].append(player["name"] + "：" + str(lane_index + 1) + "列目を引き取り（6枚目）")
-            else:
-                lane.append(card)
-                totals = {color: sum(c["cs"].count(color) for c in lane) for color in ("red", "blue", "green", "yellow", "black", "white")}
-                if max(totals.values(), default=0) >= 6:
-                    game["taken"][player_id].extend(lane[:-1]); game["lanes"][lane_index] = [card]
-                    game["last_log"].append(player["name"] + "：" + str(lane_index + 1) + "列目を引き取り（同色6つ以上）")
-                else: game["last_log"].append(player["name"] + "：" + str(card["n"]) + "を" + str(lane_index + 1) + "列目へ配置")
-        else:
-            game["taken"][player_id].extend(game["lanes"][lane_index]); game["lanes"][lane_index] = [card]
-            game["last_log"].append(player["name"] + "：置ける列がないため" + str(lane_index + 1) + "列目を選んで引き取り")
+        eligible = matching_lanes(game["lanes"], card)
+        if eligible and lane_index not in eligible:
+            return jsonify(error="その列には配置できません。"), 400
+        play_card_to_lane(game, player, card, lane_index, chosen_by_player=True)
         game["pending_choice"] = None
         if game["resolution_queue"]: game["resolution_queue"].pop(0)
         continue_online_resolution(room)

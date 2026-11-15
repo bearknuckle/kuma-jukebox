@@ -95,10 +95,10 @@ function renderGame(g){
  $("onlinePlayers").innerHTML=g.players.map(p=>'<div class="player '+(p.id===playerId?"me":"")+'"><strong>'+escapeHtml(p.name)+(p.id===playerId?"（あなた）":"")+'</strong><div class="small">手札 '+p.hand_count+'枚 / 獲得 '+p.taken_count+'枚 / 失点 '+p.score+'点</div><div class="small">'+(p.submitted?"カード提出済み":"選択中")+'</div></div>').join("");
  $("onlineHand").innerHTML=g.my_hand.map(c=>'<button class="handcard '+(selectedCard===c.n?"selected":"")+'" data-n="'+c.n+'" '+(g.my_submitted||g.status==="finished"?"disabled":"")+'>'+c.n+'<div class="color-dots">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join("")+'</div><div class="small">'+c.penalty+'点</div></button>').join("");
  $("onlineHand").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCard=+b.dataset.n;selectedLane=null;renderGame(g)});
- $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||g.must_choose_lane;
+ $("submitCardBtn").disabled=selectedCard===null||g.my_submitted||g.status==="finished"||g.must_choose_lane||g.pending_choice;
  $("submitCardBtn").textContent=g.my_submitted?"提出済み・処理順を待っています":"このカードを提出";
  const cancelBtn=$("cancelCardBtn");
- const canCancel=g.my_submitted&&g.submitted_count<g.players.length&&g.status==="playing"&&!g.must_choose_lane;
+ const canCancel=g.my_submitted&&g.submitted_count<g.players.length&&g.status==="playing"&&!g.must_choose_lane&&!g.pending_choice;
  cancelBtn.classList.toggle("hidden",!canCancel);
  cancelBtn.disabled=!canCancel;
  $("gameStatus").textContent=g.status==="finished"?"対戦が終了しました。":g.must_choose_lane&&g.pending_choice_mode==="place"?"あなたのカード（"+g.pending_card_number+"）を処理する番です。置く列を選んでください。":g.must_choose_lane&&g.pending_choice_mode==="take"?"置ける列がありません。引き取る列を選択してください。":g.pending_choice?g.pending_player_name+"さんのカードを処理しています。":g.my_submitted?"カードを提出しました。他のプレイヤーの提出と処理順を待っています。":selectedCard===null?"手札からカードを1枚選んでください。":"カードを選んで提出してください。全員の提出後、数字の小さい順に処理し、自分の番に置く列を選びます。";

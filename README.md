@@ -50,4 +50,12 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
+ブラウザで2人対戦を操作するテスト（`tests/e2e`）は Playwright を使います。Playwright が入っていない環境では自動でスキップされます。
+
+```bash
+pip install -r requirements-e2e.txt
+python -m playwright install chromium
+pytest -q tests/e2e
+```
+
 Pull Request と `main` への push のたびに、GitHub Actions（`.github/workflows/test.yml`）で同じテストが自動で実行されます。

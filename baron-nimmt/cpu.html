@@ -48,8 +48,8 @@ function render(){
 function matchingRows(card){return lanes.map((l,i)=>l[l.length-1].cs.some(c=>card.cs.includes(c))?i:-1).filter(i=>i>=0)}
 function lanePenalty(lane,card){let same=card.cs.filter(c=>lane[lane.length-1].cs.includes(c)).length;return scoreCards(lane)+same*2}
 function chooseCpuCard(p){let best=p.hand[0],bestVal=Infinity;for(const c of p.hand){let rows=matchingRows(c);let val;if(!rows.length)val=100+Math.min(...lanes.map(l=>scoreCards(l)));else val=Math.min(...rows.map(i=>{let l=lanes[i];return l.length>=5?scoreCards(l)+20:scoreCards(l)+l.length*.35}));if(val<bestVal){bestVal=val;best=c}}return best}
-function takeLane(i,player,played,reason){let old=lanes[i].slice(0,-1);player.taken.push(...old);lanes[i]=[played];return old.length}
-function resolveCard(player,card,manualLane=null){let rows=matchingRows(card);let chosen;if(!rows.length){chosen=lanes.map((l,i)=>({i,v:scoreCards(l)})).sort((a,b)=>a.v-b.v)[0].i;let n=takeLane(chosen,player,card,'no-match');return player.name+'：同色の列なし → '+(chosen+1)+'列目を引き取り（'+n+'枚）';}
+function takeLane(i,player,played,reason){let old=lanes[i].filter(c=>c!==played);player.taken.push(...old);lanes[i]=[played];return old.length}
+function resolveCard(player,card,manualLane=null){let rows=matchingRows(card);let chosen;if(!rows.length){chosen=manualLane!==null&&manualLane>=0&&manualLane<lanes.length?manualLane:lanes.map((l,i)=>({i,v:scoreCards(l)})).sort((a,b)=>a.v-b.v)[0].i;let n=takeLane(chosen,player,card,'no-match');return player.name+'：同色の列なし → '+(chosen+1)+'列目を引き取り（'+n+'枚）';}
 chosen=manualLane!==null&&rows.includes(manualLane)?manualLane:rows.sort((a,b)=>lanes[a].length-lanes[b].length||scoreCards(lanes[a])-scoreCards(lanes[b]))[0];let lane=lanes[chosen];if(lane.length>=5){let n=takeLane(chosen,player,card,'sixth');return player.name+'：6枚目 → '+(chosen+1)+'列目を引き取り（'+n+'枚）';}
 lane.push(card);let totals=COLORS.map(color=>lane.reduce((s,c)=>s+c.cs.filter(x=>x===color).length,0));if(Math.max(...totals)>=6){let n=takeLane(chosen,player,card,'color');return player.name+'：同色6つ以上 → '+(chosen+1)+'列目を引き取り（'+n+'枚）';}
 return player.name+'：'+card.n+'を'+(chosen+1)+'列目へ配置';}

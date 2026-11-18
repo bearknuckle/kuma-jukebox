@@ -59,6 +59,11 @@ button{font-family:inherit;cursor:pointer;border:none}
 .spyinfo{font-size:13px;font-weight:800;padding:4px 10px;border-radius:10px;background:#2b2a28;color:#fff;align-self:flex-start}
 .spy{display:block;width:100%;margin-bottom:8px;padding:11px;border-radius:12px;background:#fff;border:2px solid var(--ink)!important;color:var(--ink);font-size:15px;font-weight:800}
 .spy:disabled{opacity:.35}
+.order{display:flex;justify-content:center;align-items:center;gap:4px;margin-bottom:6px;font-size:13px}
+.order span{padding:2px 8px;border-radius:99px;background:#ebe2cc;color:var(--sub);font-weight:700}
+.order span.done{opacity:.45}
+.order span.cur{background:var(--ink);color:#fff}
+.order i{font-style:normal;color:var(--sub);font-size:11px}
 .rumor{font-size:19px;font-weight:800;line-height:1.4}
 .who{font-size:13px;color:var(--sub)}
 .back.real .tag{background:var(--up)}
@@ -136,7 +141,8 @@ button{font-family:inherit;cursor:pointer;border:none}
     </div>
     <h3 style="margin-top:14px">かけひきルール</h3>
     <ul>
-      <li>📊 <b>人気で値段が動く</b>：そのラウンドに買った人が売った人より多い会社は+1、少ない会社は−1</li>
+      <li>📊 <b>売買で値段が動く</b>：だれかが買うとすぐ+1、売るとすぐ−1。後から買う人ほど高くなる</li>
+      <li>🔄 <b>手番は毎ラウンドずれる</b>：後の番なら、ほかの人の動きを見てから決められる</li>
       <li>🕵️ <b>情報屋</b>：1コイン払うと、ウワサが本当かどうかを先に教えてもらえる（1ゲーム2回まで。CPUも使う）</li>
     </ul>
     <p style="font-size:13px;color:var(--sub);margin-top:8px">最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
@@ -178,6 +184,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 
   <div class="market" id="market"></div>
 
+  <div class="order" id="order"></div>
   <div class="phase" id="phase"></div>
   <button class="spy hidden" id="spyBtn" onclick="useSpy()"></button>
   <div class="lesson hidden" id="lesson"></div>
@@ -242,6 +249,8 @@ function total(p){return p.coins+COMP.reduce((s,c)=>s+p.sh[c.id]*S.prices[c.id],
 /* ---------- CPU ---------- */
 function aiRabbit(p){
   const e=expect(S.card,p);
+  // ウサギは流行に乗る：直前にだれかが買った株を追いかける
+  if(S.lastBuy&&e[S.lastBuy]>=0&&p.coins>=S.prices[S.lastBuy]) return {type:'buy',c:S.lastBuy};
   const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
   if(e[best]>0&&p.coins>=S.prices[best]) return {type:'buy',c:best};
   const bad=COMP.map(c=>c.id).filter(id=>p.sh[id]>0&&e[id]<0).sort((a,b)=>e[a]-e[b])[0];
@@ -302,7 +311,8 @@ function show(id){['start','game','end'].forEach(s=>document.getElementById(s).c
 function startRound(){
   S.round++;
   S.card=S.deck[S.round-1];
-  S.phase='act';S.log=[];S.lastDelta={};S.pop={};S.net={};
+  S.phase='wait';S.log=[];S.lastDelta={};S.pop={};S.net={};S.lastBuy=null;S.lateBuy=false;
+  const st=(S.round-1)%S.players.length;S.order=S.players.map((_,i)=>(i+st)%S.players.length);S.turn=0;
   S.players.forEach(p=>p.knows=false);
   S.before=S.players.map(total);
   document.getElementById('spyInfo').classList.add('hidden');
@@ -318,6 +328,18 @@ function startRound(){
     document.getElementById('who').textContent='関係ありそう：'+targets.map(id=>CN[id].emo+CN[id].name).join('・');
   },S.round>1?300:0);
   render();
+  setTimeout(nextTurn,S.round>1?600:200);
+}
+function nextTurn(){
+  if(S.turn>=S.order.length){S.phase='reveal';render();return}
+  const i=S.order[S.turn];
+  if(i===0){S.phase='act';render();return}
+  S.phase='cpu';render();
+  setTimeout(()=>{
+    const p=S.players[i];
+    if(cpuWantsSpy(p)){p.coins-=SPY_COST;p.spy--;p.spyUsed++;p.knows=true;S.log.push(`${p.icon} ${p.name}：🕵️情報屋に聞いた（${SPY_COST}コイン）`)}
+    const a=p.ai(p);doAction(p,a.type,a.c);S.turn++;S.phase='wait';render(true);nextTurn();
+  },750);
 }
 
 function useSpy(){
@@ -336,37 +358,25 @@ function act(type,c){
   if(type==='buy'&&me.coins<S.prices[c])return;
   if(type==='sell'&&me.sh[c]<=0)return;
   doAction(me,type,c);
-  S.phase='cpu';render();
-  runCPU(1);
+  S.turn++;S.phase='wait';render(true);
+  nextTurn();
 }
-function runCPU(i){
-  if(i>=S.players.length){applyPopularity();return}
-  setTimeout(()=>{
-    const p=S.players[i];
-    if(cpuWantsSpy(p)){p.coins-=SPY_COST;p.spy--;p.spyUsed++;p.knows=true;S.log.push(`${p.icon} ${p.name}：🕵️情報屋に聞いた（${SPY_COST}コイン）`)}
-    const a=p.ai(p);doAction(p,a.type,a.c);render();runCPU(i+1);
-  },650);
-}
-// 人気で値段が動く：買いが多い会社は+1、売りが多い会社は−1
-function applyPopularity(){
-  setTimeout(()=>{
-    S.lastDelta={};const msgs=[];
-    COMP.forEach(c=>{
-      const net=S.net[c.id]||0; if(!net)return;
-      const old=S.prices[c.id], nw=clamp(old+(net>0?1:-1));
-      if(nw!==old){S.prices[c.id]=nw;S.lastDelta[c.id]=nw-old;S.pop[c.id]=nw-old;msgs.push(`${c.emo}${c.name}${nw>old?'<b class="up">▲+1</b>':'<b class="down">▼−1</b>'}`)}
-    });
-    S.log.push(msgs.length?`📊 人気で値段が動いた：${msgs.join('　')}`:'📊 人気による値動きはなし');
-    S.phase='reveal';render(true);
-  },500);
+// 売買するとすぐ値段が動く：買うと+1、売ると−1
+function movePrice(c,d){
+  const old=S.prices[c],nw=clamp(old+d);
+  S.prices[c]=nw;S.lastDelta[c]=(S.lastDelta[c]||0)+nw-old;S.pop[c]=(S.pop[c]||0)+nw-old;
+  return nw;
 }
 function doAction(p,type,c){
-  if(type==='buy')S.net[c]=(S.net[c]||0)+1;
-  if(type==='sell')S.net[c]=(S.net[c]||0)-1;
   const price=type!=='pass'?S.prices[c]:0;
-  if(type==='buy'){p.coins-=price;p.sh[c]++;S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="up">買った</b>（${price}コイン）`)}
-  else if(type==='sell'){p.coins+=price;p.sh[c]--;S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="down">売った</b>（${price}コイン）`)}
-  else S.log.push(`${p.icon} ${p.name}：見送り`);
+  if(type==='buy'){
+    if(p.me&&(S.pop[c]||0)>0)S.lateBuy=true;
+    p.coins-=price;p.sh[c]++;const nw=movePrice(c,1);S.lastBuy=c;
+    S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="up">買った</b>（${price}コイン）${nw>price?`→ 株価${nw}に`:''}`);
+  }else if(type==='sell'){
+    p.coins+=price;p.sh[c]--;const nw=movePrice(c,-1);
+    S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="down">売った</b>（${price}コイン）${nw<price?`→ 株価${nw}に`:''}`);
+  }else S.log.push(`${p.icon} ${p.name}：見送り`);
 }
 
 function reveal(){
@@ -404,7 +414,8 @@ function showLesson(){
   else if(sid==='paper'&&!card.real) tip+='<br>📰 新聞でも<b>まれに外れる</b>。どんな情報も100%ではない。';
   else if(sid==='paper') tip+='<br>📰 新聞のような<b>確かな情報源</b>は、判断の手がかりになる。';
   const popIds=Object.keys(S.pop);
-  if(popIds.length) tip+=`<br>📊 ${popIds.map(id=>CN[id].emo+CN[id].name).join('・')}は売り買いの人気で値段が動いた。<b>買う人が多いと上がり、売る人が多いと下がる</b>（需要と供給）。`;
+  if(popIds.some(id=>S.pop[id])) tip+=`<br>📊 売り買いで値段が動いた。<b>買う人が多いと上がり、売る人が多いと下がる</b>（需要と供給）。`;
+  if(S.lateBuy) tip+='<br>⏰ ほかの人が先に買って値上がりしたあとに買った。<b>出遅れると高くつく</b>。';
   if(me.knows) tip+='<br>🕵️ お金を払って確かな情報を手に入れた。<b>情報にも値段がある</b>。';
   if(S.round===3) tip+='<br>💡 1つの会社に集中すると、当たれば大もうけ、外れれば大ゾン。<b>分けて持つ</b>と安定するよ。';
   const sign=diff>0?'+':'';
@@ -429,7 +440,7 @@ function finish(){
     <li>情報屋を使った回数：<b>${me.spyUsed}回</b>（CPU：${S.players.slice(1).map(p=>p.icon+p.spyUsed).join(' ')}）</li>
     <li>最後の株価：${COMP.map(c=>`${c.emo}${S.prices[c.id]}`).join('　')}</li>
   </ul>
-  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「買う人が多いと値段は上がる」「情報にも値段がある」「1社に集中しない」——この5つを覚えておこう。</p>`;
+  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「買う人が多いと値段は上がる（出遅れると高い）」「情報にも値段がある」「1社に集中しない」——この5つを覚えておこう。</p>`;
   show('end');
 }
 
@@ -459,13 +470,14 @@ function render(animate){
 
   const phase=document.getElementById('phase'), btn=document.getElementById('mainBtn');
   btn.disabled=false;
+  document.getElementById('order').innerHTML='手番 '+S.order.map((i,k)=>{const p=S.players[i];return `<span class="${k<S.turn?'done':k===S.turn&&(S.phase==='act'||S.phase==='cpu')?'cur':''}">${p.icon}${p.me?'あなた':''}</span>`}).join('<i>→</i>');
   const sb=document.getElementById('spyBtn');
   sb.classList.toggle('hidden',S.phase!=='act');
   sb.disabled=!(S.phase==='act'&&!me.knows&&me.spy>0&&me.coins>=SPY_COST);
   sb.textContent=me.knows?'🕵️ 情報屋に聞いた':`🕵️ 情報屋に聞く（${SPY_COST}コイン・残り${me.spy}回）`;
-  if(S.phase==='act'){phase.innerHTML=`あなたの番：<b>1回だけ</b> 買う・売る・見送る を選ぼう（所持金 ${me.coins}コイン）`;btn.textContent='見送る';btn.onclick=()=>act('pass')}
-  else if(S.phase==='cpu'){phase.textContent='CPUが考え中…';btn.textContent='…';btn.disabled=true;btn.onclick=null}
-  else if(S.phase==='reveal'){phase.textContent='みんな決めた！人気で値段が動いたよ。ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}
+  if(S.phase==='act'){phase.innerHTML=`あなたの番（${S.turn+1}番目）：<b>1回だけ</b> 買う・売る・見送る を選ぼう（所持金 ${me.coins}コイン）`;btn.textContent='見送る';btn.onclick=()=>act('pass')}
+  else if(S.phase==='cpu'||S.phase==='wait'){phase.textContent=(S.phase==='wait'||!S.players[S.order[S.turn]])?'…':`${S.players[S.order[S.turn]].icon} ${S.players[S.order[S.turn]].name}が考え中…`;btn.textContent='…';btn.disabled=true;btn.onclick=null}
+  else if(S.phase==='reveal'){phase.textContent='みんな決めた！ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}
   else {phase.textContent='';btn.textContent=S.round>=ROUNDS?'🏆 結果発表':'次のラウンドへ ▶';btn.onclick=next}
 
   document.getElementById('players').innerHTML=S.players.map(p=>{

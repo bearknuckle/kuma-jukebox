@@ -43,7 +43,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 .round i.now{background:var(--up)}
 
 /* news card */
-.news{perspective:900px;height:148px;margin-bottom:12px}
+.news{perspective:900px;height:172px;margin-bottom:12px}
 .inner{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
 .inner.flipped{transform:rotateY(180deg)}
 .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px}
@@ -56,6 +56,9 @@ button{font-family:inherit;cursor:pointer;border:none}
 .srclist{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:13px}
 .fronthead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .rely{font-size:12px;color:var(--sub);font-weight:700}
+.spyinfo{font-size:13px;font-weight:800;padding:4px 10px;border-radius:10px;background:#2b2a28;color:#fff;align-self:flex-start}
+.spy{display:block;width:100%;margin-bottom:8px;padding:11px;border-radius:12px;background:#fff;border:2px solid var(--ink)!important;color:var(--ink);font-size:15px;font-weight:800}
+.spy:disabled{opacity:.35}
 .rumor{font-size:19px;font-weight:800;line-height:1.4}
 .who{font-size:13px;color:var(--sub)}
 .back.real .tag{background:var(--up)}
@@ -131,6 +134,11 @@ button{font-family:inherit;cursor:pointer;border:none}
       <div><span class="src s-tv">📺 テレビ</span>わりと本当（7割）</div>
       <div><span class="src s-sns">📱 SNS</span>半々（5割）</div>
     </div>
+    <h3 style="margin-top:14px">かけひきルール</h3>
+    <ul>
+      <li>📊 <b>人気で値段が動く</b>：そのラウンドに買った人が売った人より多い会社は+1、少ない会社は−1</li>
+      <li>🕵️ <b>情報屋</b>：1コイン払うと、ウワサが本当かどうかを先に教えてもらえる（1ゲーム2回まで。CPUも使う）</li>
+    </ul>
     <p style="font-size:13px;color:var(--sub);margin-top:8px">最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
   </div>
   <div class="panel">
@@ -158,6 +166,7 @@ button{font-family:inherit;cursor:pointer;border:none}
         <div class="fronthead"><div class="tag" id="frontTag">ウワサ</div><div class="rely" id="rely"></div></div>
         <div class="rumor"><span id="srcBadge"></span><span id="rumor"></span></div>
         <div class="who" id="who"></div>
+        <div class="spyinfo hidden" id="spyInfo"></div>
       </div>
       <div class="face back" id="back">
         <div class="tag" id="backTag"></div>
@@ -170,6 +179,7 @@ button{font-family:inherit;cursor:pointer;border:none}
   <div class="market" id="market"></div>
 
   <div class="phase" id="phase"></div>
+  <button class="spy hidden" id="spyBtn" onclick="useSpy()"></button>
   <div class="lesson hidden" id="lesson"></div>
   <button class="big" id="mainBtn"></button>
 
@@ -194,7 +204,7 @@ const COMP=[
   {id:'power',name:'電力',emo:'⚡',color:'var(--power)'},
 ];
 const CN=Object.fromEntries(COMP.map(c=>[c.id,c]));
-const ROUNDS=5, START_COINS=10, START_PRICE=5;
+const ROUNDS=5, START_COINS=10, START_PRICE=5, SPY_COST=1, SPY_USES=2;
 // ウワサの出どころ：p = 本当になる確率
 const SOURCES=[
   {id:'paper',name:'新聞',emo:'📰',p:0.9,cls:'s-paper',rely:'ほぼ本当（9割）'},
@@ -226,12 +236,12 @@ let S;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function clamp(v){return Math.max(1,Math.min(10,v))}
 function emptySh(){return {game:0,food:0,power:0}}
-function expect(card){const q=card.src.p,e={};COMP.forEach(c=>{e[c.id]=q*(card.t[c.id]||0)+(1-q)*(card.f[c.id]||0)});return e}
+function expect(card,p){const q=(p&&p.knows)?(card.real?1:0):card.src.p,e={};COMP.forEach(c=>{e[c.id]=q*(card.t[c.id]||0)+(1-q)*(card.f[c.id]||0)});return e}
 function total(p){return p.coins+COMP.reduce((s,c)=>s+p.sh[c.id]*S.prices[c.id],0)}
 
 /* ---------- CPU ---------- */
 function aiRabbit(p){
-  const e=expect(S.card);
+  const e=expect(S.card,p);
   const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
   if(e[best]>0&&p.coins>=S.prices[best]) return {type:'buy',c:best};
   const bad=COMP.map(c=>c.id).filter(id=>p.sh[id]>0&&e[id]<0).sort((a,b)=>e[a]-e[b])[0];
@@ -241,7 +251,7 @@ function aiRabbit(p){
   return {type:'pass'};
 }
 function aiTurtle(p){
-  const e=expect(S.card);
+  const e=expect(S.card,p);
   const bad=COMP.map(c=>c.id).filter(id=>p.sh[id]>0&&e[id]<0)[0];
   if(bad) return {type:'sell',c:bad};
   const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
@@ -253,10 +263,19 @@ function aiFox(p){
   if(high) return {type:'sell',c:high};
   const low=COMP.map(c=>c.id).filter(id=>S.prices[id]<=4&&p.coins>=S.prices[id]).sort((a,b)=>S.prices[a]-S.prices[b])[0];
   if(low) return {type:'buy',c:low};
-  const e=expect(S.card);
+  const e=expect(S.card,p);
   const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
   if(e[best]>0.5&&p.coins>=S.prices[best]) return {type:'buy',c:best};
   return {type:'pass'};
+}
+
+// CPUが情報屋を使うか：カメは新聞以外なら、キツネはSNSなら使う。ウサギは使わない
+function cpuWantsSpy(p){
+  if(p.spy<=0||p.coins<SPY_COST)return false;
+  const sid=S.card.src.id;
+  if(p.name==='カメ')return sid!=='paper';
+  if(p.name==='キツネ')return sid==='sns';
+  return false;
 }
 
 /* ---------- flow ---------- */
@@ -269,10 +288,10 @@ function newGame(){
     hist:{game:[START_PRICE],food:[START_PRICE],power:[START_PRICE]},
     hits:0,bySrc:{paper:[0,0],tv:[0,0],sns:[0,0]},
     players:[
-      {name:'あなた',icon:'🙂',me:true,coins:START_COINS,sh:emptySh()},
-      {name:'ウサギ',icon:'🐰',coins:START_COINS,sh:emptySh(),ai:aiRabbit},
-      {name:'カメ',icon:'🐢',coins:START_COINS,sh:emptySh(),ai:aiTurtle},
-      {name:'キツネ',icon:'🦊',coins:START_COINS,sh:emptySh(),ai:aiFox},
+      {name:'あなた',icon:'🙂',me:true,coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false},
+      {name:'ウサギ',icon:'🐰',coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false,ai:aiRabbit},
+      {name:'カメ',icon:'🐢',coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false,ai:aiTurtle},
+      {name:'キツネ',icon:'🦊',coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false,ai:aiFox},
     ]
   };
   show('game');
@@ -283,7 +302,10 @@ function show(id){['start','game','end'].forEach(s=>document.getElementById(s).c
 function startRound(){
   S.round++;
   S.card=S.deck[S.round-1];
-  S.phase='act';S.log=[];S.lastDelta={};
+  S.phase='act';S.log=[];S.lastDelta={};S.pop={};S.net={};
+  S.players.forEach(p=>p.knows=false);
+  S.before=S.players.map(total);
+  document.getElementById('spyInfo').classList.add('hidden');
   document.getElementById('newsInner').classList.remove('flipped');
   document.getElementById('lesson').classList.add('hidden');
   setTimeout(()=>{ // 裏返しが戻ってから中身を差し替える
@@ -298,21 +320,49 @@ function startRound(){
   render();
 }
 
+function useSpy(){
+  const me=S.players[0];
+  if(S.phase!=='act'||me.knows||me.spy<=0||me.coins<SPY_COST)return;
+  me.coins-=SPY_COST;me.spy--;me.spyUsed++;me.knows=true;
+  const el=document.getElementById('spyInfo');
+  el.innerHTML=S.card.real?'🕵️ 情報屋「このウワサは<span style="color:#ffb3ad">本当</span>だよ」':'🕵️ 情報屋「このウワサは<span style="color:#a9cbf3">ウソ</span>だよ」';
+  el.classList.remove('hidden');
+  S.log.push(`${me.icon} あなた：🕵️情報屋に聞いた（${SPY_COST}コイン）`);
+  render();
+}
 function act(type,c){
   if(S.phase!=='act')return;
   const me=S.players[0];
   if(type==='buy'&&me.coins<S.prices[c])return;
   if(type==='sell'&&me.sh[c]<=0)return;
-  S.before=S.players.map(total);
   doAction(me,type,c);
   S.phase='cpu';render();
   runCPU(1);
 }
 function runCPU(i){
-  if(i>=S.players.length){S.phase='reveal';render();return}
-  setTimeout(()=>{const p=S.players[i];const a=p.ai(p);doAction(p,a.type,a.c);render();runCPU(i+1)},650);
+  if(i>=S.players.length){applyPopularity();return}
+  setTimeout(()=>{
+    const p=S.players[i];
+    if(cpuWantsSpy(p)){p.coins-=SPY_COST;p.spy--;p.spyUsed++;p.knows=true;S.log.push(`${p.icon} ${p.name}：🕵️情報屋に聞いた（${SPY_COST}コイン）`)}
+    const a=p.ai(p);doAction(p,a.type,a.c);render();runCPU(i+1);
+  },650);
+}
+// 人気で値段が動く：買いが多い会社は+1、売りが多い会社は−1
+function applyPopularity(){
+  setTimeout(()=>{
+    S.lastDelta={};const msgs=[];
+    COMP.forEach(c=>{
+      const net=S.net[c.id]||0; if(!net)return;
+      const old=S.prices[c.id], nw=clamp(old+(net>0?1:-1));
+      if(nw!==old){S.prices[c.id]=nw;S.lastDelta[c.id]=nw-old;S.pop[c.id]=nw-old;msgs.push(`${c.emo}${c.name}${nw>old?'<b class="up">▲+1</b>':'<b class="down">▼−1</b>'}`)}
+    });
+    S.log.push(msgs.length?`📊 人気で値段が動いた：${msgs.join('　')}`:'📊 人気による値動きはなし');
+    S.phase='reveal';render(true);
+  },500);
 }
 function doAction(p,type,c){
+  if(type==='buy')S.net[c]=(S.net[c]||0)+1;
+  if(type==='sell')S.net[c]=(S.net[c]||0)-1;
   const price=type!=='pass'?S.prices[c]:0;
   if(type==='buy'){p.coins-=price;p.sh[c]++;S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="up">買った</b>（${price}コイン）`)}
   else if(type==='sell'){p.coins+=price;p.sh[c]--;S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="down">売った</b>（${price}コイン）`)}
@@ -353,6 +403,9 @@ function showLesson(){
   else if(sid==='sns') tip+='<br>📱 SNSのウワサは<b>半分は外れる</b>。だれが言っているかを確かめよう。';
   else if(sid==='paper'&&!card.real) tip+='<br>📰 新聞でも<b>まれに外れる</b>。どんな情報も100%ではない。';
   else if(sid==='paper') tip+='<br>📰 新聞のような<b>確かな情報源</b>は、判断の手がかりになる。';
+  const popIds=Object.keys(S.pop);
+  if(popIds.length) tip+=`<br>📊 ${popIds.map(id=>CN[id].emo+CN[id].name).join('・')}は売り買いの人気で値段が動いた。<b>買う人が多いと上がり、売る人が多いと下がる</b>（需要と供給）。`;
+  if(me.knows) tip+='<br>🕵️ お金を払って確かな情報を手に入れた。<b>情報にも値段がある</b>。';
   if(S.round===3) tip+='<br>💡 1つの会社に集中すると、当たれば大もうけ、外れれば大ゾン。<b>分けて持つ</b>と安定するよ。';
   const sign=diff>0?'+':'';
   document.getElementById('lesson').innerHTML=`このラウンドのあなたの資産：<b class="${diff>0?'up':diff<0?'down':''}">${sign}${diff}</b><br>${tip}`;
@@ -373,9 +426,10 @@ function finish(){
   document.getElementById('endStats').innerHTML=`<h3>ふりかえり</h3><ul>
     <li>あなたの増えたお金：<b class="${gain>0?'up':gain<0?'down':''}">${gain>0?'+':''}${gain}コイン</b></li>
     <li>5つのウワサのうち、本当だったのは <b>${S.hits}つ</b>（${SOURCES.filter(x=>S.bySrc[x.id][1]).map(x=>`${x.emo}${x.name} ${S.bySrc[x.id][0]}/${S.bySrc[x.id][1]}`).join('・')}）</li>
+    <li>情報屋を使った回数：<b>${me.spyUsed}回</b>（CPU：${S.players.slice(1).map(p=>p.icon+p.spyUsed).join(' ')}）</li>
     <li>最後の株価：${COMP.map(c=>`${c.emo}${S.prices[c.id]}`).join('　')}</li>
   </ul>
-  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「1社に集中しない」「安いときに買って高いときに売るのは難しい」——この4つを覚えておこう。</p>`;
+  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「買う人が多いと値段は上がる」「情報にも値段がある」「1社に集中しない」——この5つを覚えておこう。</p>`;
   show('end');
 }
 
@@ -405,14 +459,18 @@ function render(animate){
 
   const phase=document.getElementById('phase'), btn=document.getElementById('mainBtn');
   btn.disabled=false;
+  const sb=document.getElementById('spyBtn');
+  sb.classList.toggle('hidden',S.phase!=='act');
+  sb.disabled=!(S.phase==='act'&&!me.knows&&me.spy>0&&me.coins>=SPY_COST);
+  sb.textContent=me.knows?'🕵️ 情報屋に聞いた':`🕵️ 情報屋に聞く（${SPY_COST}コイン・残り${me.spy}回）`;
   if(S.phase==='act'){phase.innerHTML=`あなたの番：<b>1回だけ</b> 買う・売る・見送る を選ぼう（所持金 ${me.coins}コイン）`;btn.textContent='見送る';btn.onclick=()=>act('pass')}
   else if(S.phase==='cpu'){phase.textContent='CPUが考え中…';btn.textContent='…';btn.disabled=true;btn.onclick=null}
-  else if(S.phase==='reveal'){phase.textContent='みんな決めた！ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}
+  else if(S.phase==='reveal'){phase.textContent='みんな決めた！人気で値段が動いたよ。ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}
   else {phase.textContent='';btn.textContent=S.round>=ROUNDS?'🏆 結果発表':'次のラウンドへ ▶';btn.onclick=next}
 
   document.getElementById('players').innerHTML=S.players.map(p=>{
     const hold=COMP.filter(c=>p.sh[c.id]).map(c=>c.emo+'×'+p.sh[c.id]).join(' ')||'株なし';
-    return `<div class="pl ${p.me?'me':''}"><div class="nm"><span>${p.icon} ${p.name}</span></div><div class="tot">${total(p)}<small style="font-size:11px">コイン分</small></div><div class="detail">現金${p.coins}・${hold}</div></div>`;
+    return `<div class="pl ${p.me?'me':''}"><div class="nm"><span>${p.icon} ${p.name}</span></div><div class="tot">${total(p)}<small style="font-size:11px">コイン分</small></div><div class="detail">現金${p.coins}・${hold}・🕵️${p.spy}</div></div>`;
   }).join('');
   document.getElementById('log').innerHTML=S.log.map(l=>`<div>${l}</div>`).join('');
 }

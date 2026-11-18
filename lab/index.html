@@ -29,6 +29,8 @@ a.game:hover{transform:translateY(-2px);border-color:var(--accent)}
 .desc{font-size:13px;color:#d9d4e6;line-height:1.6;margin:4px 0 8px}
 .meta{display:flex;gap:10px;font-size:12px;color:var(--dim);flex-wrap:wrap}
 .game.soon{opacity:.45;border-style:dashed}
+h2.cat{font-size:16px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2.cat:first-child{margin-top:4px}
 footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 </style>
 </head>
@@ -48,12 +50,12 @@ const GAMES=[
   {
     id:'onpu-karuta', name:'音符カルタ', icon:'🎼', color:'#b8322a',
     desc:'読み手が言った音（または鳴らした音）の楽譜札をすばやく取るカルタ。ト音・ヘ音記号、加線まで。CPU対戦とタイムアタックで楽譜が読めるようになる。',
-    players:'1人（CPU 1人）', time:'2〜3分', genre:'学べる', added:'2026-11-18', isNew:true
+    players:'1人（CPU 1人）', time:'2〜3分', genre:'音楽', added:'2026-11-18', isNew:true
   },
   {
     id:'shinko-shiritori', name:'進行しりとり', icon:'🎹', color:'#2f8f5f',
     desc:'場のコードに「自然につながる」コードをつないでいく、しりとり型カードゲーム。はったりとダウトあり。遊びながらコード進行の流れが身につく。',
-    players:'1人（CPU 1〜3人）', time:'5〜10分', genre:'学べる', added:'2026-11-18', isNew:true
+    players:'1人（CPU 1〜3人）', time:'5〜10分', genre:'音楽', added:'2026-11-18', isNew:true
   },
   {
     id:'onechord', name:'ワンコード', icon:'🎵', color:'#4f8cff',
@@ -63,33 +65,48 @@ const GAMES=[
   {
     id:'uwasa-kabu', name:'ウワサ株', icon:'📈', color:'#d1453b',
     desc:'ニュースのウワサを見て株を売り買い。裏返して答え合わせ。遊びながら株取引のキホンが身につく。',
-    players:'1人（CPU 3人）', time:'5〜10分', genre:'学べる', added:'2026-11-18', isNew:true
+    players:'1人（CPU 3人）', time:'5〜10分', genre:'株', added:'2026-11-18', isNew:true
   },
 ];
 const SOON={name:'次の試作を準備中…',icon:'🛠️',color:'#2a2639',desc:'新しいゲームができたらここに追加されます。'};
 
-const genres=['すべて',...new Set(GAMES.map(g=>g.genre))];
+// カテゴリ（表示順）。新しいカテゴリはここに追加する
+const CATS=[
+  {id:'音楽',label:'音楽のゲーム',icon:'🎵'},
+  {id:'株',label:'株のゲーム',icon:'📈'},
+];
 let cur='すべて';
+function card(g){
+  const a=document.createElement('a');a.className='game';a.href=g.id+'/';
+  a.innerHTML=`<div class="icon" style="background:${g.color}">${g.icon}</div>
+    <div class="body"><div class="name">${g.name}${g.isNew?'<span class="tag">NEW</span>':''}</div>
+    <div class="desc">${g.desc}</div>
+    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div></div>`;
+  return a;
+}
 function render(){
+  const cats=CATS.filter(c=>GAMES.some(g=>g.genre===c.id));
   const f=document.getElementById('filters');f.innerHTML='';
-  if(genres.length>2)genres.forEach(g=>{
-    const b=document.createElement('button');b.textContent=g;if(g===cur)b.className='on';
-    b.onclick=()=>{cur=g;render();};f.appendChild(b);
+  [{id:'すべて',label:'すべて',icon:''},...cats].forEach(c=>{
+    const b=document.createElement('button');
+    const n=c.id==='すべて'?GAMES.length:GAMES.filter(g=>g.genre===c.id).length;
+    b.textContent=(c.icon?c.icon+' ':'')+(c.id==='すべて'?'すべて':c.id)+' '+n;
+    if(c.id===cur)b.className='on';
+    b.onclick=()=>{cur=c.id;render();};f.appendChild(b);
   });
-  const grid=document.getElementById('grid');grid.innerHTML='';
-  GAMES.filter(g=>cur==='すべて'||g.genre===cur)
-    .sort((a,b)=>b.added.localeCompare(a.added))
-    .forEach(g=>{
-      const a=document.createElement('a');a.className='game';a.href=g.id+'/';
-      a.innerHTML=`<div class="icon" style="background:${g.color}">${g.icon}</div>
-        <div class="body"><div class="name">${g.name}${g.isNew?'<span class="tag">NEW</span>':''}</div>
-        <div class="desc">${g.desc}</div>
-        <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span><span>🏷 ${g.genre}</span></div></div>`;
-      grid.appendChild(a);
-    });
-  const s=document.createElement('div');s.className='game soon';
-  s.innerHTML=`<div class="icon" style="background:${SOON.color}">${SOON.icon}</div><div class="body"><div class="name">${SOON.name}</div><div class="desc">${SOON.desc}</div></div>`;
-  grid.appendChild(s);
+  const root=document.getElementById('grid');root.innerHTML='';root.className='';
+  cats.filter(c=>cur==='すべて'||c.id===cur).forEach(c=>{
+    const h=document.createElement('h2');h.className='cat';h.textContent=c.icon+' '+c.label;root.appendChild(h);
+    const grid=document.createElement('div');grid.className='grid';
+    GAMES.filter(g=>g.genre===c.id).sort((a,b)=>b.added.localeCompare(a.added)).forEach(g=>grid.appendChild(card(g)));
+    root.appendChild(grid);
+  });
+  if(cur==='すべて'){
+    const grid=document.createElement('div');grid.className='grid';grid.style.marginTop='24px';
+    const s=document.createElement('div');s.className='game soon';
+    s.innerHTML=`<div class="icon" style="background:${SOON.color}">${SOON.icon}</div><div class="body"><div class="name">${SOON.name}</div><div class="desc">${SOON.desc}</div></div>`;
+    grid.appendChild(s);root.appendChild(grid);
+  }
 }
 render();
 </script>

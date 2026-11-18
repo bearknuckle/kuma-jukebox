@@ -49,6 +49,11 @@ button{font-family:inherit;cursor:pointer;border:none}
 .back{background:var(--card);border:2px solid var(--ink);transform:rotateY(180deg)}
 .tag{align-self:flex-start;font-size:12px;font-weight:800;padding:2px 10px;border-radius:99px;background:var(--ink);color:#fff}
 .front .tag{background:#d9b84a}
+.src{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:2px 9px;border-radius:99px;margin-right:8px;white-space:nowrap}
+.s-paper{background:#dfeaf7;color:#1f4f86}.s-tv{background:#fbe6cf;color:#8a4b0b}.s-sns{background:#f6d9e6;color:#8c1f52}
+.srclist{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:13px}
+.fronthead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rely{font-size:12px;color:var(--sub);font-weight:700}
 .rumor{font-size:19px;font-weight:800;line-height:1.4}
 .who{font-size:13px;color:var(--sub)}
 .back.real .tag{background:var(--up)}
@@ -118,7 +123,13 @@ button{font-family:inherit;cursor:pointer;border:none}
       <li>1回だけ <b>買う・売る・見送る</b> を選ぶ</li>
       <li>カードを裏返すと、ウワサの答えが出て株価が動く</li>
     </ol>
-    <p style="font-size:13px;color:var(--sub);margin-top:8px">ウワサはだいたい本当。でも、ときどき外れます。最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
+    <p style="font-size:13px;color:var(--sub);margin-top:8px">ウワサは外れることもあります。<b style="color:var(--ink)">どこから出たウワサか</b>で、当たりやすさがちがいます。</p>
+    <div class="srclist">
+      <div><span class="src s-paper">📰 新聞</span>ほぼ本当（9割）</div>
+      <div><span class="src s-tv">📺 テレビ</span>わりと本当（7割）</div>
+      <div><span class="src s-sns">📱 SNS</span>半々（5割）</div>
+    </div>
+    <p style="font-size:13px;color:var(--sub);margin-top:8px">最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
   </div>
   <div class="panel">
     <h3>対戦するCPU</h3>
@@ -142,8 +153,8 @@ button{font-family:inherit;cursor:pointer;border:none}
   <div class="news">
     <div class="inner" id="newsInner">
       <div class="face front">
-        <div class="tag" id="frontTag">ウワサ</div>
-        <div class="rumor" id="rumor"></div>
+        <div class="fronthead"><div class="tag" id="frontTag">ウワサ</div><div class="rely" id="rely"></div></div>
+        <div class="rumor"><span id="srcBadge"></span><span id="rumor"></span></div>
         <div class="who" id="who"></div>
       </div>
       <div class="face back" id="back">
@@ -181,7 +192,13 @@ const COMP=[
   {id:'power',name:'電力',emo:'⚡',color:'var(--power)'},
 ];
 const CN=Object.fromEntries(COMP.map(c=>[c.id,c]));
-const ROUNDS=5, TRUTH=0.7, START_COINS=10, START_PRICE=5;
+const ROUNDS=5, START_COINS=10, START_PRICE=5;
+// ウワサの出どころ：p = 本当になる確率
+const SOURCES=[
+  {id:'paper',name:'新聞',emo:'📰',p:0.9,cls:'s-paper',rely:'ほぼ本当（9割）'},
+  {id:'tv',name:'テレビ',emo:'📺',p:0.7,cls:'s-tv',rely:'わりと本当（7割）'},
+  {id:'sns',name:'SNS',emo:'📱',p:0.5,cls:'s-sns',rely:'半々（5割）'},
+];
 
 // t = 本当だったときの変化, f = 外れたときの変化
 const CARDS=[
@@ -207,7 +224,7 @@ let S;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function clamp(v){return Math.max(1,Math.min(10,v))}
 function emptySh(){return {game:0,food:0,power:0}}
-function expect(card){const e={};COMP.forEach(c=>{e[c.id]=TRUTH*(card.t[c.id]||0)+(1-TRUTH)*(card.f[c.id]||0)});return e}
+function expect(card){const q=card.src.p,e={};COMP.forEach(c=>{e[c.id]=q*(card.t[c.id]||0)+(1-q)*(card.f[c.id]||0)});return e}
 function total(p){return p.coins+COMP.reduce((s,c)=>s+p.sh[c.id]*S.prices[c.id],0)}
 
 /* ---------- CPU ---------- */
@@ -242,12 +259,13 @@ function aiFox(p){
 
 /* ---------- flow ---------- */
 function newGame(){
-  const deck=shuffle(CARDS.slice()).slice(0,ROUNDS).map(c=>({...c,real:Math.random()<TRUTH}));
+  const srcs=shuffle([0,0,1,1,2,2,Math.floor(Math.random()*3)]).slice(0,ROUNDS).map(i=>SOURCES[i]);
+  const deck=shuffle(CARDS.slice()).slice(0,ROUNDS).map((c,i)=>({...c,src:srcs[i],real:Math.random()<srcs[i].p}));
   S={
     round:0,deck,card:null,phase:'act',log:[],lastDelta:{},
     prices:{game:START_PRICE,food:START_PRICE,power:START_PRICE},
     hist:{game:[START_PRICE],food:[START_PRICE],power:[START_PRICE]},
-    hits:0,
+    hits:0,bySrc:{paper:[0,0],tv:[0,0],sns:[0,0]},
     players:[
       {name:'あなた',icon:'🙂',me:true,coins:START_COINS,sh:emptySh()},
       {name:'ウサギ',icon:'🐰',coins:START_COINS,sh:emptySh(),ai:aiRabbit},
@@ -268,6 +286,9 @@ function startRound(){
   document.getElementById('lesson').classList.add('hidden');
   setTimeout(()=>{ // 裏返しが戻ってから中身を差し替える
     document.getElementById('frontTag').textContent=`ラウンド${S.round}のウワサ`;
+    const sc=S.card.src;
+    document.getElementById('srcBadge').innerHTML=`<span class="src ${sc.cls}">${sc.emo} ${sc.name}</span>`;
+    document.getElementById('rely').textContent=sc.rely;
     document.getElementById('rumor').textContent='「'+S.card.r+'」';
     const targets=[...new Set([...Object.keys(S.card.t),...Object.keys(S.card.f)])];
     document.getElementById('who').textContent='関係ありそう：'+targets.map(id=>CN[id].emo+CN[id].name).join('・');
@@ -299,6 +320,7 @@ function doAction(p,type,c){
 function reveal(){
   const card=S.card, eff=card.real?card.t:card.f;
   if(card.real)S.hits++;
+  S.bySrc[card.src.id][1]++;if(card.real)S.bySrc[card.src.id][0]++;
   S.lastDelta={};
   COMP.forEach(c=>{
     const old=S.prices[c.id], nw=clamp(old+(eff[c.id]||0));
@@ -324,6 +346,11 @@ function showLesson(){
   else if(!card.real) tip='悪いウワサが<b>デマ</b>だった。あわてて売った人はソンしたかも。';
   else if(goodRumor) tip='ウワサが当たった！<b>先に買っていた人</b>がトク。でも毎回当たるとは限らない。';
   else tip='悪いウワサが本当だった。<b>早めに売った人</b>は損をさけられた。';
+  const sid=card.src.id;
+  if(sid==='sns'&&card.real) tip+='<br>📱 SNSのウワサが当たった。でも半分は外れるので、<b>たまたま</b>かも。';
+  else if(sid==='sns') tip+='<br>📱 SNSのウワサは<b>半分は外れる</b>。だれが言っているかを確かめよう。';
+  else if(sid==='paper'&&!card.real) tip+='<br>📰 新聞でも<b>まれに外れる</b>。どんな情報も100%ではない。';
+  else if(sid==='paper') tip+='<br>📰 新聞のような<b>確かな情報源</b>は、判断の手がかりになる。';
   if(S.round===3) tip+='<br>💡 1つの会社に集中すると、当たれば大もうけ、外れれば大ゾン。<b>分けて持つ</b>と安定するよ。';
   const sign=diff>0?'+':'';
   document.getElementById('lesson').innerHTML=`このラウンドのあなたの資産：<b class="${diff>0?'up':diff<0?'down':''}">${sign}${diff}</b><br>${tip}`;
@@ -343,10 +370,10 @@ function finish(){
   const me=S.players[0], gain=total(me)-START_COINS;
   document.getElementById('endStats').innerHTML=`<h3>ふりかえり</h3><ul>
     <li>あなたの増えたお金：<b class="${gain>0?'up':gain<0?'down':''}">${gain>0?'+':''}${gain}コイン</b></li>
-    <li>5つのウワサのうち、本当だったのは <b>${S.hits}つ</b></li>
+    <li>5つのウワサのうち、本当だったのは <b>${S.hits}つ</b>（${SOURCES.filter(x=>S.bySrc[x.id][1]).map(x=>`${x.emo}${x.name} ${S.bySrc[x.id][0]}/${S.bySrc[x.id][1]}`).join('・')}）</li>
     <li>最後の株価：${COMP.map(c=>`${c.emo}${S.prices[c.id]}`).join('　')}</li>
   </ul>
-  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「ウワサは外れることもある」「1社に集中しない」「安いときに買って高いときに売るのは難しい」——この3つを覚えておこう。</p>`;
+  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「1社に集中しない」「安いときに買って高いときに売るのは難しい」——この4つを覚えておこう。</p>`;
   show('end');
 }
 

@@ -34,6 +34,8 @@ a.game:hover{transform:translateY(-2px);border-color:var(--accent)}
 .game.soon{opacity:.45;border-style:dashed}
 h2.cat{font-size:16px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 h2.cat:first-child{margin-top:4px}
+.meta.played{margin-top:4px;color:#7fb2ff}
+#reset{background:none;border:none;color:var(--dim);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;margin-top:6px}
 .catnote{font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.6}
 footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 </style>
@@ -46,7 +48,7 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
   </header>
   <div class="filters" id="filters"></div>
   <div class="grid" id="grid"></div>
-  <footer>ゲームは随時追加予定</footer>
+  <footer>ゲームは随時追加予定<br><button id="reset">遊んだ記録をリセット</button></footer>
 </main>
 <script>
 // ゲームを増やすときはここに1件追加する
@@ -93,12 +95,27 @@ const CATS=[
   {id:'チュートリアル',label:'既存ゲームのチュートリアル',icon:'📘',note:'市販のボードゲームのルールを、遊びながら覚えられるチュートリアルです（オリジナルの試作ゲームではありません）'},
 ];
 let cur='すべて';
+// 遊んだ記録（この端末のブラウザだけに保存）
+const PKEY='lab-plays';
+function loadPlays(){try{return JSON.parse(localStorage.getItem(PKEY)||'{}')||{};}catch(e){return {};}}
+function savePlays(p){try{localStorage.setItem(PKEY,JSON.stringify(p));}catch(e){}}
+let PLAYS=loadPlays();
+function recordPlay(id){const p=loadPlays();const r=p[id]||{n:0,last:0};r.n++;r.last=Date.now();p[id]=r;savePlays(p);PLAYS=p;}
+function ago(t){const m=Math.floor((Date.now()-t)/60000);if(m<1)return'たった今';if(m<60)return m+'分前';const h=Math.floor(m/60);if(h<24)return h+'時間前';return Math.floor(h/24)+'日前';}
+function byPlay(a,b){
+  const pa=PLAYS[a.id],pb=PLAYS[b.id];
+  if(pa&&pb)return pb.last-pa.last;
+  if(pa)return -1;if(pb)return 1;
+  return b.added.localeCompare(a.added);
+}
 function card(g){
   const a=document.createElement('a');a.className='game';a.href=g.url||(g.id+'/');
+  a.addEventListener('click',()=>recordPlay(g.id));
+  const pl=PLAYS[g.id];
   a.innerHTML=`<div class="icon" style="background:${g.color}">${g.icon}</div>
-    <div class="body"><div class="name">${g.name}${g.badge?`<span class="tag" style="background:#3a3550">${g.badge}</span>`:''}${g.isNew?'<span class="tag">NEW</span>':''}</div>
+    <div class="body"><div class="name">${g.name}${g.badge?`<span class="tag" style="background:#3a3550">${g.badge}</span>`:''}${g.isNew&&!pl?'<span class="tag">NEW</span>':''}</div>
     <div class="desc">${g.desc}</div>
-    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div>${g.note?`<div class="meta" style="margin-top:4px">ℹ️ ${g.note}</div>`:''}</div>`;
+    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div>${pl?`<div class="meta played">🕘 ${ago(pl.last)}に遊んだ · ${pl.n}回</div>`:''}${g.note?`<div class="meta" style="margin-top:4px">ℹ️ ${g.note}</div>`:''}</div>`;
   return a;
 }
 function render(){
@@ -112,11 +129,17 @@ function render(){
     b.onclick=()=>{cur=c.id;render();};f.appendChild(b);
   });
   const root=document.getElementById('grid');root.innerHTML='';root.className='';
+  const recent=GAMES.filter(g=>PLAYS[g.id]).sort(byPlay).slice(0,3);
+  if(cur==='すべて'&&recent.length){
+    const h=document.createElement('h2');h.className='cat';h.textContent='🕘 最近遊んだゲーム';root.appendChild(h);
+    const grid=document.createElement('div');grid.className='grid';
+    recent.forEach(g=>grid.appendChild(card(g)));root.appendChild(grid);
+  }
   cats.filter(c=>cur==='すべて'||c.id===cur).forEach(c=>{
     const h=document.createElement('h2');h.className='cat';h.textContent=c.icon+' '+c.label;root.appendChild(h);
     if(c.note){const n=document.createElement('p');n.className='catnote';n.textContent=c.note;root.appendChild(n);}
     const grid=document.createElement('div');grid.className='grid';
-    GAMES.filter(g=>g.genre===c.id).sort((a,b)=>b.added.localeCompare(a.added)).forEach(g=>grid.appendChild(card(g)));
+    GAMES.filter(g=>g.genre===c.id).sort(byPlay).forEach(g=>grid.appendChild(card(g)));
     root.appendChild(grid);
   });
   if(cur==='すべて'){
@@ -126,6 +149,8 @@ function render(){
     grid.appendChild(s);root.appendChild(grid);
   }
 }
+document.getElementById('reset').onclick=()=>{savePlays({});PLAYS={};render();};
+window.addEventListener('pageshow',()=>{PLAYS=loadPlays();render();});
 render();
 </script>
 </body>

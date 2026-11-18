@@ -81,6 +81,11 @@ h1 span{color:var(--T)}
 .result .big{font-size:28px;font-weight:800;margin:8px 0}
 .result .cad{color:var(--D);font-weight:800;font-size:18px}
 .small{font-size:12px;color:var(--dim)}
+#prog{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0 4px}
+#prog .pc{min-width:44px;padding:6px 8px;border-radius:8px;font-weight:800;font-size:14px;color:#fff;opacity:.45;transition:transform .12s,opacity .12s,box-shadow .12s}
+#prog .pc.now{opacity:1;transform:scale(1.18);box-shadow:0 0 0 2px #fff,0 0 16px rgba(255,255,255,.5)}
+#prog .pc.done{opacity:.9}
+#prog .pc.fin{outline:2px solid var(--D)}
 </style>
 </head>
 <body>
@@ -405,17 +410,46 @@ function after(){
     cpuTimer=setTimeout(()=>{cpuStep();after();},950);
   }
 }
+// ---------- 進行の再生 ----------
+const PROG_MAX=16,BEAT=520;
+let replayTimers=[];
+function progNotes(x){
+  if(CH[x])return CH[x].notes;
+  if(x.endsWith('sus4')){const r=ROOT[x[0]];return[r-12,r,r+5,r+7];}
+  return null;
+}
+function progCls(x){return CH[x]?FCLS[CH[x].f]:'fX';}
+function stopReplay(){replayTimers.forEach(clearTimeout);replayTimers=[];}
+function replayProg(prog){
+  stopReplay();
+  const els=[...document.querySelectorAll('#prog .pc')];
+  els.forEach(e=>e.classList.remove('now','done','fin'));
+  prog.forEach((x,i)=>{
+    const last=i===prog.length-1;
+    replayTimers.push(setTimeout(()=>{
+      els.forEach(e=>e.classList.remove('now'));
+      if(els[i-1])els[i-1].classList.add('done');
+      els[i].classList.add('now');
+      const n=progNotes(x);
+      if(n)playNotes(last&&S.cadence?n.concat([72]):n,last?2.2:0.9);
+      if(last)replayTimers.push(setTimeout(()=>{els[i].classList.remove('now');els[i].classList.add('done','fin');},900));
+    },i*BEAT+(last?BEAT*0.6:0)));
+  });
+}
 function showResult(){
   const w=S.winner,you=w===S.players[0];
   let html=`<h2>${S.stalled?'山札切れで終了':'演奏終了！'}</h2><div class="big">${you?'🎉 あなたの勝ち！':w.name+' の勝ち'}</div>`;
   if(S.cadence)html+=`<div class="cad">♪ 完全終止で上がり！</div>`;
-  html+=`<p class="small">今回の進行（最後の12手）</p><p>${S.history.slice(-12).join(' → ')}</p>`;
+  const prog=S.history.filter(x=>x!=='⇄'&&x!=='⊘').slice(-PROG_MAX);
+  html+=`<p class="small">今回の進行${prog.length<S.history.filter(x=>x!=='⇄'&&x!=='⊘').length?'（最後の'+PROG_MAX+'コード）':''}</p><div id="prog">${prog.map(x=>`<span class="pc ${progCls(x)}">${x}</span>`).join('')}</div>`;
+  html+=`<button class="btn" id="rReplay" style="margin-top:4px">▶ もう一度聴く</button>`;
   html+=`<p class="small">残り手札：${S.players.map(p=>p.name+' '+p.hand.length+'枚').join('／')}</p>`;
   html+=`<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="rSet" style="flex:1">設定</button><button class="btn primary" id="rAgain" style="flex:2">もう一度</button></div>`;
   $('resultBody').innerHTML=html;$('ovResult').classList.remove('hide');
-  if(S.cadence)playNotes(CH.C.notes.concat([72]),2.2);
-  $('rAgain').onclick=()=>{$('ovResult').classList.add('hide');start();};
-  $('rSet').onclick=()=>{$('ovResult').classList.add('hide');$('ovStart').classList.remove('hide');};
+  $('rReplay').onclick=()=>{ensureAudio();replayProg(prog);};
+  setTimeout(()=>replayProg(prog),500);
+  $('rAgain').onclick=()=>{stopReplay();$('ovResult').classList.add('hide');start();};
+  $('rSet').onclick=()=>{stopReplay();$('ovResult').classList.add('hide');$('ovStart').classList.remove('hide');};
 }
 function start(){
   ensureAudio();clearTimeout(cpuTimer);
@@ -433,7 +467,7 @@ seg('segCpu','cpu');seg('segAdv','adv');
 try{const s=JSON.parse(localStorage.getItem('onechord-cfg')||'null');if(s){cfg=Object.assign(cfg,s);
   ['segCpu','segAdv'].forEach((id,k)=>{const v=k?cfg.adv:cfg.cpu;$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));});}}catch(e){}
 $('bStart').onclick=()=>{try{localStorage.setItem('onechord-cfg',JSON.stringify(cfg));}catch(e){}$('ovStart').classList.add('hide');start();};
-$('bNew').onclick=()=>{clearTimeout(cpuTimer);$('ovStart').classList.remove('hide');};
+$('bNew').onclick=()=>{clearTimeout(cpuTimer);stopReplay();$('ovStart').classList.remove('hide');};
 $('bRules').onclick=$('bRules2').onclick=()=>$('ovRules').classList.remove('hide');
 $('bCloseRules').onclick=()=>$('ovRules').classList.add('hide');
 $('bSound').onclick=()=>{soundOn=!soundOn;$('bSound').textContent=soundOn?'🔊':'🔇';ensureAudio();};

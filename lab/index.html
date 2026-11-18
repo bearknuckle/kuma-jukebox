@@ -34,6 +34,7 @@ a.game:hover{transform:translateY(-2px);border-color:var(--accent)}
 .game.soon{opacity:.45;border-style:dashed}
 h2.cat{font-size:16px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 h2.cat:first-child{margin-top:4px}
+.meta.hot{margin-top:4px;color:#ffae73}
 .meta.played{margin-top:4px;color:#7fb2ff}
 #reset{background:none;border:none;color:var(--dim);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;margin-top:6px}
 .catnote{font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.6}
@@ -44,7 +45,7 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 <main>
   <header>
     <h1><img src="icon.svg" alt="" class="logo"> 試作ゲームラボ</h1>
-    <p class="lead">ブラウザですぐ遊べる試作ゲームの置き場です。スマホでもそのまま遊べます。感想があればぜひ教えてください。</p>
+    <p class="lead">ブラウザですぐ遊べる試作ゲームの置き場です。スマホでもそのまま遊べます。</p>
   </header>
   <div class="filters" id="filters"></div>
   <div class="grid" id="grid"></div>
@@ -92,8 +93,24 @@ const PKEY='lab-plays';
 function loadPlays(){try{return JSON.parse(localStorage.getItem(PKEY)||'{}')||{};}catch(e){return {};}}
 function savePlays(p){try{localStorage.setItem(PKEY,JSON.stringify(p));}catch(e){}}
 let PLAYS=loadPlays();
-function recordPlay(id){const p=loadPlays();const r=p[id]||{n:0,last:0};r.n++;r.last=Date.now();p[id]=r;savePlays(p);PLAYS=p;}
+// みんなの遊んだ回数（試作ゲームラボのカウンターサーバー）
+const API='https://game-lab-api.onrender.com/api/plays';
+let GLOBAL={};
+function sendPlay(id){try{if(navigator.sendBeacon&&navigator.sendBeacon(API+'/'+id))return;}catch(e){}try{fetch(API+'/'+id,{method:'POST',mode:'no-cors',keepalive:true});}catch(e){}}
+async function loadGlobal(){
+  try{
+    const ctl=new AbortController();setTimeout(()=>ctl.abort(),90000);
+    const r=await fetch(API,{signal:ctl.signal});const d=await r.json();
+    if(d&&d.plays){GLOBAL=d.plays;render();}
+  }catch(e){}
+}
+function recordPlay(id){sendPlay(id);const p=loadPlays();const r=p[id]||{n:0,last:0};r.n++;r.last=Date.now();p[id]=r;savePlays(p);PLAYS=p;}
 function ago(t){const m=Math.floor((Date.now()-t)/60000);if(m<1)return'たった今';if(m<60)return m+'分前';const h=Math.floor(m/60);if(h<24)return h+'時間前';return Math.floor(h/24)+'日前';}
+function byPop(a,b){
+  const ga=GLOBAL[a.id]||0,gb=GLOBAL[b.id]||0;
+  if(ga!==gb)return gb-ga;
+  return byPlay(a,b);
+}
 function byPlay(a,b){
   const pa=PLAYS[a.id],pb=PLAYS[b.id];
   if(pa&&pb)return pb.last-pa.last;
@@ -107,7 +124,7 @@ function card(g){
   a.innerHTML=`<div class="icon" style="background:${g.color}">${g.icon}</div>
     <div class="body"><div class="name">${g.name}${g.badge?`<span class="tag" style="background:#3a3550">${g.badge}</span>`:''}${g.isNew&&!pl?'<span class="tag">NEW</span>':''}</div>
     <div class="desc">${g.desc}</div>
-    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div>${pl?`<div class="meta played">🕘 ${ago(pl.last)}に遊んだ · ${pl.n}回</div>`:''}${g.note?`<div class="meta" style="margin-top:4px">ℹ️ ${g.note}</div>`:''}</div>`;
+    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div>${GLOBAL[g.id]?`<div class="meta hot">🔥 みんなで ${GLOBAL[g.id]}回</div>`:''}${pl?`<div class="meta played">🕘 ${ago(pl.last)}に遊んだ · ${pl.n}回</div>`:''}${g.note?`<div class="meta" style="margin-top:4px">ℹ️ ${g.note}</div>`:''}</div>`;
   return a;
 }
 function render(){
@@ -121,6 +138,13 @@ function render(){
     b.onclick=()=>{cur=c.id;render();};f.appendChild(b);
   });
   const root=document.getElementById('grid');root.innerHTML='';root.className='';
+  const hot=GAMES.filter(g=>GLOBAL[g.id]).sort(byPop).slice(0,3);
+  if(cur==='すべて'&&hot.length){
+    const h=document.createElement('h2');h.className='cat';h.textContent='🔥 最近の人気';root.appendChild(h);
+    const n=document.createElement('p');n.className='catnote';n.textContent='みんなが遊んだ回数の多い順（回数はときどきリセットされます）';root.appendChild(n);
+    const grid=document.createElement('div');grid.className='grid';
+    hot.forEach(g=>grid.appendChild(card(g)));root.appendChild(grid);
+  }
   const recent=GAMES.filter(g=>PLAYS[g.id]).sort(byPlay).slice(0,3);
   if(cur==='すべて'&&recent.length){
     const h=document.createElement('h2');h.className='cat';h.textContent='🕘 最近遊んだゲーム';root.appendChild(h);
@@ -131,7 +155,7 @@ function render(){
     const h=document.createElement('h2');h.className='cat';h.textContent=c.icon+' '+c.label;root.appendChild(h);
     if(c.note){const n=document.createElement('p');n.className='catnote';n.textContent=c.note;root.appendChild(n);}
     const grid=document.createElement('div');grid.className='grid';
-    GAMES.filter(g=>g.genre===c.id).sort(byPlay).forEach(g=>grid.appendChild(card(g)));
+    GAMES.filter(g=>g.genre===c.id).sort(byPop).forEach(g=>grid.appendChild(card(g)));
     root.appendChild(grid);
   });
   if(cur==='すべて'){
@@ -144,6 +168,7 @@ function render(){
 document.getElementById('reset').onclick=()=>{savePlays({});PLAYS={};render();};
 window.addEventListener('pageshow',()=>{PLAYS=loadPlays();render();});
 render();
+loadGlobal();
 </script>
 </body>
 </html>

@@ -29,8 +29,10 @@
   .stock .nm{font-weight:800;font-size:18px}
   .stock .pr{font-size:30px;font-weight:800;line-height:1.1}
   .stock .dl{font-size:13px;height:18px;font-weight:700}
-  .stock .bar{display:flex;gap:2px;justify-content:center;margin-top:6px}
-  .stock .bar i{width:7px;height:7px;border-radius:2px;background:var(--line)}
+  .stock .spark{display:block;width:100%;height:40px;margin-top:6px}
+  .stock .range{font-size:10px;color:var(--sub);display:flex;justify-content:space-between;flex-direction:row-reverse;margin-top:-2px}
+  .stock .range span:first-child::before{content:'安値 '}
+  .stock .range span:last-child::before{content:'高値 '}
   .stock .memo{font-size:12px;color:var(--sub);margin-top:6px;min-height:18px}
   .up{color:var(--buy)} .down{color:var(--sell)}
   .me{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:14px}
@@ -68,7 +70,7 @@
 <body>
 <main>
   <h1>せーの株</h1>
-  <p class="tag">みんなの注文で株価が決まる、読み合いの株ゲーム（CPU 3人と対戦・約5分）</p>
+  <p class="tag">みんなの注文で株価が決まる、読み合いの株ゲーム（CPU 3人と対戦・5〜15分）</p>
 
   <!-- タイトル -->
   <section id="title">
@@ -78,7 +80,7 @@
         <li>銘柄は <b>A・B・C</b> の3つ。株価は全部 <b>5</b> から。あなたは <b>30コイン</b> で始めます。</li>
         <li>各社には裏向きの<b>業績カード</b>（−3／−1／+1／+3 のどれか）があり、あなたは<b>1社だけ</b>こっそり見られます。CPUもそれぞれ1社ずつ知っています。</li>
         <li>毎ラウンド、全員が「銘柄」と「買う／売る／見送り」を1つ選び、<b>せーの</b>で公開。</li>
-        <li>銘柄ごとに <b>買いの数 − 売りの数</b> だけ株価が動き（1〜10）、<b>動いた後の値段</b>で全員の注文が成立します。1注文は1株。</li>
+        <li>銘柄ごとに <b>買いの数 − 売りの数</b> だけ株価が動き（1〜10。じっくりモードは1〜20）、<b>動いた後の値段</b>で全員の注文が成立します。1注文は1株。</li>
         <li>6ラウンド後に業績カードを公開。<b>株価 + 業績</b> が最終株価になり、株を換金してお金が一番多い人の勝ち。</li>
       </ol>
     </div>
@@ -86,7 +88,7 @@
       <h2>じっくりモードの追加ルール</h2>
       <ul class="rules" style="padding-left:20px;margin:0">
         <li>6ラウンドを<b>1期</b>として、<b>3期</b>くり返します。</li>
-        <li>持ち株とお金は<b>次の期へ持ち越し</b>。決算後の株価が次の期のスタート価格です。</li>
+        <li>株価の上限は<b>20</b>。持ち株とお金は<b>次の期へ持ち越し</b>。決算後の株価が次の期のスタート価格です。</li>
         <li><b>配当：</b>業績がプラスの会社は、決算で1株につき業績と同じ数のコインがもらえます。</li>
         <li><b>倒産：</b>決算で株価が0になった会社は倒産し、その株は紙くずに。新しい会社として5から再上場します。</li>
         <li>業績カードは期ごとに配り直し。知っている会社も入れ替わります。</li>
@@ -182,12 +184,18 @@ const sgn=v=>v>0?'+'+v:''+v;
 function newGame(periods){
   const players=[{name:'あなた',cpu:false},...CPU_NAMES.map(n=>({name:n,cpu:true}))]
     .map(p=>({...p,cash:START_CASH,sh:{A:0,B:0,C:0},knows:null,div:0}));
-  S={periods,longRules:periods>1,period:0,round:1,price:{A:START_PRICE,B:START_PRICE,C:START_PRICE},prev:{A:0,B:0,C:0},
+  S={periods,longRules:periods>1,maxP:periods>1?20:10,hist:{A:[START_PRICE],B:[START_PRICE],C:[START_PRICE]},marks:[],period:0,round:1,price:{A:START_PRICE,B:START_PRICE,C:START_PRICE},prev:{A:0,B:0,C:0},
      players,pick:null,act:null,log:[],pastEarn:[]};
   startPeriod();
 }
+function ensureHist(){ // 古い保存データ用
+  if(!S.hist)S.hist={A:[S.price.A],B:[S.price.B],C:[S.price.C]};
+  if(!S.marks)S.marks=[];
+}
 function startPeriod(){
   S.period++; S.round=1; S.prev={A:0,B:0,C:0}; S.base={...S.price};
+  ensureHist();
+  if(S.period>1){NAMES.forEach(n=>S.hist[n].push(S.price[n])); S.marks.push(S.hist.A.length-1);} // 期の境目
   const vals=shuffle([-3,-1,1,3]).slice(0,3);
   S.earn={}; NAMES.forEach((n,i)=>S.earn[n]=vals[i]);
   // 誰がどの会社を知っているか（4人で3社→1社は2人が知る）
@@ -199,6 +207,7 @@ function startPeriod(){
   save('round');
 }
 const isLastRound=()=>S.round===ROUNDS;
+const maxP=()=>S.maxP||(S.longRules?20:10);
 const isFinal=()=>S.period===S.periods;
 
 function legal(p,stock,act){
@@ -232,11 +241,16 @@ function cpuOrder(p,idx){
       if(known&&v<0) add(s,'sell',4);
       if(known&&v>0) add(s,'buy',3);
     }
+    // 共通：利確・押し目買い・様子見買い（後半も手が止まらないように）
+    if(p.sh[s]&&pr[s]>fair) add(s,'sell',2+(pr[s]-fair));          // 適正より高い→利確
+    if(gap>=1) add(s,'buy',1+gap);                                   // 適正より安い→押し目買い
+    if(!known&&pr[s]<=S.base[s]+1) add(s,'buy',1);                   // よく分からないけど安め→少し買う
+    if(p.sh[s]>=3&&!(known&&v>0)) add(s,'sell',2);                   // 持ちすぎは減らす
     if(last&&p.sh[s]&&!(known&&v>0)) add(s,'sell',4); // 最終ラウンドは利確したくなる
     if(divChance&&known&&v>0) add(s,'buy',5); // 配当がほしい
     if(divChance&&known&&v===-3&&p.sh[s]) add(s,'sell',6); // 倒産がこわい
   });
-  add('A','pass',1);
+  add('A','pass',opts.length?0.6:1);
   const tot=opts.reduce((t,o)=>t+o.w,0); let r=Math.random()*tot;
   for(const o of opts){if((r-=o.w)<=0)return {stock:o.a==='pass'?null:o.s,act:o.a}}
   return {stock:null,act:'pass'};
@@ -252,13 +266,13 @@ function render(){
   const me=S.players[0];
   $('roundLbl').textContent=(S.periods>1||S.period>1?`第${S.period}期・`:'')+`ラウンド ${Math.min(S.round,ROUNDS)} / ${ROUNDS}`;
   $('stocks').innerHTML=NAMES.map(n=>{
-    const d=S.prev[n], bars=Array.from({length:10},(_,i)=>`<i style="${i<S.price[n]?'background:'+COLORS[n]:''}"></i>`).join('');
+    const d=S.prev[n];
     const memo=me.knows===n?`業績メモ：<b style="color:${S.earn[n]>0?'var(--buy)':'var(--sell)'}">${sgn(S.earn[n])}</b>`:'業績 ？';
     return `<div class="stock" style="border-color:${COLORS[n]}">
       <div class="nm" style="color:${COLORS[n]}">${n}社</div>
       <div class="pr">${S.price[n]}</div>
       <div class="dl ${d>0?'up':d<0?'down':''}">${S.round>1?(d>0?'▲'+d:d<0?'▼'+(-d):'±0'):''}</div>
-      <div class="bar">${bars}</div>
+      ${spark(n)}
       <div class="memo">${memo}</div></div>`}).join('');
   $('me').innerHTML=`<span>所持金 <b>${me.cash}</b></span>`+NAMES.map(n=>`<span>${n}社 <b>${me.sh[n]}</b>株</span>`).join('')+
     `<span>評価額 <b>${worth(me)}</b></span>`;
@@ -284,6 +298,23 @@ function render(){
     S.players.map(p=>`<tr><td class="l">${p.name}</td><td>${p.cash}</td>${NAMES.map(n=>`<td>${p.sh[n]}</td>`).join('')}<td><b>${worth(p)}</b></td></tr>`).join('');
   $('log').innerHTML=S.log.length?S.log.slice().reverse().map(t=>`<div>${t}</div>`).join(''):'<div>まだ取引はありません。</div>';
 }
+// 株価チャート（直近の期を中心に最大24点）
+function spark(n){
+  const H=(S.hist&&S.hist[n])||[S.price[n]];
+  const from=Math.max(0,H.length-24), pts=H.slice(from), M=maxP();
+  let lo=Math.min(...pts), hi=Math.max(...pts); while(hi-lo<4){if(lo>1)lo--; if(hi-lo<4&&hi<M)hi++; if(lo<=1&&hi>=M)break;}
+  const W=100,HH=40,pad=4, step=pts.length>1?(W-pad*2)/(pts.length-1):0;
+  const x=i=>pad+i*step, y=v=>HH-pad-(v-lo)/Math.max(1,hi-lo)*(HH-pad*2);
+  const line=pts.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const marks=(S.marks||[]).filter(m=>m>=from).map(m=>`<line x1="${x(m-from)}" x2="${x(m-from)}" y1="2" y2="${HH-2}" stroke="var(--line)" stroke-dasharray="2 2"/>`).join('');
+  const last=pts.length-1;
+  return `<svg class="spark" viewBox="0 0 ${W} ${HH}" preserveAspectRatio="none" aria-label="${n}社の株価の動き">
+    <line x1="0" x2="${W}" y1="${y(S.base?S.base[n]:START_PRICE)}" y2="${y(S.base?S.base[n]:START_PRICE)}" stroke="var(--line)"/>
+    ${marks}
+    <path d="${line}" fill="none" stroke="${COLORS[n]}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    <circle cx="${x(last)}" cy="${y(pts[last])}" r="2.5" fill="${COLORS[n]}"/></svg>
+    <div class="range"><span>${lo}</span><span>${hi}</span></div>`;
+}
 const worth=p=>p.cash+NAMES.reduce((t,n)=>t+p.sh[n]*S.price[n],0);
 const actLabel=o=>o.act==='pass'?'<span class="chip" style="background:var(--pass)">見送り</span>':
   `<span class="chip" style="background:${COLORS[o.stock]}">${o.stock}社</span> <span class="chip" style="background:${o.act==='buy'?'var(--buy)':'var(--sell)'}">${o.act==='buy'?'買い':'売り'}</span>`;
@@ -293,8 +324,8 @@ function go(){
   const net={A:0,B:0,C:0};
   orders.forEach(o=>{if(o.act==='buy')net[o.stock]++;if(o.act==='sell')net[o.stock]--});
   const before={...S.price};
-  NAMES.forEach(n=>S.price[n]=clamp(S.price[n]+net[n],1,10));
-  NAMES.forEach(n=>{S.prev[n]=S.price[n]-before[n]});
+  NAMES.forEach(n=>S.price[n]=clamp(S.price[n]+net[n],1,maxP()));
+  NAMES.forEach(n=>{S.prev[n]=S.price[n]-before[n]; if(S.hist)S.hist[n].push(S.price[n])});
   const fills=orders.map((o,i)=>{
     const p=S.players[i];
     if(o.act==='buy'){const c=S.price[o.stock]; if(p.cash>=c){p.cash-=c;p.sh[o.stock]++;return `${c}で購入`} return '資金不足で不成立'}
@@ -372,7 +403,7 @@ function finish(){
 }
 function nextPeriod(){
   if(isFinal())S.periods++; // 続ける：持ち株・お金をそのまま次の期へ
-  NAMES.forEach(n=>{if(S.price[n]===0)S.price[n]=START_PRICE; S.price[n]=clamp(S.price[n],1,10)});
+  NAMES.forEach(n=>{if(S.price[n]===0)S.price[n]=START_PRICE; S.price[n]=clamp(S.price[n],1,maxP())});
   startPeriod();
 }
 
@@ -404,7 +435,7 @@ function showResume(){
 }
 function resume(){
   const d=loadSave(); if(!d)return showResume();
-  S=d.S;
+  S=d.S; ensureHist();
   $('title').classList.add('hidden');$('result').classList.add('hidden');$('game').classList.remove('hidden');
   if(d.phase==='settle')return nextPeriod();
   if(S.round>ROUNDS)return finish();

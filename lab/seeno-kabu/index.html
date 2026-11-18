@@ -73,6 +73,11 @@
   .modes small{display:block;font-weight:400;font-size:12px;opacity:.8}
   button.primary.alt{background:var(--gold);border-color:var(--gold)}
   #nextPeriodBtn{margin-bottom:8px}
+  .event{display:flex;gap:10px;align-items:center;margin-top:10px;padding:8px 12px;border-radius:12px;background:#fff7e3;border:1px solid #f0dca6;font-size:14px}
+  .event .ei{font-size:26px}
+  .event small{color:var(--sub)}
+  .event.pop{animation:pop .5s ease}
+  @keyframes pop{0%{transform:rotateY(90deg);opacity:0}100%{transform:none;opacity:1}}
   .win{font-size:20px;font-weight:800;text-align:center;margin:6px 0 10px}
 </style>
 </head>
@@ -90,6 +95,7 @@
         <li>各社には裏向きの<b>業績カード</b>（−3／−1／+1／+3 のどれか）があり、あなたは<b>1社だけ</b>こっそり見られます。CPUもそれぞれ1社ずつ知っています。</li>
         <li>毎ラウンド、全員が「銘柄」と「買う／売る／見送り」を1つ選び、<b>せーの</b>で公開。</li>
         <li>銘柄ごとに <b>買いの数 − 売りの数</b> だけ株価が動き（1〜10。じっくりモードは1〜20）、<b>動いた後の値段</b>で全員の注文が成立します。1注文は1株。</li>
+        <li>期のはじめに<b>景気カード</b>を1枚めくります（好景気・不景気・ブーム・不祥事・大型受注・平穏）。</li>
         <li>6ラウンド後に業績カードを公開。<b>株価 + 業績</b> が最終株価になり、株を換金してお金が一番多い人の勝ち。</li>
       </ol>
     </div>
@@ -121,6 +127,7 @@
         <h2 style="margin:0"><a href="../" style="text-decoration:none;color:inherit" aria-label="ラボに戻る">⌂</a> 株価ボード</h2>
         <span class="round" id="roundLbl"></span>
       </div>
+      <div id="eventBox"></div>
       <div class="stocks" id="stocks" style="margin-top:8px"></div>
     </div>
 
@@ -202,11 +209,13 @@ function ensureHist(){ // 古い保存データ用
   if(!S.marks)S.marks=[];
 }
 function startPeriod(){
-  S.period++; S.round=1; S.prev={A:0,B:0,C:0}; S.base={...S.price};
+  S.period++; S.round=1; S.prev={A:0,B:0,C:0};
   ensureHist();
   if(S.period>1){NAMES.forEach(n=>S.hist[n].push(S.price[n])); S.marks.push(S.hist.A.length-1);} // 期の境目
   const vals=shuffle([-3,-1,1,3]).slice(0,3);
   S.earn={}; NAMES.forEach((n,i)=>S.earn[n]=vals[i]);
+  drawEvent();
+  S.base={...S.price};
   // 誰がどの会社を知っているか（4人で3社→1社は2人が知る）
   const know=shuffle([0,1,2,Math.floor(Math.random()*3)]).map(i=>NAMES[i]);
   S.players.forEach((p,i)=>p.knows=know[i]);
@@ -214,6 +223,36 @@ function startPeriod(){
   $('title').classList.add('hidden');$('result').classList.add('hidden');$('game').classList.remove('hidden');
   resetOrderUI(); render(); window.scrollTo({top:0});
   save('round');
+}
+/* ---------- 景気カード（期のはじめに1枚） ---------- */
+const EVENTS=[
+  {id:'boom',  icon:'☀️',name:'好景気',   w:3, txt:()=>'全社の株価 +1'},
+  {id:'slump', icon:'🌧️',name:'不景気',   w:3, txt:()=>'全社の株価 −1'},
+  {id:'fad',   icon:'🔥',name:'ブーム',   w:2, one:true, txt:t=>`${t}社の株価 +2`},
+  {id:'scandal',icon:'💣',name:'不祥事', w:2, one:true, txt:t=>`${t}社の株価 −2`},
+  {id:'order', icon:'📦',name:'大型受注', w:2, one:true, txt:t=>`${t}社の業績 +2（決算で効く・みんなが知っている）`},
+  {id:'calm',  icon:'🍵',name:'平穏',     w:2, txt:()=>'何も起きない'},
+];
+function drawEvent(){
+  const tot=EVENTS.reduce((t,e)=>t+e.w,0); let x=Math.random()*tot, ev=EVENTS[0];
+  for(const e of EVENTS){if((x-=e.w)<=0){ev=e;break}}
+  const t=ev.one?NAMES[Math.floor(Math.random()*3)]:null, M=maxP();
+  const before={...S.price};
+  if(ev.id==='boom')NAMES.forEach(n=>S.price[n]=clamp(S.price[n]+1,1,M));
+  if(ev.id==='slump')NAMES.forEach(n=>S.price[n]=clamp(S.price[n]-1,1,M));
+  if(ev.id==='fad')S.price[t]=clamp(S.price[t]+2,1,M);
+  if(ev.id==='scandal')S.price[t]=clamp(S.price[t]-2,1,M);
+  S.bonus={A:0,B:0,C:0};
+  if(ev.id==='order'){S.bonus[t]=2;S.earn[t]+=2;}
+  S.event={icon:ev.icon,name:ev.name,txt:ev.txt(t),target:t};
+  NAMES.forEach(n=>S.prev[n]=S.price[n]-before[n]);
+  if(NAMES.some(n=>S.price[n]!==before[n]))NAMES.forEach(n=>S.hist[n].push(S.price[n]));
+  S.log.push(`${ev.icon} 景気カード「${ev.name}」：${S.event.txt}`);
+  S.showEvent=true;
+}
+function eventBanner(){
+  const e=S.event; if(!e)return '';
+  return `<div class="event${S.showEvent?' pop':''}"><span class="ei">${e.icon}</span><div><b>景気カード：${e.name}</b><br><small>${e.txt}</small></div></div>`;
 }
 const isLastRound=()=>S.round===ROUNDS;
 const maxP=()=>S.maxP||(S.longRules?20:10);
@@ -235,7 +274,8 @@ function cpuOrder(p,idx){
   const divChance=isLastRound()&&!isFinal(); // 配当前の駆け込み
   NAMES.forEach(s=>{
     const known=(s===k);
-    const fair=known?S.base[s]+v:S.base[s]; // その人が思う適正価格
+    const pub=(S.bonus&&S.bonus[s])||0; // 大型受注はみんな知っている
+    const fair=known?S.base[s]+v:S.base[s]+pub; // その人が思う適正価格
     const gap=fair-pr[s];
     if(idx===0){ // ハヤミ
       if(known&&v>0) add(s,'buy', 6+gap*2);
@@ -272,15 +312,17 @@ function resetOrderUI(){
   $('nextBtn').classList.add('hidden');
 }
 function render(){
+  $('eventBox').innerHTML=eventBanner(); S.showEvent=false;
   const me=S.players[0];
   $('roundLbl').textContent=(S.periods>1||S.period>1?`第${S.period}期・`:'')+`ラウンド ${Math.min(S.round,ROUNDS)} / ${ROUNDS}`;
   $('stocks').innerHTML=NAMES.map(n=>{
     const d=S.prev[n];
-    const memo=me.knows===n?`業績メモ：<b style="color:${S.earn[n]>0?'var(--buy)':'var(--sell)'}">${sgn(S.earn[n])}</b>`:'業績 ？';
+    const bn=(S.bonus&&S.bonus[n])||0;
+    const memo=me.knows===n?`業績メモ：<b style="color:${S.earn[n]>0?'var(--buy)':'var(--sell)'}">${sgn(S.earn[n])}</b>`:(bn?`業績 ？${sgn(bn)}`:'業績 ？');
     return `<div class="stock" style="border-color:${COLORS[n]}">
       <div class="nm" style="color:${COLORS[n]}">${n}社</div>
       <div class="pr">${S.price[n]}</div>
-      <div class="dl ${d>0?'up':d<0?'down':''}">${S.round>1?(d>0?'▲'+d:d<0?'▼'+(-d):'±0'):''}</div>
+      <div class="dl ${d>0?'up':d<0?'down':''}">${S.round>1||d?(d>0?'▲'+d:d<0?'▼'+(-d):'±0'):''}</div>
       ${spark(n)}
       <div class="memo">${memo}</div></div>`}).join('');
   $('me').innerHTML=`<span>所持金 <b>${me.cash}</b></span>`+NAMES.map(n=>`<span>${n}社 <b>${me.sh[n]}</b>株</span>`).join('')+

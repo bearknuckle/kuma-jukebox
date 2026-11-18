@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>試作ゲームラボ</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="description" content="ブラウザですぐ遊べる試作ゲームの置き場">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
@@ -14,7 +16,8 @@ html,body{margin:0;background:var(--bg);color:var(--text);font-family:"M PLUS Ro
 main{max-width:720px;margin:0 auto;padding:28px 16px 48px}
 header{margin-bottom:24px}
 h1{margin:0;font-size:26px;font-weight:800;letter-spacing:.04em}
-h1 span{color:var(--accent)}
+h1{display:flex;align-items:center;gap:10px}
+.logo{width:40px;height:40px;border-radius:10px}
 .lead{color:var(--dim);font-size:14px;margin:8px 0 0;line-height:1.7}
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin:20px 0 16px}
 .filters button{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:99px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
@@ -37,7 +40,7 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 <body>
 <main>
   <header>
-    <h1><span>▶</span> 試作ゲームラボ</h1>
+    <h1><img src="icon.svg" alt="" class="logo"> 試作ゲームラボ</h1>
     <p class="lead">ブラウザですぐ遊べる試作ゲームの置き場です。スマホでもそのまま遊べます。感想があればぜひ教えてください。</p>
   </header>
   <div class="filters" id="filters"></div>

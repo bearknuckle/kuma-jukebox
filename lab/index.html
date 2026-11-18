@@ -34,6 +34,7 @@ a.game:hover{transform:translateY(-2px);border-color:var(--accent)}
 .game.soon{opacity:.45;border-style:dashed}
 h2.cat{font-size:16px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 h2.cat:first-child{margin-top:4px}
+.catnote{font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.6}
 footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 </style>
 </head>
@@ -76,9 +77,9 @@ const GAMES=[
     players:'1人（CPU 3人）', time:'5〜10分', genre:'株', added:'2026-11-18', isNew:true
   },
   {
-    id:'baron-nimmt', name:'ニムト男爵', icon:'🐮', color:'#c9a227',
+    id:'baron-nimmt', name:'ニムト男爵', badge:'市販ゲーム', icon:'🐮', color:'#c9a227',
     url:'https://boardgame-tutorial.onrender.com/baron-nimmt',
-    desc:'牛マークの色で置く列を決めるカードゲームを、チュートリアルで学べる。CPU対戦・オンライン対戦つき。',
+    desc:'市販のカードゲーム「ニムト男爵」のルールを学べるチュートリアル。牛マークの色で置く列を決める仕組みを順番に覚えられる。CPU対戦・オンライン対戦つき。',
     players:'2〜10人（CPU・オンライン対戦）', time:'約30分', genre:'チュートリアル', added:'2026-11-18', isNew:true,
     note:'別サーバーのため、最初の表示に少し時間がかかることがあります'
   },
@@ -87,15 +88,15 @@ const SOON={name:'次の試作を準備中…',icon:'🛠️',color:'#2a2639',de
 
 // カテゴリ（表示順）。新しいカテゴリはここに追加する
 const CATS=[
-  {id:'音楽',label:'音楽のゲーム',icon:'🎵'},
-  {id:'株',label:'株のゲーム',icon:'📈'},
-  {id:'チュートリアル',label:'チュートリアル',icon:'📘'},
+  {id:'音楽',label:'音楽のゲーム',icon:'🎵',note:'オリジナルの試作ゲーム'},
+  {id:'株',label:'株のゲーム',icon:'📈',note:'オリジナルの試作ゲーム'},
+  {id:'チュートリアル',label:'既存ゲームのチュートリアル',icon:'📘',note:'市販のボードゲームのルールを、遊びながら覚えられるチュートリアルです（オリジナルの試作ゲームではありません）'},
 ];
 let cur='すべて';
 function card(g){
   const a=document.createElement('a');a.className='game';a.href=g.url||(g.id+'/');
   a.innerHTML=`<div class="icon" style="background:${g.color}">${g.icon}</div>
-    <div class="body"><div class="name">${g.name}${g.isNew?'<span class="tag">NEW</span>':''}</div>
+    <div class="body"><div class="name">${g.name}${g.badge?`<span class="tag" style="background:#3a3550">${g.badge}</span>`:''}${g.isNew?'<span class="tag">NEW</span>':''}</div>
     <div class="desc">${g.desc}</div>
     <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div>${g.note?`<div class="meta" style="margin-top:4px">ℹ️ ${g.note}</div>`:''}</div>`;
   return a;
@@ -113,6 +114,7 @@ function render(){
   const root=document.getElementById('grid');root.innerHTML='';root.className='';
   cats.filter(c=>cur==='すべて'||c.id===cur).forEach(c=>{
     const h=document.createElement('h2');h.className='cat';h.textContent=c.icon+' '+c.label;root.appendChild(h);
+    if(c.note){const n=document.createElement('p');n.className='catnote';n.textContent=c.note;root.appendChild(n);}
     const grid=document.createElement('div');grid.className='grid';
     GAMES.filter(g=>g.genre===c.id).sort((a,b)=>b.added.localeCompare(a.added)).forEach(g=>grid.appendChild(card(g)));
     root.appendChild(grid);

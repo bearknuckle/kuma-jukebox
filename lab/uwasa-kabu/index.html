@@ -30,6 +30,10 @@ button{font-family:inherit;cursor:pointer;border:none}
 .cpu-intro div{display:flex;gap:10px;align-items:center}
 .cpu-intro .av{font-size:24px}
 .cpu-intro small{color:var(--sub);display:block}
+.cpu-intro div.off{opacity:.3}
+.cnt{display:flex;gap:6px;margin:4px 0 12px}
+.cnt button{flex:1;padding:10px 0;border-radius:10px;background:#fff;border:2px solid var(--line)!important;font-size:16px;font-weight:800;color:var(--ink)}
+.cnt button.on{background:var(--ink);color:#fff;border-color:var(--ink)!important}
 .big{display:block;width:100%;padding:16px;border-radius:14px;background:var(--ink);color:#fff;font-size:18px;font-weight:800;box-shadow:0 4px 0 #000;transition:transform .08s}
 .big:active{transform:translateY(3px);box-shadow:0 1px 0 #000}
 .big:disabled{background:#a9a294;box-shadow:0 4px 0 #8a8478}
@@ -148,12 +152,9 @@ button{font-family:inherit;cursor:pointer;border:none}
     <p style="font-size:13px;color:var(--sub);margin-top:8px">最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
   </div>
   <div class="panel">
-    <h3>対戦するCPU</h3>
-    <div class="cpu-intro">
-      <div><span class="av">🐰</span><span><b>ウサギ</b><small>強気。いいウワサにはすぐ飛びつく</small></span></div>
-      <div><span class="av">🐢</span><span><b>カメ</b><small>慎重。安くて確かそうなときだけ買う</small></span></div>
-      <div><span class="av">🦊</span><span><b>キツネ</b><small>へそまがり。安いと買い、高いと売る</small></span></div>
-    </div>
+    <h3>対戦するCPUの人数</h3>
+    <div class="cnt" id="cnt"></div>
+    <div class="cpu-intro" id="cpuIntro"></div>
   </div>
   <button class="big" onclick="newGame()">はじめる</button>
   <p style="text-align:center;margin-top:14px"><a href="../" style="color:var(--sub);font-size:13px">← 試作ゲームラボに戻る</a></p>
@@ -284,7 +285,42 @@ function cpuWantsSpy(p){
   const sid=S.card.src.id;
   if(p.name==='カメ')return sid!=='paper';
   if(p.name==='キツネ')return sid==='sns';
+  if(p.name==='フクロウ')return sid==='tv';
   return false;
+}
+
+// フクロウ：計算派。得しそうなら買い、損しそうなら売る。テレビのウワサで情報屋を使う
+function aiOwl(p){
+  const e=expect(S.card,p);
+  const ids=COMP.map(c=>c.id);
+  const bad=ids.filter(id=>p.sh[id]>0&&e[id]<-0.3).sort((a,b)=>e[a]-e[b])[0];
+  if(bad) return {type:'sell',c:bad};
+  const best=ids.filter(id=>p.coins>=S.prices[id]).sort((a,b)=>(e[b]-S.prices[b]*0.05)-(e[a]-S.prices[a]*0.05))[0];
+  if(best&&e[best]>0.3) return {type:'buy',c:best};
+  const high=ids.filter(id=>p.sh[id]>0&&S.prices[id]>=8&&e[id]<=0)[0];
+  if(high) return {type:'sell',c:high};
+  return {type:'pass'};
+}
+// ブタ：ためこみ派。持っていない会社から順に安く集めて、ほとんど売らない
+function aiPig(p){
+  const ids=COMP.map(c=>c.id);
+  const want=ids.filter(id=>p.coins>=S.prices[id]&&S.prices[id]<=6).sort((a,b)=>(p.sh[a]-p.sh[b])||(S.prices[a]-S.prices[b]))[0];
+  if(want) return {type:'buy',c:want};
+  return {type:'pass'};
+}
+const CPUS=[
+  {name:'ウサギ',icon:'🐰',ai:aiRabbit,desc:'強気。いいウワサや流行にすぐ飛びつく'},
+  {name:'カメ',icon:'🐢',ai:aiTurtle,desc:'慎重。安くて確かそうなときだけ買う'},
+  {name:'キツネ',icon:'🦊',ai:aiFox,desc:'へそまがり。安いと買い、高いと売る'},
+  {name:'フクロウ',icon:'🦉',ai:aiOwl,desc:'計算派。得か損かを考えて売り買いする'},
+  {name:'ブタ',icon:'🐷',ai:aiPig,desc:'ためこみ派。いろんな株を安く集めて手放さない'},
+];
+let numCpu=3;
+try{const v=+localStorage.getItem('uwasa-cpu');if(v>=1&&v<=5)numCpu=v}catch(e){}
+function setCpu(n){numCpu=n;try{localStorage.setItem('uwasa-cpu',n)}catch(e){}renderSetup()}
+function renderSetup(){
+  document.getElementById('cnt').innerHTML=[1,2,3,4,5].map(n=>`<button class="${n===numCpu?'on':''}" onclick="setCpu(${n})">${n}人</button>`).join('');
+  document.getElementById('cpuIntro').innerHTML=CPUS.map((c,i)=>`<div class="${i<numCpu?'':'off'}"><span class="av">${c.icon}</span><span><b>${c.name}</b><small>${c.desc}</small></span></div>`).join('');
 }
 
 /* ---------- flow ---------- */
@@ -298,9 +334,7 @@ function newGame(){
     hits:0,bySrc:{paper:[0,0],tv:[0,0],sns:[0,0]},
     players:[
       {name:'あなた',icon:'🙂',me:true,coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false},
-      {name:'ウサギ',icon:'🐰',coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false,ai:aiRabbit},
-      {name:'カメ',icon:'🐢',coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false,ai:aiTurtle},
-      {name:'キツネ',icon:'🦊',coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false,ai:aiFox},
+      ...CPUS.slice(0,numCpu).map(c=>({name:c.name,icon:c.icon,ai:c.ai,coins:START_COINS,sh:emptySh(),spy:SPY_USES,spyUsed:0,knows:false})),
     ]
   };
   show('game');
@@ -430,8 +464,8 @@ function next(){
 function finish(){
   const ranked=S.players.map(p=>({p,v:total(p)})).sort((a,b)=>b.v-a.v);
   const myRank=ranked.findIndex(r=>r.p.me)+1;
-  const msgs=['🏆 優勝！おめでとう！','🥈 2位！おしい！','🥉 3位！次はいける！','4位…リベンジしよう！'];
-  document.getElementById('endMsg').textContent=msgs[myRank-1];
+  const n=ranked.length;
+  document.getElementById('endMsg').textContent=myRank===1?'🏆 優勝！おめでとう！':myRank===n?`${n}位…リベンジしよう！`:myRank===2?'🥈 2位！おしい！':myRank===3?'🥉 3位！次はいける！':`${myRank}位！次はいける！`;
   document.getElementById('rank').innerHTML=ranked.map((r,i)=>`<div class="rk ${r.p.me?'me':''}"><span class="no">${i+1}</span><span class="nm">${r.p.icon} ${r.p.name}</span><span class="v">${r.v}<small style="font-size:12px">コイン</small></span></div>`).join('');
   const me=S.players[0], gain=total(me)-START_COINS;
   document.getElementById('endStats').innerHTML=`<h3>ふりかえり</h3><ul>
@@ -486,6 +520,7 @@ function render(animate){
   }).join('');
   document.getElementById('log').innerHTML=S.log.map(l=>`<div>${l}</div>`).join('');
 }
+renderSetup();
 </script>
 </body>
 </html>

@@ -75,6 +75,13 @@ const GAMES=[
     desc:'ニュースのウワサを見て株を売り買い。裏返して答え合わせ。遊びながら株取引のキホンが身につく。',
     players:'1人（CPU 3人）', time:'5〜10分', genre:'株', added:'2026-11-18', isNew:true
   },
+  {
+    id:'baron-nimmt', name:'ニムト男爵', icon:'🐮', color:'#c9a227',
+    url:'https://boardgame-tutorial.onrender.com/baron-nimmt',
+    desc:'牛マークの色で置く列を決めるカードゲームを、チュートリアルで学べる。CPU対戦・オンライン対戦つき。',
+    players:'2〜10人（CPU・オンライン対戦）', time:'約30分', genre:'チュートリアル', added:'2026-11-18', isNew:true,
+    note:'別サーバーのため、最初の表示に少し時間がかかることがあります'
+  },
 ];
 const SOON={name:'次の試作を準備中…',icon:'🛠️',color:'#2a2639',desc:'新しいゲームができたらここに追加されます。'};
 
@@ -82,14 +89,15 @@ const SOON={name:'次の試作を準備中…',icon:'🛠️',color:'#2a2639',de
 const CATS=[
   {id:'音楽',label:'音楽のゲーム',icon:'🎵'},
   {id:'株',label:'株のゲーム',icon:'📈'},
+  {id:'チュートリアル',label:'チュートリアル',icon:'📘'},
 ];
 let cur='すべて';
 function card(g){
-  const a=document.createElement('a');a.className='game';a.href=g.id+'/';
+  const a=document.createElement('a');a.className='game';a.href=g.url||(g.id+'/');
   a.innerHTML=`<div class="icon" style="background:${g.color}">${g.icon}</div>
     <div class="body"><div class="name">${g.name}${g.isNew?'<span class="tag">NEW</span>':''}</div>
     <div class="desc">${g.desc}</div>
-    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div></div>`;
+    <div class="meta"><span>👥 ${g.players}</span><span>⏱ ${g.time}</span></div>${g.note?`<div class="meta" style="margin-top:4px">ℹ️ ${g.note}</div>`:''}</div>`;
   return a;
 }
 function render(){

@@ -80,6 +80,16 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
 .reader.pulse .call{animation:pop .35s ease}
 @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 .timer{position:absolute;left:0;bottom:0;height:3px;background:var(--gold);width:0}
+.call span.done{opacity:.35}
+.call.multi{font-size:34px}
+.call i{font-style:normal;color:#6f7fa3;margin:0 2px}
+.line{display:flex;gap:6px;justify-content:center;margin:-2px 0 8px}
+.line .card,.line .ph{width:58px;flex:none}
+.line .card{cursor:default}
+.line .card.ok{box-shadow:0 0 0 3px var(--gold)}
+.line .ph{aspect-ratio:100/138;border:2px dashed rgba(120,100,70,.35);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:900}
+.card.held{outline:3px solid var(--gold);outline-offset:1px}
+.card.held::after{content:attr(data-n);position:absolute;left:-6px;top:-8px;width:22px;height:22px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center}
 .msg{text-align:center;font-weight:700;font-size:14px;min-height:22px;margin:-4px 0 8px}
 .msg.good{color:var(--ok)} .msg.bad{color:var(--you)} .msg.cpu{color:var(--cpu)}
 
@@ -141,6 +151,12 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     <div class="lvs" id="levels"></div>
     <div class="lvnote">おすすめの順番：赤 → 赤＋青 → 緑 → 全部まぜる。紙の札も同じ4色で作れば、遊ぶ色の札だけを場に並べられます。</div>
   </div>
+  <div class="group"><h2>あそびかた</h2>
+    <div class="seg" data-key="melody">
+      <button data-v="1">1枚ずつ</button>
+      <button data-v="3">メロディ取り 3音</button>
+      <button data-v="4">メロディ取り 4音</button>
+    </div></div>
   <div class="group"><h2>対戦相手</h2>
     <div class="seg" data-key="cpu">
       <button data-v="solo">ひとりで</button>
@@ -166,6 +182,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     ・同じ音名の札が2枚あるときは、どちらを取ってもOK（「音だけ聴く」は高さまでぴったりの札だけ）。<br>
     ・ちがう札をタップすると<b>お手つき</b>で−1点。CPU戦ではその回はもう取れません。<br>
     ・「ひとりで」は全部取るまでのタイムと、まちがいの数を記録します。<br>
+    ・<b>メロディ取り</b>：読み手が3〜4音を続けて出します。その順番どおりに札を取ると、取った札が並んで小さな楽譜になります。全部そろえた人が、その札を全部もらえます（紙で遊ぶときは、取った札を左から順に並べて全員で答え合わせ）。<br>
     ・最後に、まちがえた音・取られた音を「苦手な音」として見直せます。<br>
     ・札の枠の色と右上のマーク（●■▲◆）がレベルです。色が見分けにくくても、マークで区別できます。
   </details>
@@ -185,6 +202,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     <button class="replay" id="replay">🔊 もう一度</button>
     <div class="timer" id="timer"></div>
   </div>
+  <div class="line hidden" id="line"></div>
   <div class="msg" id="msg"></div>
   <div class="grid" id="board"></div>
   <button class="quit" id="quitBtn" style="margin-top:14px">やめて設定にもどる</button>
@@ -228,7 +246,7 @@ const LEVELS=[
 ];
 const LV=Object.fromEntries(LEVELS.map(l=>[l.id,l]));
 
-const S={mode:'name',levels:['red'],cpu:'2',size:'12',names:'doremi'};
+const S={mode:'name',melody:'1',levels:['red'],cpu:'2',size:'12',names:'doremi'};
 try{Object.assign(S,JSON.parse(localStorage.getItem('onpuKarutaSettings')||'{}'))}catch(e){}
 if(!Array.isArray(S.levels)||!S.levels.filter(id=>LV[id]).length) S.levels=['red'];
 S.levels=S.levels.filter(id=>LV[id]);
@@ -346,15 +364,15 @@ function startGame(){
   const pool=shuffle(buildPool());
   const n=Math.min(+S.size,pool.length);
   const cards=pool.slice(0,n).map((c,i)=>({...c,id:i,taken:null}));
-  G={cards,you:0,cpu:0,miss:0,times:[],weak:[],state:'idle',target:null,lock:false,t0:0,cpuTimer:null,start:performance.now(),solo:S.cpu==='solo'};
+  G={cards,you:0,cpu:0,got:0,miss:0,times:[],weak:[],state:'idle',seq:[],pos:0,picked:[],lock:false,t0:0,cpuTimer:null,start:performance.now(),solo:S.cpu==='solo',L:+S.melody||1};
   $('cpuBox').classList.toggle('hidden',G.solo);
   const board=$('board'); board.innerHTML='';
-  board.style.gridTemplateColumns=`repeat(4,1fr)`;
   cards.forEach(c=>{
     c.el=cardEl(c);
     c.el.addEventListener('pointerdown',ev=>{ev.preventDefault();tap(c)});
     board.appendChild(c.el);
   });
+  $('line').innerHTML=''; $('line').classList.toggle('hidden',G.L===1);
   updateBar(); show('game');
   $('call').innerHTML='<small>よーい…</small>'; setMsg('');
   setTimeout(nextRound,900);
@@ -365,68 +383,103 @@ function updateBar(){
 }
 function setMsg(t,cls=''){const m=$('msg');m.textContent=t;m.className='msg '+cls}
 const matches=(c,t)=> S.mode==='sound' ? midiOf(c)===midiOf(t) : c.d%7===t.d%7;
+const GAP=600; // メロディの音の間隔(ms)
 
 function cpuDelay(){
   const r={1:[4200,6500],2:[2500,4000],3:[1300,2200]}[S.cpu];
   return r[0]+Math.random()*(r[1]-r[0]);
 }
+function playSeq(seq){ seq.forEach((c,i)=>setTimeout(()=>playMidi(midiOf(c)),i*GAP)); }
+function renderCall(){
+  const L=G.seq.length;
+  if(S.mode==='sound'){
+    $('call').innerHTML=G.seq.map((c,i)=>`<span class="${i<G.pos?'done':''}">♪</span>`).join('')+`<small>${L>1?'このメロディを順番に取ろう':'この音はどれ？'}</small>`;
+  }else{
+    $('call').innerHTML=G.seq.map((c,i)=>`<span class="${i<G.pos?'done':''}">${nameOf(c)}</span>`).join(L>1?'<i>・</i>':'')+(S.mode==='both'?'<small>♪</small>':'');
+  }
+  $('call').classList.toggle('multi',L>1);
+}
+function renderLine(cards,ok){
+  const ln=$('line'); if(G.L===1) return; ln.innerHTML='';
+  for(let i=0;i<G.seq.length;i++){
+    const c=cards[i];
+    if(c){ const el=cardEl(c); if(ok) el.classList.add('ok'); ln.appendChild(el); }
+    else { const ph=document.createElement('div'); ph.className='ph'; ph.textContent=i+1; ln.appendChild(ph); }
+  }
+}
 function nextRound(){
   const left=G.cards.filter(c=>!c.taken);
   if(!left.length) return finish();
-  const t=left[Math.random()*left.length|0];
-  G.target=t; G.state='calling'; G.lock=false;
+  G.seq=shuffle(left.slice()).slice(0,Math.min(G.L,left.length));
+  G.pos=0; G.picked=[]; G.state='calling'; G.lock=false;
   const rd=$('reader'); rd.classList.remove('pulse'); void rd.offsetWidth; rd.classList.add('pulse');
-  if(S.mode==='sound'){ $('call').innerHTML='♪<small>この音はどれ？</small>'; }
-  else $('call').innerHTML=nameOf(t)+(S.mode==='both'?'<small>♪</small>':'');
+  renderCall(); renderLine([]);
   $('replay').classList.toggle('hidden',S.mode==='name');
-  if(S.mode!=='sound') speak(nameOf(t));
-  if(S.mode!=='name') setTimeout(()=>playMidi(midiOf(t)),S.mode==='both'?350:0);
-  setMsg('');
+  if(S.mode!=='sound') speak(G.seq.map(nameOf).join('、'));
+  const off=S.mode==='both'?350+G.seq.length*250:0;
+  if(S.mode!=='name') setTimeout(()=>playSeq(G.seq),off);
+  setMsg(G.seq.length>1?`${G.seq.length}音のメロディ。順番に取ろう`:'');
   G.t0=performance.now();
   const timer=$('timer'); timer.style.transition='none'; timer.style.width='0';
   if(!G.solo){
-    const d=cpuDelay()+(S.mode==='both'?350:0);
+    const L=G.seq.length;
+    const d=cpuDelay()*(L===1?1:0.75*L)+off+(S.mode!=='name'?(L-1)*GAP:0);
     void timer.offsetWidth; timer.style.transition=`width ${d}ms linear`; timer.style.width='100%';
     G.cpuTimer=setTimeout(()=>cpuTake(),d);
   }
 }
 function tap(c){
-  if(!G||G.state!=='calling'||c.taken) return;
+  if(!G||G.state!=='calling'||c.taken||c.held) return;
   audio();
   if(G.lock){ setMsg('お手つき中…この回は取れません','bad'); return; }
-  if(matches(c,G.target)){
-    G.times.push(performance.now()-G.t0);
-    take(c,'you');
+  const want=G.seq[G.pos];
+  if(matches(c,want)){
+    c.held=true; G.picked.push(c); G.pos++;
+    if(G.seq.length>1){
+      playMidi(midiOf(c));
+      c.el.classList.add('held'); c.el.dataset.n=G.pos;
+      renderCall(); renderLine(G.picked);
+    }
+    if(G.pos===G.seq.length){ G.times.push(performance.now()-G.t0); takeRound('you',G.picked); }
   }else{
     G.miss++; G.you--; sfx(false);
     if(navigator.vibrate) try{navigator.vibrate(80)}catch(e){}
     c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');
-    const correct=G.cards.filter(x=>!x.taken&&matches(x,G.target));
-    pushWeak(correct[0]||G.target);
-    if(G.solo){ setMsg(`お手つき！ それは「${nameOf(c)}」`,'bad'); }
+    const correct=G.cards.filter(x=>!x.taken&&!x.held&&matches(x,want));
+    pushWeak(correct[0]||want);
+    const where=G.seq.length>1?`${G.pos+1}音目は「${S.mode==='sound'?'？':nameOf(want)}」。`:'';
+    if(G.solo){ setMsg(`お手つき！ ${where}それは「${nameOf(c)}」`,'bad'); }
     else { G.lock=true; setMsg(`お手つき −1点（それは「${nameOf(c)}」）`,'bad'); }
     updateBar();
   }
 }
 function cpuTake(){
   if(G.state!=='calling') return;
-  pushWeak(G.target);
-  take(G.target,'cpu');
+  G.seq.slice(G.pos).forEach(pushWeak);
+  takeRound('cpu',G.seq);
 }
 function pushWeak(c){ if(!G.weak.some(w=>w.clef===c.clef&&w.p===c.p)) G.weak.push({clef:c.clef,p:c.p,d:c.d,lv:c.lv}); }
-function take(c,who){
+function takeRound(who,cards){
   G.state='resolved'; clearTimeout(G.cpuTimer);
   const timer=$('timer'); timer.style.transition='none'; timer.style.width='0';
-  c.taken=who; if(who==='you')G.you++; else G.cpu++;
-  const tag=c.el.querySelector('.tag');
-  tag.innerHTML=`${nameOf(c)}<small>${who==='you'?'あなた':'CPU'}${octLabel(c)?' · '+octLabel(c):''}</small>`;
-  c.el.classList.add(who==='you'?'taken-you':'taken-cpu');
-  if(who==='you'){ sfx(true); setMsg(`取った！ ${(G.times[G.times.length-1]/1000).toFixed(2)}秒`,'good'); }
-  else setMsg(`CPUが取りました（「${nameOf(c)}」）`,'cpu');
-  if(S.mode==='sound') $('call').innerHTML=nameOf(c)+'<small>でした</small>';
+  G.picked.forEach(c=>{c.held=false;c.el.classList.remove('held');});
+  const L=cards.length;
+  cards.forEach(c=>{
+    c.taken=who;
+    const tag=c.el.querySelector('.tag');
+    tag.innerHTML=`${nameOf(c)}<small>${who==='you'?'あなた':'CPU'}${octLabel(c)?' · '+octLabel(c):''}</small>`;
+    c.el.classList.add(who==='you'?'taken-you':'taken-cpu');
+  });
+  if(who==='you'){ G.you+=L; G.got+=L; } else G.cpu+=L;
+  const sec=(G.times[G.times.length-1]/1000).toFixed(2);
+  if(who==='you'){ sfx(true); setMsg(L>1?`メロディ完成！ ${sec}秒`:`取った！ ${sec}秒`,'good'); }
+  else setMsg(L>1?'CPUがメロディを完成させました':`CPUが取りました（「${nameOf(cards[0])}」）`,'cpu');
+  G.pos=L; renderCall();
+  if(L>1){ renderLine(cards,true); setTimeout(()=>playSeq(cards),500); }
   updateBar();
-  setTimeout(()=>{ c.el.classList.add('gone'); setTimeout(()=>{c.el.classList.remove('gone','taken-you','taken-cpu');c.el.classList.add('slot')},300); },800);
-  setTimeout(nextRound,1400);
+  const wait=L>1?900+L*GAP:800;
+  setTimeout(()=>{ cards.forEach(c=>c.el.classList.add('gone')); setTimeout(()=>cards.forEach(c=>{c.el.classList.remove('gone','taken-you','taken-cpu');c.el.classList.add('slot')}),300); },wait);
+  setTimeout(nextRound,wait+600);
 }
 function finish(){
   G.state='done';
@@ -436,13 +489,13 @@ function finish(){
   if(G.solo){
     v.textContent='クリア！'; v.className='verdict win';
     sub.textContent=`${G.cards.length}枚を ${total.toFixed(1)} 秒で取りました`;
-    $('stats').innerHTML=stat(total.toFixed(1)+'秒','合計タイム')+stat(avg.toFixed(2)+'秒','1枚の平均')+stat(G.miss,'お手つき');
+    $('stats').innerHTML=stat(total.toFixed(1)+'秒','合計タイム')+stat(avg.toFixed(2)+'秒',G.L>1?'1メロディの平均':'1枚の平均')+stat(G.miss,'お手つき');
   }else{
     const win=G.you>G.cpu, draw=G.you===G.cpu;
     v.textContent=draw?'ひきわけ':win?'あなたの勝ち！':'CPUの勝ち';
     v.className='verdict '+(draw?'':win?'win':'lose');
     sub.textContent=`あなた ${G.you} 点 ／ CPU ${G.cpu} 点`;
-    $('stats').innerHTML=stat(G.times.length+'枚','取った札')+stat(avg?avg.toFixed(2)+'秒':'—','平均の速さ')+stat(G.miss,'お手つき');
+    $('stats').innerHTML=stat(G.got+'枚','取った札')+stat(avg?avg.toFixed(2)+'秒':'—',G.L>1?'メロディの速さ':'平均の速さ')+stat(G.miss,'お手つき');
   }
   const w=$('weak'); w.innerHTML='';
   if(!G.weak.length) w.innerHTML='<div class="none">なし！ かんぺきです 🎉</div>';
@@ -466,7 +519,7 @@ $('startBtn').onclick=startGame;
 $('againBtn').onclick=startGame;
 $('backBtn').onclick=()=>show('setup');
 $('quitBtn').onclick=()=>{ if(G){clearTimeout(G.cpuTimer);G.state='done'} try{speechSynthesis.cancel()}catch(e){} show('setup'); };
-$('replay').onclick=()=>{ if(G&&G.target){ audio(); playMidi(midiOf(G.target)); } };
+$('replay').onclick=()=>{ if(G&&G.seq.length){ audio(); playSeq(G.seq); } };
 </script>
 </body>
 </html>

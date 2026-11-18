@@ -96,7 +96,6 @@ h1 span{color:var(--T)}
   <div id="hand"></div>
   <div id="actions">
     <button class="btn" id="bDraw">1枚引く</button>
-    <button class="btn" id="bPass">パス</button>
   </div>
 </div>
 
@@ -105,7 +104,7 @@ h1 span{color:var(--T)}
     <h2>♪ ワンコード</h2>
     <p>コード進行のルールに沿ってカードを出し合い、手札を先になくした人の勝ち。</p>
     <div class="row"><span>CPUの人数</span><div class="seg" id="segCpu"><button class="btn" data-v="1">1</button><button class="btn on" data-v="2">2</button><button class="btn" data-v="3">3</button></div></div>
-    <div class="row"><span>上級ルール<br><span class="small">同じ機能は続けて出せない</span></span><div class="seg" id="segAdv"><button class="btn on" data-v="0">オフ</button><button class="btn" data-v="1">オン</button></div></div>
+    <div class="row"><span>上級ルール<br><span class="small">最後の1枚は C だけ</span></span><div class="seg" id="segAdv"><button class="btn on" data-v="0">オフ</button><button class="btn" data-v="1">オン</button></div></div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn" id="bRules2" style="flex:1">ルールを見る</button>
       <button class="btn primary" id="bStart" style="flex:2">スタート</button>
@@ -123,32 +122,41 @@ h1 span{color:var(--T)}
       <li><span class="dot fD"></span>ドミナント D：G×8</li>
       <li><span class="dot fX"></span>特殊：G7×3、sus4×3、リピート×3、ブレイク×3</li>
     </ul>
-    <h3>つなぎ方</h3>
+    <h3>準備</h3>
     <ul>
-      <li>T の後 → どれでも出せる</li>
-      <li>S の後 → S・D・T を出せる</li>
-      <li>D の後 → T だけ</li>
-      <li>同じコードはいつでも重ねてよい</li>
-      <li><b>上級ルール</b>：同じ機能は続けて出せない（T→S/D、S→D/T、D→T）</li>
+      <li>1人7枚ずつ配る</li>
+      <li>山札をめくり、最初に出た T のカードが場札</li>
     </ul>
-    <h3>流れ</h3>
+    <h3>つなぎ方（T → S → D → T の一方通行）</h3>
     <ul>
-      <li>1人7枚。順番につながるカードを1枚出す</li>
-      <li>出せない（出したくない）ときは1枚引く。引いたカードが出せるなら、そのまま出してもよい</li>
-      <li>手札が最初になくなった人の勝ち</li>
+      <li>T の後 → S か D</li>
+      <li>S の後 → D だけ</li>
+      <li>D の後 → T だけ</li>
+      <li>同じコードなら、いつでも重ねられる（例：F→F、G→G）</li>
+    </ul>
+    <h3>手番</h3>
+    <ul>
+      <li>つながるカードを1枚出す</li>
+      <li>出せないときは1枚引く。引いたカードが出せれば、そのまま出す。出せなければ手番は終わり</li>
+      <li>山札がなくなったら、場の一番上以外をシャッフルして山札に戻す</li>
     </ul>
     <h3>特殊カード</h3>
     <ul>
-      <li><b>G7</b>：D扱い。次の人は T を出すか、2枚引いて終了</li>
-      <li><b>sus4</b>：いつでも出せて、次の人は何でも出せる</li>
+      <li><b>G7</b>：D扱い。次の人は T を出すか、2枚引いて手番終了。G7 に G7 を重ねてもよい（引くのは2枚のまま）</li>
+      <li><b>sus4</b>：いつでも出せる（G7 を出された直後は除く）。次の人は何でも出せる</li>
       <li><b>リピート</b>：順番が逆回り（2人ならもう一度自分の番）</li>
       <li><b>ブレイク</b>：次の人は1回休み</li>
       <li>リピート・ブレイクは D の後には出せない。場のコードは変わらない</li>
     </ul>
-    <h3>決めのルール</h3>
+    <h3>上がり</h3>
     <ul>
-      <li>最後の1枚は T でないと出せない。T 以外が1枚残ったら引くしかない</li>
-      <li>G（G7）→ C で上がると「完全終止」！</li>
+      <li>手札が最初になくなった人の勝ち</li>
+      <li>最後の1枚は T でないと出せない。T 以外が1枚残ったら引くしかない（特殊カードでは上がれない）</li>
+      <li>G か G7 → C で上がると「完全終止」！</li>
+    </ul>
+    <h3>上級ルール</h3>
+    <ul>
+      <li>最後の1枚は <b>C</b> でないと出せない（Am・Em では上がれない）。しっかり「ド」で終わろう</li>
     </ul>
     <button class="btn primary" id="bCloseRules" style="width:100%;margin-top:12px">閉じる</button>
   </div>
@@ -181,7 +189,7 @@ function newGame(nCpu,advanced){
   S={players,deck:makeDeck(),discard:[],dir:1,turn:0,cur:null,free:false,g7:false,advanced:!!advanced,
      over:false,winner:null,cadence:false,history:[],phase:'play',drawn:null,stall:0};
   for(let r=0;r<7;r++)for(const p of players)p.hand.push(S.deck.pop());
-  const i=S.deck.findIndex(c=>c.kind==='chord');
+  const i=S.deck.findIndex(c=>c.kind==='chord'&&CH[c.name].f==='T');
   const st=S.deck.splice(i,1)[0];
   S.cur=st;S.discard.push(st);S.history.push(st.name);
   S.turn=Math.floor(Math.random()*players.length);
@@ -196,18 +204,18 @@ function drawOne(){
   return S.deck.pop()||null;
 }
 function canPlay(c,p){
-  if(p.hand.length===1&&fn(c)!=='T')return false;
-  if(S.g7)return fn(c)==='T';
+  if(p.hand.length===1&&(S.advanced?c.name!=='C':fn(c)!=='T'))return false;
+  if(S.g7)return fn(c)==='T'||c.kind==='g7';
   if(c.kind==='sus4')return true;
   const f=fn(S.cur);
   if(c.kind==='rev'||c.kind==='skip')return S.free||f!=='D';
   if(S.free)return true;
   if(c.name===S.cur.name)return true;
   const g=fn(c);
-  if(f==='D')return g==='T';
-  if(S.advanced)return f!==g;
-  return true;
+  return NEXT[f].includes(g);
 }
+// 一方通行：T → S/D、S → D、D → T
+const NEXT={T:['S','D'],S:['D'],D:['T']};
 function label(c){return c.kind==='sus4'?S.cur.name[0]+'sus4':c.name;}
 function advance(n){S.turn=nextIndex(n);S.phase='play';S.drawn=null;}
 function play(p,c){
@@ -254,7 +262,6 @@ function bumpStall(n){
     S.over=true;S.winner=w;S.cadence=false;S.stalled=true;
   }
 }
-function pass(){hooks.log(`<b>${curPlayer().name}</b> はパスした`);advance(1);}
 function cpuChoose(p,opts){
   const nextP=S.players[nextIndex(1)];
   let best=null,bs=-1e9;
@@ -262,7 +269,7 @@ function cpuChoose(p,opts){
     let s=Math.random()*2;
     const rest=p.hand.filter(x=>x!==c);
     if(rest.length===0)s+=100;
-    if(rest.length===1)s+=fn(rest[0])==='T'?50:-30;
+    if(rest.length===1)s+=(S.advanced?rest[0].name==='C':fn(rest[0])==='T')?50:-30;
     if(fn(c)==='T')s-=3;
     if(c.kind==='sus4')s-=6;
     if(c.kind==='chord')s+=2;
@@ -356,10 +363,8 @@ function render(){
   const f=fn(S.cur);
   let need;
   if(S.free)need='次は何でもOK';
-  else if(S.g7)need='T を出すか2枚引く';
-  else if(f==='D')need='次は T だけ';
-  else if(S.advanced)need=f==='T'?'次は S か D':'次は D か T';
-  else need='次は何でもOK';
+  else if(S.g7)need='T か G7 を出すか2枚引く';
+  else need={T:'次は S か D',S:'次は D だけ',D:'次は T だけ'}[f]+`（${S.cur.name} の重ねもOK）`;
   const turnName=S.over?'—':curPlayer().name;
   $('info').innerHTML=`場：<b>${S.free?S.cur.name[0]+'sus4':S.cur.name}</b>（${S.free?'ワイルド':FNAME[f]}）<br>`
     +`<span class="badge" style="background:${S.g7?'var(--D)':'#2a2639'}">${need}</span><br>`
@@ -369,12 +374,12 @@ function render(){
   S.history.slice(-8).forEach(x=>{const s=document.createElement('span');s.className='chip';s.textContent=x;h.appendChild(s);});
   // hand
   const myTurn=!S.over&&S.turn===0;
-  $('youLbl').innerHTML=myTurn?'<b style="color:#fff">あなたの番です</b>'+(you.hand.length===1?'（ラスト1枚：T のみ出せます）':''):`あなたの手札（${you.hand.length}枚）`;
+  $('youLbl').innerHTML=myTurn?'<b style="color:#fff">あなたの番です</b>'+(you.hand.length===1?(S.advanced?'（ラスト1枚：C のみ出せます）':'（ラスト1枚：T のみ出せます）'):''):`あなたの手札（${you.hand.length}枚）`;
   const hand=$('hand');hand.innerHTML='';
   [...you.hand].sort((a,b)=>ORD(a)-ORD(b)).forEach(c=>{
     const el=cardEl(c,false);
     let ok=false;
-    if(myTurn){ok=S.phase==='afterDraw'?c===S.drawn:canPlay(c,you);}
+    if(myTurn){ok=S.phase==='afterDraw'?false:canPlay(c,you);}
     if(S.phase==='afterDraw'&&c===S.drawn&&myTurn)el.classList.add('drawn');
     el.classList.add(ok?'ok':(myTurn?'off':'x'));
     if(ok)el.onclick=()=>{ensureAudio();play(you,c);after();};
@@ -382,7 +387,6 @@ function render(){
   });
   $('bDraw').disabled=!myTurn||S.phase==='afterDraw';
   $('bDraw').textContent=S.g7&&myTurn?'2枚引く':'1枚引く';
-  $('bPass').disabled=!myTurn||S.phase!=='afterDraw';
 }
 function after(){
   render();
@@ -424,8 +428,12 @@ $('bNew').onclick=()=>{clearTimeout(cpuTimer);$('ovStart').classList.remove('hid
 $('bRules').onclick=$('bRules2').onclick=()=>$('ovRules').classList.remove('hide');
 $('bCloseRules').onclick=()=>$('ovRules').classList.add('hide');
 $('bSound').onclick=()=>{soundOn=!soundOn;$('bSound').textContent=soundOn?'🔊':'🔇';ensureAudio();};
-$('bDraw').onclick=()=>{ensureAudio();drawAction(S.players[0]);render();if(S.phase!=='afterDraw')after();};
-$('bPass').onclick=()=>{pass();after();};
+$('bDraw').onclick=()=>{
+  ensureAudio();const you=S.players[0];const d=drawAction(you);render();
+  if(!d){after();return;}
+  // 引いたカードが出せるときは、少し見せてから自動で出す
+  setTimeout(()=>{if(S.over||S.drawn!==d)return;play(you,d);after();},700);
+};
 </script>
 </body>
 </html>

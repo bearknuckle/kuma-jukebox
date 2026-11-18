@@ -39,7 +39,19 @@ h1 span{color:var(--frame)}
 }
 .seg button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .preview{display:flex;gap:8px;justify-content:center;margin:6px 0 14px}
-.preview .card{width:74px;cursor:default}
+.preview .card{width:64px;cursor:default}
+.group h2 span{font-weight:500;margin-left:6px;font-size:12px}
+.lvs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lvs button{
+  display:flex;align-items:center;gap:8px;text-align:left;font:inherit;padding:8px 9px;border-radius:10px;
+  border:1.5px solid var(--paper2);background:var(--card);color:var(--ink);cursor:pointer
+}
+.lvs .sw{flex:none;width:26px;height:34px;border-radius:5px;border:2.5px solid var(--c);display:flex;align-items:center;justify-content:center;color:var(--c);font-size:13px;background:#fffaf0}
+.lvs b{display:block;font-size:14px}
+.lvs small{display:block;font-size:11px;color:var(--muted);line-height:1.35}
+.lvs button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,#fffaf0);box-shadow:inset 0 0 0 1px var(--c)}
+.lvs button.on .sw{background:var(--c);color:#fff}
+.lvnote{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
 .big{
   display:block;width:100%;font:inherit;font-weight:900;font-size:20px;letter-spacing:.1em;
   padding:15px;border:none;border-radius:14px;background:var(--frame);color:#fff;cursor:pointer;
@@ -75,10 +87,10 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
 .card{
   position:relative;background:var(--card);border-radius:8px;aspect-ratio:100/138;cursor:pointer;
   box-shadow:0 2px 0 var(--paper2),0 3px 8px rgba(60,40,10,.12);
-  border:2px solid var(--frame);padding:3px;transition:transform .12s ease,opacity .3s ease;
+  border:2px solid var(--lv,var(--frame));padding:3px;transition:transform .12s ease,opacity .3s ease;
   user-select:none;touch-action:manipulation
 }
-.card::before{content:"";position:absolute;inset:3px;border:1px solid rgba(184,50,42,.35);border-radius:5px;pointer-events:none}
+.card::before{content:"";position:absolute;inset:3px;border:1px solid var(--lv,var(--frame));opacity:.35;border-radius:5px;pointer-events:none}
 .card svg{width:100%;height:100%;display:block}
 .card:active{transform:scale(.96)}
 .card .tag{
@@ -125,17 +137,10 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
       <button data-v="sound">音だけ聴く</button>
       <button data-v="both">音名＋音</button>
     </div></div>
-  <div class="group"><h2>音部記号</h2>
-    <div class="seg" data-key="clef">
-      <button data-v="treble">ト音記号</button>
-      <button data-v="bass">ヘ音記号</button>
-      <button data-v="mix">まぜる</button>
-    </div></div>
-  <div class="group"><h2>音の範囲</h2>
-    <div class="seg" data-key="range">
-      <button data-v="staff">五線の中だけ</button>
-      <button data-v="ledger">加線まで</button>
-    </div></div>
+  <div class="group"><h2>レベル（札の色）<span>いくつでも選べます</span></h2>
+    <div class="lvs" id="levels"></div>
+    <div class="lvnote">おすすめの順番：赤 → 赤＋青 → 緑 → 全部まぜる。紙の札も同じ4色で作れば、遊ぶ色の札だけを場に並べられます。</div>
+  </div>
   <div class="group"><h2>対戦相手</h2>
     <div class="seg" data-key="cpu">
       <button data-v="solo">ひとりで</button>
@@ -161,7 +166,8 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     ・同じ音名の札が2枚あるときは、どちらを取ってもOK（「音だけ聴く」は高さまでぴったりの札だけ）。<br>
     ・ちがう札をタップすると<b>お手つき</b>で−1点。CPU戦ではその回はもう取れません。<br>
     ・「ひとりで」は全部取るまでのタイムと、まちがいの数を記録します。<br>
-    ・最後に、まちがえた音・取られた音を「苦手な音」として見直せます。
+    ・最後に、まちがえた音・取られた音を「苦手な音」として見直せます。<br>
+    ・札の枠の色と右上のマーク（●■▲◆）がレベルです。色が見分けにくくても、マークで区別できます。
   </details>
   <p style="text-align:center;margin-top:16px"><a href="../" style="color:var(--muted);font-size:13px">← 試作ゲームラボに戻る</a></p>
 </section>
@@ -212,10 +218,20 @@ const CLEF={
   treble:{base:30, glyph:'E050', gp:2, label:'ト'},   // bottom line E4
   bass:  {base:18, glyph:'E062', gp:6, label:'ヘ'}    // bottom line G2
 };
-const RANGE={staff:[-1,9], ledger:[-4,12]};
+const span=(a,b)=>Array.from({length:b-a+1},(_,i)=>a+i);
+// 札の色＝レベル。紙の札でもこの4色・4マークで分ける
+const LEVELS=[
+  {id:'red',   name:'赤', mark:'●', color:'#b8322a', clef:'treble', ps:span(-1,9),          desc:'ト音記号・五線の中'},
+  {id:'blue',  name:'青', mark:'■', color:'#2f5fa8', clef:'treble', ps:[-4,-3,-2,10,11,12], desc:'ト音記号・加線'},
+  {id:'green', name:'緑', mark:'▲', color:'#3d8a5a', clef:'bass',   ps:span(-1,9),          desc:'ヘ音記号・五線の中'},
+  {id:'purple',name:'紫', mark:'◆', color:'#7a4a9a', clef:'bass',   ps:[-4,-3,-2,10,11,12], desc:'ヘ音記号・加線'}
+];
+const LV=Object.fromEntries(LEVELS.map(l=>[l.id,l]));
 
-const S={mode:'name',clef:'treble',range:'staff',cpu:'2',size:'12',names:'doremi'};
+const S={mode:'name',levels:['red'],cpu:'2',size:'12',names:'doremi'};
 try{Object.assign(S,JSON.parse(localStorage.getItem('onpuKarutaSettings')||'{}'))}catch(e){}
+if(!Array.isArray(S.levels)||!S.levels.filter(id=>LV[id]).length) S.levels=['red'];
+S.levels=S.levels.filter(id=>LV[id]);
 function saveS(){try{localStorage.setItem('onpuKarutaSettings',JSON.stringify(S))}catch(e){}}
 
 const nameOf=c=>(S.names==='cde'?CDE:DOREMI)[c.d%7];
@@ -237,11 +253,14 @@ function cardSVG(c){
   if(c.p>=4) s+=`<rect x="${cx-5.9}" y="${y}" width="1.2" height="34" fill="#2a2622"/>`;
   else s+=`<rect x="${cx+4.7}" y="${y-34}" width="1.2" height="34" fill="#2a2622"/>`;
   s+=`<path d="${GLYPH.E0A4}" transform="translate(${cx-5.9},${y}) scale(0.04,-0.04)" fill="#2a2622"/>`;
+  const lv=LV[c.lv];
+  if(lv) s+=`<text x="94" y="15" text-anchor="end" font-size="11" fill="${lv.color}">${lv.mark}</text>`;
   return s+'</svg>';
 }
 function cardEl(c){
   const el=document.createElement('div');
   el.className='card';
+  if(LV[c.lv]) el.style.setProperty('--lv',LV[c.lv].color);
   el.innerHTML=cardSVG(c)+`<div class="tag"></div>`;
   return el;
 }
@@ -287,10 +306,23 @@ function syncSeg(){
     const k=seg.dataset.key;
     seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===S[k]));
   });
+  const box=$('levels'); box.innerHTML='';
+  LEVELS.forEach(l=>{
+    const b=document.createElement('button');
+    b.style.setProperty('--c',l.color);
+    b.className=S.levels.includes(l.id)?'on':'';
+    b.innerHTML=`<span class="sw">${l.mark}</span><span><b>${l.name}の札（${l.ps.length}枚）</b><small>${l.desc}</small></span>`;
+    b.onclick=()=>{
+      const on=S.levels.includes(l.id);
+      if(on&&S.levels.length===1) return;
+      S.levels=on?S.levels.filter(x=>x!==l.id):LEVELS.map(x=>x.id).filter(x=>x===l.id||S.levels.includes(x));
+      saveS(); syncSeg();
+    };
+    box.appendChild(b);
+  });
   const pv=$('preview'); pv.innerHTML='';
-  const clefs=S.clef==='mix'?['treble','bass']:[S.clef,S.clef];
-  const ps=S.range==='ledger'?[-3,11]:[3,7];
-  clefs.forEach((cl,i)=>pv.appendChild(cardEl({clef:cl,p:ps[i],d:CLEF[cl].base+ps[i]})));
+  S.levels.forEach(id=>{const l=LV[id], p=l.ps[Math.floor(l.ps.length/2)];
+    pv.appendChild(cardEl({clef:l.clef,p,d:CLEF[l.clef].base+p,lv:id}));});
 }
 document.querySelectorAll('.seg').forEach(seg=>seg.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
@@ -303,9 +335,8 @@ let G=null;
 function show(id){['setup','game','result'].forEach(s=>$(s).classList.toggle('hidden',s!==id)); window.scrollTo(0,0);}
 
 function buildPool(){
-  const clefs=S.clef==='mix'?['treble','bass']:[S.clef];
-  const [lo,hi]=RANGE[S.range]; const pool=[];
-  clefs.forEach(cl=>{for(let p=lo;p<=hi;p++) pool.push({clef:cl,p,d:CLEF[cl].base+p});});
+  const pool=[];
+  S.levels.forEach(id=>{const l=LV[id]; l.ps.forEach(p=>pool.push({clef:l.clef,p,d:CLEF[l.clef].base+p,lv:id}));});
   return pool;
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -382,7 +413,7 @@ function cpuTake(){
   pushWeak(G.target);
   take(G.target,'cpu');
 }
-function pushWeak(c){ if(!G.weak.some(w=>w.clef===c.clef&&w.p===c.p)) G.weak.push({clef:c.clef,p:c.p,d:c.d}); }
+function pushWeak(c){ if(!G.weak.some(w=>w.clef===c.clef&&w.p===c.p)) G.weak.push({clef:c.clef,p:c.p,d:c.d,lv:c.lv}); }
 function take(c,who){
   G.state='resolved'; clearTimeout(G.cpuTimer);
   const timer=$('timer'); timer.style.transition='none'; timer.style.width='0';
@@ -417,7 +448,8 @@ function finish(){
   if(!G.weak.length) w.innerHTML='<div class="none">なし！ かんぺきです 🎉</div>';
   else{
     const g=document.createElement('div'); g.className='grid';
-    G.weak.sort((a,b)=>a.clef.localeCompare(b.clef)||a.p-b.p).forEach(c=>{
+    const ord=id=>LEVELS.findIndex(l=>l.id===id);
+    G.weak.sort((a,b)=>ord(a.lv)-ord(b.lv)||a.p-b.p).forEach(c=>{
       const el=cardEl(c); el.querySelector('.tag').textContent=nameOf(c);
       el.addEventListener('click',()=>{audio();playMidi(midiOf(c))});
       el.style.cursor='pointer'; g.appendChild(el);

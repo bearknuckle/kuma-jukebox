@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ウワサ株</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap">
+<style>
+:root{
+  --bg:#f3ead6;--card:#fffaf0;--ink:#2b2a28;--sub:#7d7668;--line:#e3d7bc;
+  --up:#d1453b;--down:#2f6fb5;--game:#7b5cd6;--food:#e08a1e;--power:#2a9d8f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:"M PLUS Rounded 1c",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding:calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+.wrap{max-width:460px;margin:0 auto}
+button{font-family:inherit;cursor:pointer;border:none}
+.hidden{display:none!important}
+
+/* start */
+.title{font-size:40px;font-weight:800;text-align:center;letter-spacing:.04em;margin:24px 0 4px}
+.title span{display:inline-block;transform:rotate(-6deg);color:var(--up)}
+.catch{text-align:center;color:var(--sub);font-size:14px;margin-bottom:20px}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.panel h3{font-size:15px;margin-bottom:8px}
+.panel ol,.panel ul{padding-left:20px;font-size:14px;line-height:1.8}
+.cpu-intro{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.cpu-intro div{display:flex;gap:10px;align-items:center}
+.cpu-intro .av{font-size:24px}
+.cpu-intro small{color:var(--sub);display:block}
+.big{display:block;width:100%;padding:16px;border-radius:14px;background:var(--ink);color:#fff;font-size:18px;font-weight:800;box-shadow:0 4px 0 #000;transition:transform .08s}
+.big:active{transform:translateY(3px);box-shadow:0 1px 0 #000}
+.big:disabled{background:#a9a294;box-shadow:0 4px 0 #8a8478}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.top .logo{font-weight:800;font-size:18px}
+.round{display:flex;gap:4px}
+.round i{width:22px;height:8px;border-radius:4px;background:var(--line)}
+.round i.on{background:var(--ink)}
+.round i.now{background:var(--up)}
+
+/* news card */
+.news{perspective:900px;height:148px;margin-bottom:12px}
+.inner{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
+.inner.flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.front{background:#fff3c4;border:2px dashed #d9b84a}
+.back{background:var(--card);border:2px solid var(--ink);transform:rotateY(180deg)}
+.tag{align-self:flex-start;font-size:12px;font-weight:800;padding:2px 10px;border-radius:99px;background:var(--ink);color:#fff}
+.front .tag{background:#d9b84a}
+.rumor{font-size:19px;font-weight:800;line-height:1.4}
+.who{font-size:13px;color:var(--sub)}
+.back.real .tag{background:var(--up)}
+.back.fake .tag{background:var(--down)}
+.res{font-size:17px;font-weight:800}
+.effs{display:flex;gap:6px;flex-wrap:wrap}
+.eff{font-size:13px;font-weight:800;padding:2px 8px;border-radius:8px;background:#f2ece0}
+
+/* market */
+.market{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.co{background:var(--card);border:2px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:10px 12px;display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"n s p" "b b b";align-items:center;column-gap:10px;row-gap:8px}
+.co-n{grid-area:n}
+.co-name{font-weight:800;font-size:16px}
+.own{font-size:12px;color:var(--sub)}
+.own b{color:var(--ink);font-size:14px}
+.co-s{grid-area:s}
+.co-p{grid-area:p;text-align:right;min-width:62px}
+.price{font-size:28px;font-weight:800;line-height:1}
+.price small{font-size:11px;color:var(--sub);font-weight:700;margin-left:2px}
+.delta{display:block;font-size:13px;font-weight:800;margin-top:2px}
+.up{color:var(--up)}.down{color:var(--down)}
+.pop{animation:pop .5s}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.co-b{grid-area:b;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.co-b button{padding:9px 0;border-radius:10px;font-size:15px;font-weight:800}
+.buy{background:var(--up);color:#fff}
+.sell{background:#fff;color:var(--down);border:2px solid var(--down)!important}
+.co-b button:disabled{opacity:.28}
+
+/* action */
+.phase{font-size:14px;font-weight:700;text-align:center;margin-bottom:8px;min-height:20px}
+.lesson{background:#e9f3ef;border:2px solid #b9d8cc;border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.6;margin-bottom:10px}
+.lesson b{color:#1f6f63}
+
+/* players */
+.players{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 10px}
+.pl{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12px}
+.pl.me{border-color:var(--ink)}
+.pl .nm{font-weight:800;font-size:13px;display:flex;justify-content:space-between}
+.pl .tot{font-size:18px;font-weight:800}
+.pl .detail{color:var(--sub)}
+.log{font-size:13px;color:var(--sub);line-height:1.7;min-height:20px}
+.log div{animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+/* end */
+.rank{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.rk{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px}
+.rk.me{border-color:var(--ink)}
+.rk .no{font-size:22px;font-weight:800;width:30px;text-align:center}
+.rk .nm{flex:1;font-weight:800}
+.rk .v{font-size:22px;font-weight:800}
+.result-msg{text-align:center;font-size:24px;font-weight:800;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- START -->
+<section id="start">
+  <div class="title">ウワサ<span>株</span></div>
+  <p class="catch">ウワサを見て、上がりそうな株を買おう。裏返したら答え合わせ！</p>
+  <div class="panel">
+    <h3>あそびかた（全5ラウンド）</h3>
+    <ol>
+      <li>ニュースのウワサが1枚出る</li>
+      <li>1回だけ <b>買う・売る・見送る</b> を選ぶ</li>
+      <li>カードを裏返すと、ウワサの答えが出て株価が動く</li>
+    </ol>
+    <p style="font-size:13px;color:var(--sub);margin-top:8px">ウワサはだいたい本当。でも、ときどき外れます。最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
+  </div>
+  <div class="panel">
+    <h3>対戦するCPU</h3>
+    <div class="cpu-intro">
+      <div><span class="av">🐰</span><span><b>ウサギ</b><small>強気。いいウワサにはすぐ飛びつく</small></span></div>
+      <div><span class="av">🐢</span><span><b>カメ</b><small>慎重。安くて確かそうなときだけ買う</small></span></div>
+      <div><span class="av">🦊</span><span><b>キツネ</b><small>へそまがり。安いと買い、高いと売る</small></span></div>
+    </div>
+  </div>
+  <button class="big" onclick="newGame()">はじめる</button>
+  <p style="text-align:center;margin-top:14px"><a href="../" style="color:var(--sub);font-size:13px">← 試作ゲームラボに戻る</a></p>
+</section>
+
+<!-- GAME -->
+<section id="game" class="hidden">
+  <div class="top">
+    <div class="logo"><a href="../" style="text-decoration:none;color:inherit" aria-label="ラボに戻る">⌂</a> ウワサ株</div>
+    <div class="round" id="roundDots"></div>
+  </div>
+
+  <div class="news">
+    <div class="inner" id="newsInner">
+      <div class="face front">
+        <div class="tag" id="frontTag">ウワサ</div>
+        <div class="rumor" id="rumor"></div>
+        <div class="who" id="who"></div>
+      </div>
+      <div class="face back" id="back">
+        <div class="tag" id="backTag"></div>
+        <div class="res" id="res"></div>
+        <div class="effs" id="effs"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="market" id="market"></div>
+
+  <div class="phase" id="phase"></div>
+  <div class="lesson hidden" id="lesson"></div>
+  <button class="big" id="mainBtn"></button>
+
+  <div class="players" id="players"></div>
+  <div class="log" id="log"></div>
+</section>
+
+<!-- END -->
+<section id="end" class="hidden">
+  <div class="result-msg" id="endMsg"></div>
+  <div class="rank" id="rank"></div>
+  <div class="panel" id="endStats"></div>
+  <button class="big" onclick="newGame()">もう一度あそぶ</button>
+  <p style="text-align:center;margin-top:14px"><a href="../" style="color:var(--sub);font-size:13px">← 試作ゲームラボに戻る</a></p>
+</section>
+
+</div>
+<script>
+const COMP=[
+  {id:'game',name:'ゲーム',emo:'🎮',color:'var(--game)'},
+  {id:'food',name:'食品',emo:'🍙',color:'var(--food)'},
+  {id:'power',name:'電力',emo:'⚡',color:'var(--power)'},
+];
+const CN=Object.fromEntries(COMP.map(c=>[c.id,c]));
+const ROUNDS=5, TRUTH=0.7, START_COINS=10, START_PRICE=5;
+
+// t = 本当だったときの変化, f = 外れたときの変化
+const CARDS=[
+ {r:'新しいゲーム機が出るらしい',t:{game:3},tt:'本当に発売！大ヒット',f:{game:-2},ft:'発売延期でガッカリ'},
+ {r:'人気ゲームの続編を作っているらしい',t:{game:2},tt:'続編が正式発表！',f:{game:-1},ft:'ただのうわさだった'},
+ {r:'ゲームにひどいバグがあるらしい',t:{game:-2},tt:'本当にバグだらけ…',f:{game:1},ft:'すぐ直って評判アップ'},
+ {r:'海外で大きなゲーム大会が開かれるらしい',t:{game:2},tt:'大会が大盛り上がり！',f:{game:-1},ft:'大会は中止に'},
+ {r:'新しいおにぎりがSNSで話題らしい',t:{food:2},tt:'売り切れ続出！',f:{food:-1},ft:'すぐにブームが終わった'},
+ {r:'お米が値上がりするらしい',t:{food:-2},tt:'材料代が上がって苦しい',f:{food:1},ft:'値段は変わらず一安心'},
+ {r:'有名人が食品会社のCMに出るらしい',t:{food:2},tt:'CMが大人気！',f:{food:-1},ft:'CMの話はなくなった'},
+ {r:'食品工場でトラブルがあったらしい',t:{food:-3},tt:'工場がしばらく止まる…',f:{food:1},ft:'デマだと分かって安心買い'},
+ {r:'今年の夏はすごく暑くなるらしい',t:{power:2,food:1},tt:'猛暑！エアコンもアイスも売れた',f:{power:-1},ft:'すずしい夏だった'},
+ {r:'新しい発電所ができるらしい',t:{power:3},tt:'発電所が完成！',f:{power:-2},ft:'計画が中止に'},
+ {r:'電気料金が下がるらしい',t:{power:-2},tt:'値下げで電力会社のもうけが減った',f:{power:1},ft:'料金はそのまま'},
+ {r:'大きな停電が起きたらしい',t:{power:-2},tt:'停電の修理にお金がかかった',f:{power:1},ft:'すぐ復旧して評判アップ'},
+ {r:'景気がよくなるらしい',t:{game:1,food:1,power:1},tt:'みんなの財布がゆるんだ！',f:{game:-1,food:-1,power:-1},ft:'景気は良くならなかった'},
+ {r:'景気が悪くなるらしい',t:{game:-2,food:-1},tt:'みんながお金を使わなくなった',f:{game:1,food:1},ft:'思ったより平気だった'},
+ {r:'ゲーム機の電気代が問題になっているらしい',t:{game:-2,power:1},tt:'ゲーム離れ、電気は売れる',f:{game:1},ft:'省エネ機が出て逆に人気'},
+];
+
+let S;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function clamp(v){return Math.max(1,Math.min(10,v))}
+function emptySh(){return {game:0,food:0,power:0}}
+function expect(card){const e={};COMP.forEach(c=>{e[c.id]=TRUTH*(card.t[c.id]||0)+(1-TRUTH)*(card.f[c.id]||0)});return e}
+function total(p){return p.coins+COMP.reduce((s,c)=>s+p.sh[c.id]*S.prices[c.id],0)}
+
+/* ---------- CPU ---------- */
+function aiRabbit(p){
+  const e=expect(S.card);
+  const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
+  if(e[best]>0&&p.coins>=S.prices[best]) return {type:'buy',c:best};
+  const bad=COMP.map(c=>c.id).filter(id=>p.sh[id]>0&&e[id]<0).sort((a,b)=>e[a]-e[b])[0];
+  if(bad) return {type:'sell',c:bad};
+  const cheap=COMP.map(c=>c.id).filter(id=>p.coins>=S.prices[id]&&S.prices[id]<=7).sort((a,b)=>S.prices[a]-S.prices[b])[0];
+  if(cheap) return {type:'buy',c:cheap};
+  return {type:'pass'};
+}
+function aiTurtle(p){
+  const e=expect(S.card);
+  const bad=COMP.map(c=>c.id).filter(id=>p.sh[id]>0&&e[id]<0)[0];
+  if(bad) return {type:'sell',c:bad};
+  const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
+  if(e[best]>=1&&S.prices[best]<=6&&p.coins>=S.prices[best]) return {type:'buy',c:best};
+  return {type:'pass'};
+}
+function aiFox(p){
+  const high=COMP.map(c=>c.id).filter(id=>p.sh[id]>0&&S.prices[id]>=8).sort((a,b)=>S.prices[b]-S.prices[a])[0];
+  if(high) return {type:'sell',c:high};
+  const low=COMP.map(c=>c.id).filter(id=>S.prices[id]<=4&&p.coins>=S.prices[id]).sort((a,b)=>S.prices[a]-S.prices[b])[0];
+  if(low) return {type:'buy',c:low};
+  const e=expect(S.card);
+  const best=COMP.map(c=>c.id).sort((a,b)=>e[b]-e[a])[0];
+  if(e[best]>0.5&&p.coins>=S.prices[best]) return {type:'buy',c:best};
+  return {type:'pass'};
+}
+
+/* ---------- flow ---------- */
+function newGame(){
+  const deck=shuffle(CARDS.slice()).slice(0,ROUNDS).map(c=>({...c,real:Math.random()<TRUTH}));
+  S={
+    round:0,deck,card:null,phase:'act',log:[],lastDelta:{},
+    prices:{game:START_PRICE,food:START_PRICE,power:START_PRICE},
+    hist:{game:[START_PRICE],food:[START_PRICE],power:[START_PRICE]},
+    hits:0,
+    players:[
+      {name:'あなた',icon:'🙂',me:true,coins:START_COINS,sh:emptySh()},
+      {name:'ウサギ',icon:'🐰',coins:START_COINS,sh:emptySh(),ai:aiRabbit},
+      {name:'カメ',icon:'🐢',coins:START_COINS,sh:emptySh(),ai:aiTurtle},
+      {name:'キツネ',icon:'🦊',coins:START_COINS,sh:emptySh(),ai:aiFox},
+    ]
+  };
+  show('game');
+  startRound();
+}
+function show(id){['start','game','end'].forEach(s=>document.getElementById(s).classList.toggle('hidden',s!==id));window.scrollTo(0,0)}
+
+function startRound(){
+  S.round++;
+  S.card=S.deck[S.round-1];
+  S.phase='act';S.log=[];S.lastDelta={};
+  document.getElementById('newsInner').classList.remove('flipped');
+  document.getElementById('lesson').classList.add('hidden');
+  setTimeout(()=>{ // 裏返しが戻ってから中身を差し替える
+    document.getElementById('frontTag').textContent=`ラウンド${S.round}のウワサ`;
+    document.getElementById('rumor').textContent='「'+S.card.r+'」';
+    const targets=[...new Set([...Object.keys(S.card.t),...Object.keys(S.card.f)])];
+    document.getElementById('who').textContent='関係ありそう：'+targets.map(id=>CN[id].emo+CN[id].name).join('・');
+  },S.round>1?300:0);
+  render();
+}
+
+function act(type,c){
+  if(S.phase!=='act')return;
+  const me=S.players[0];
+  if(type==='buy'&&me.coins<S.prices[c])return;
+  if(type==='sell'&&me.sh[c]<=0)return;
+  S.before=S.players.map(total);
+  doAction(me,type,c);
+  S.phase='cpu';render();
+  runCPU(1);
+}
+function runCPU(i){
+  if(i>=S.players.length){S.phase='reveal';render();return}
+  setTimeout(()=>{const p=S.players[i];const a=p.ai(p);doAction(p,a.type,a.c);render();runCPU(i+1)},650);
+}
+function doAction(p,type,c){
+  const price=type!=='pass'?S.prices[c]:0;
+  if(type==='buy'){p.coins-=price;p.sh[c]++;S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="up">買った</b>（${price}コイン）`)}
+  else if(type==='sell'){p.coins+=price;p.sh[c]--;S.log.push(`${p.icon} ${p.name}：${CN[c].emo}${CN[c].name}を<b class="down">売った</b>（${price}コイン）`)}
+  else S.log.push(`${p.icon} ${p.name}：見送り`);
+}
+
+function reveal(){
+  const card=S.card, eff=card.real?card.t:card.f;
+  if(card.real)S.hits++;
+  S.lastDelta={};
+  COMP.forEach(c=>{
+    const old=S.prices[c.id], nw=clamp(old+(eff[c.id]||0));
+    S.prices[c.id]=nw; S.lastDelta[c.id]=nw-old; S.hist[c.id].push(nw);
+  });
+  const back=document.getElementById('back');
+  back.className='face back '+(card.real?'real':'fake');
+  document.getElementById('backTag').textContent=card.real?'ウワサは本当だった！':'ウワサは外れ！';
+  document.getElementById('res').textContent=card.real?card.tt:card.ft;
+  document.getElementById('effs').innerHTML=COMP.filter(c=>S.lastDelta[c.id]).map(c=>{const d=S.lastDelta[c.id];return `<span class="eff ${d>0?'up':'down'}">${c.emo}${c.name} ${d>0?'+':''}${d}</span>`}).join('')||'<span class="eff">株価は動かなかった</span>';
+  document.getElementById('newsInner').classList.add('flipped');
+  S.phase='result';
+  showLesson();
+  render(true);
+}
+
+function showLesson(){
+  const me=S.players[0], diff=total(me)-S.before[0];
+  const card=S.card;
+  const goodRumor=Object.values(card.t).reduce((a,b)=>a+b,0)>0;
+  let tip;
+  if(!card.real&&goodRumor) tip='いいウワサでも<b>外れることがある</b>。ウワサだけで飛びつくと損することも。';
+  else if(!card.real) tip='悪いウワサが<b>デマ</b>だった。あわてて売った人はソンしたかも。';
+  else if(goodRumor) tip='ウワサが当たった！<b>先に買っていた人</b>がトク。でも毎回当たるとは限らない。';
+  else tip='悪いウワサが本当だった。<b>早めに売った人</b>は損をさけられた。';
+  if(S.round===3) tip+='<br>💡 1つの会社に集中すると、当たれば大もうけ、外れれば大ゾン。<b>分けて持つ</b>と安定するよ。';
+  const sign=diff>0?'+':'';
+  document.getElementById('lesson').innerHTML=`このラウンドのあなたの資産：<b class="${diff>0?'up':diff<0?'down':''}">${sign}${diff}</b><br>${tip}`;
+  document.getElementById('lesson').classList.remove('hidden');
+}
+
+function next(){
+  if(S.round>=ROUNDS) finish(); else startRound();
+}
+
+function finish(){
+  const ranked=S.players.map(p=>({p,v:total(p)})).sort((a,b)=>b.v-a.v);
+  const myRank=ranked.findIndex(r=>r.p.me)+1;
+  const msgs=['🏆 優勝！おめでとう！','🥈 2位！おしい！','🥉 3位！次はいける！','4位…リベンジしよう！'];
+  document.getElementById('endMsg').textContent=msgs[myRank-1];
+  document.getElementById('rank').innerHTML=ranked.map((r,i)=>`<div class="rk ${r.p.me?'me':''}"><span class="no">${i+1}</span><span class="nm">${r.p.icon} ${r.p.name}</span><span class="v">${r.v}<small style="font-size:12px">コイン</small></span></div>`).join('');
+  const me=S.players[0], gain=total(me)-START_COINS;
+  document.getElementById('endStats').innerHTML=`<h3>ふりかえり</h3><ul>
+    <li>あなたの増えたお金：<b class="${gain>0?'up':gain<0?'down':''}">${gain>0?'+':''}${gain}コイン</b></li>
+    <li>5つのウワサのうち、本当だったのは <b>${S.hits}つ</b></li>
+    <li>最後の株価：${COMP.map(c=>`${c.emo}${S.prices[c.id]}`).join('　')}</li>
+  </ul>
+  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「ウワサは外れることもある」「1社に集中しない」「安いときに買って高いときに売るのは難しい」——この3つを覚えておこう。</p>`;
+  show('end');
+}
+
+/* ---------- render ---------- */
+function spark(id){
+  const h=S.hist[id], w=70, ht=26;
+  const xs=i=>h.length<2?w/2:i*(w/(ROUNDS));
+  const ys=v=>ht-2-(v-1)/9*(ht-4);
+  const pts=h.map((v,i)=>`${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join(' ');
+  const last=h.length-1;
+  return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}"><line x1="0" x2="${w}" y1="${ys(5)}" y2="${ys(5)}" stroke="#e3d7bc" stroke-dasharray="2 3"/><polyline points="${pts}" fill="none" stroke="${CN[id].color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xs(last)}" cy="${ys(h[last])}" r="3" fill="${CN[id].color}"/></svg>`;
+}
+function render(animate){
+  document.getElementById('roundDots').innerHTML=Array.from({length:ROUNDS},(_,i)=>`<i class="${i+1<S.round?'on':i+1===S.round?'now':''}"></i>`).join('');
+  const me=S.players[0], canAct=S.phase==='act';
+  document.getElementById('market').innerHTML=COMP.map(c=>{
+    const p=S.prices[c.id], d=S.lastDelta[c.id]||0;
+    return `<div class="co" style="--c:${c.color}">
+      <div class="co-n"><div class="co-name">${c.emo} ${c.name}</div><div class="own">あなたの持ち株 <b>${me.sh[c.id]}</b></div></div>
+      <div class="co-s">${spark(c.id)}</div>
+      <div class="co-p"><span class="price ${animate&&d?'pop':''}" style="display:inline-block">${p}<small>コイン</small></span>${d?`<span class="delta ${d>0?'up':'down'}">${d>0?'▲+':'▼'}${d}</span>`:''}</div>
+      <div class="co-b">
+        <button class="buy" ${canAct&&me.coins>=p?'':'disabled'} onclick="act('buy','${c.id}')">買う</button>
+        <button class="sell" ${canAct&&me.sh[c.id]>0?'':'disabled'} onclick="act('sell','${c.id}')">売る</button>
+      </div></div>`;
+  }).join('');
+
+  const phase=document.getElementById('phase'), btn=document.getElementById('mainBtn');
+  btn.disabled=false;
+  if(S.phase==='act'){phase.innerHTML=`あなたの番：<b>1回だけ</b> 買う・売る・見送る を選ぼう（所持金 ${me.coins}コイン）`;btn.textContent='見送る';btn.onclick=()=>act('pass')}
+  else if(S.phase==='cpu'){phase.textContent='CPUが考え中…';btn.textContent='…';btn.disabled=true;btn.onclick=null}
+  else if(S.phase==='reveal'){phase.textContent='みんな決めた！ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}
+  else {phase.textContent='';btn.textContent=S.round>=ROUNDS?'🏆 結果発表':'次のラウンドへ ▶';btn.onclick=next}
+
+  document.getElementById('players').innerHTML=S.players.map(p=>{
+    const hold=COMP.filter(c=>p.sh[c.id]).map(c=>c.emo+'×'+p.sh[c.id]).join(' ')||'株なし';
+    return `<div class="pl ${p.me?'me':''}"><div class="nm"><span>${p.icon} ${p.name}</span></div><div class="tot">${total(p)}<small style="font-size:11px">コイン分</small></div><div class="detail">現金${p.coins}・${hold}</div></div>`;
+  }).join('');
+  document.getElementById('log').innerHTML=S.log.map(l=>`<div>${l}</div>`).join('');
+}
+</script>
+</body>
+</html>

@@ -89,6 +89,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
 .reader.pulse .call{animation:pop .35s ease}
 @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 .call span.done{opacity:.35}
+.call small.mno{font-size:11px;color:#9fb0d0;margin-top:4px}
 .call.multi{font-size:34px}
 .call i{font-style:normal;color:#6f7fa3;margin:0 2px}
 .line{display:flex;gap:6px;justify-content:center;margin:-2px 0 8px}
@@ -190,9 +191,9 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     ・同じ音名の札が2枚あるときは、どちらを取ってもOK（「音だけ聴く」は高さまでぴったりの札だけ）。<br>
     ・ちがう札をタップすると<b>お手つき</b>。取り札を1枚返し（持っていなければなし）、その回は休みです。<br>
     ・「ひとりで」は全部の札を取るまで続けて、お手つきの数を数えます。<br>
-    ・<b>メロディ取り</b>：読み手が3〜4音を続けて出します。その順番どおりに札を取ると、取った札が並んで小さな楽譜になります。全部そろえた人が、その札を全部もらえます（紙で遊ぶときは、取った札を左から順に並べて全員で答え合わせ）。<br>
+    ・<b>メロディ取り</b>：番号つきの<b>メロディ読み札</b>（3音は24枚、4音は20枚）を山から1枚めくって読みます。場の札で作れないメロディ札はとばし、作れる札がなくなったら1枚ずつ読みに切りかえます。読み手が3〜4音を続けて出します。その順番どおりに札を取ると、取った札が並んで小さな楽譜になります。全部そろえた人が、その札を全部もらえます（紙で遊ぶときは、取った札を左から順に並べて全員で答え合わせ）。<br>
     ・まちがえた札と取られた札は<b>復習の山</b>によけておき、次のゲームで必ず場に入れます。<br>
-    ・勝ち負けは取り札の枚数で決めます。<br>
+    ・勝ち負けは取り札の<b>点数</b>で決めます。赤・緑の札は1点、加線の青・紫の札は<b>2点</b>（札の右下に「2点」）。お手つきで返すのは1点の札からです。<br>
     ・札の枠の色と右上のマーク（●■▲◆）がレベルです。色が見分けにくくても、マークで区別できます。
   </details>
   <p style="text-align:center;margin-top:16px"><a href="../" style="color:var(--muted);font-size:13px">← 試作ゲームラボに戻る</a></p>
@@ -247,12 +248,18 @@ const CLEF={
 const span=(a,b)=>Array.from({length:b-a+1},(_,i)=>a+i);
 // 札の色＝レベル。紙の札でもこの4色・4マークで分ける
 const LEVELS=[
-  {id:'red',   name:'赤', mark:'●', color:'#b8322a', clef:'treble', ps:span(-1,9),          desc:'ト音記号・五線の中'},
-  {id:'blue',  name:'青', mark:'■', color:'#2f5fa8', clef:'treble', ps:[-4,-3,-2,10,11,12], desc:'ト音記号・加線'},
-  {id:'green', name:'緑', mark:'▲', color:'#3d8a5a', clef:'bass',   ps:span(-1,9),          desc:'ヘ音記号・五線の中'},
-  {id:'purple',name:'紫', mark:'◆', color:'#7a4a9a', clef:'bass',   ps:[-4,-3,-2,10,11,12], desc:'ヘ音記号・加線'}
+  {id:'red',   name:'赤', mark:'●', color:'#b8322a', clef:'treble', ps:span(-1,9),          desc:'ト音記号・五線の中', pts:1},
+  {id:'blue',  name:'青', mark:'■', color:'#2f5fa8', clef:'treble', ps:[-4,-3,-2,10,11,12], desc:'ト音記号・加線', pts:2},
+  {id:'green', name:'緑', mark:'▲', color:'#3d8a5a', clef:'bass',   ps:span(-1,9),          desc:'ヘ音記号・五線の中', pts:1},
+  {id:'purple',name:'紫', mark:'◆', color:'#7a4a9a', clef:'bass',   ps:[-4,-3,-2,10,11,12], desc:'ヘ音記号・加線', pts:2}
 ];
 const LV=Object.fromEntries(LEVELS.map(l=>[l.id,l]));
+const val=c=>(LV[c.lv]&&LV[c.lv].pts)||1;
+// メロディ読み札（ド=0 … シ=6）。紙では番号つきの読み札にして、山から1枚ずつ読む
+const MELODIES={
+  3:['012','210','123','321','234','432','345','543','456','654','024','420','135','531','246','642','601','106','560','065','450','054','032','423'],
+  4:['0123','3210','4321','1234','2345','5432','3456','6543','0124','4210','0213','2435','5601','1065','4560','0654','2106','6012','3245','0243']
+};
 
 const S={mode:'name',melody:'1',levels:['red'],cpu:'2',size:'12',names:'doremi'};
 try{Object.assign(S,JSON.parse(localStorage.getItem('onpuKarutaSettings')||'{}'))}catch(e){}
@@ -281,6 +288,7 @@ function cardSVG(c){
   s+=`<path d="${GLYPH.E0A4}" transform="translate(${cx-5.9},${y}) scale(0.04,-0.04)" fill="#2a2622"/>`;
   const lv=LV[c.lv];
   if(lv) s+=`<text x="94" y="15" text-anchor="end" font-size="11" fill="${lv.color}">${lv.mark}</text>`;
+  if(lv&&lv.pts>1) s+=`<text x="94" y="125" text-anchor="end" font-size="10" font-weight="700" fill="${lv.color}">${lv.pts}点</text>`;
   return s+'</svg>';
 }
 function cardEl(c){
@@ -337,7 +345,7 @@ function syncSeg(){
     const b=document.createElement('button');
     b.style.setProperty('--c',l.color);
     b.className=S.levels.includes(l.id)?'on':'';
-    b.innerHTML=`<span class="sw">${l.mark}</span><span><b>${l.name}の札（${l.ps.length}枚）</b><small>${l.desc}</small></span>`;
+    b.innerHTML=`<span class="sw">${l.mark}</span><span><b>${l.name}の札（${l.ps.length}枚${l.pts>1?'・2点':''}）</b><small>${l.desc}</small></span>`;
     b.onclick=()=>{
       const on=S.levels.includes(l.id);
       if(on&&S.levels.length===1) return;
@@ -375,7 +383,7 @@ function startGame(){
   const pool=shuffle(buildPool()).sort((a,b)=>isRev(b)-isRev(a));
   const n=Math.min(+S.size,pool.length);
   const cards=shuffle(pool.slice(0,n)).map((c,i)=>({...c,id:i,taken:null}));
-  G={cards,you:0,cpu:0,got:0,miss:0,weak:[],state:'idle',seq:[],pos:0,picked:[],lock:false,cpuTimer:null,solo:S.cpu==='solo',L:+S.melody||1};
+  G={cards,hand:{you:[],cpu:[]},mdeck:shuffle((MELODIES[+S.melody]||[]).map((m,i)=>({no:i+1,names:m.split('').map(Number)}))),mno:0,miss:0,weak:[],state:'idle',seq:[],pos:0,picked:[],lock:false,cpuTimer:null,solo:S.cpu==='solo',L:+S.melody||1};
   $('cpuBox').classList.toggle('hidden',G.solo);
   const board=$('board'); board.innerHTML='';
   cards.forEach(c=>{
@@ -389,9 +397,10 @@ function startGame(){
   setTimeout(nextRound,900);
 }
 function updateBar(){
-  $('sYou').textContent=G.you; $('sCpu').textContent=G.cpu;
+  $('sYou').textContent=pts('you'); $('sCpu').textContent=pts('cpu');
   $('left').textContent=`のこり ${G.cards.filter(c=>!c.taken).length} 枚`;
 }
+const pts=who=>G.hand[who].reduce((a,c)=>a+val(c),0);
 function setMsg(t,cls=''){const m=$('msg');m.textContent=t;m.className='msg '+cls}
 const matches=(c,t)=> S.mode==='sound' ? midiOf(c)===midiOf(t) : c.d%7===t.d%7;
 const GAP=600; // メロディの音の間隔(ms)
@@ -399,6 +408,17 @@ const GAP=600; // メロディの音の間隔(ms)
 function cpuDelay(){
   const r={1:[4200,6500],2:[2500,4000],3:[1300,2200]}[S.cpu];
   return r[0]+Math.random()*(r[1]-r[0]);
+}
+function mapMelody(names,left){
+  // 同じ音名の札が複数あるときは、ひとつ前の音に近い札を選ぶ（なめらかなメロディになる）
+  const used=new Set(), seq=[]; let prev=null;
+  for(const n of names){
+    const cand=shuffle(left.filter(c=>!used.has(c)&&c.d%7===n));
+    if(!cand.length) return null;
+    if(prev) cand.sort((a,b)=>Math.abs(a.d-prev.d)-Math.abs(b.d-prev.d));
+    used.add(cand[0]); seq.push(cand[0]); prev=cand[0];
+  }
+  return seq;
 }
 function playSeq(seq){ seq.forEach((c,i)=>setTimeout(()=>playMidi(midiOf(c)),i*GAP)); }
 function renderCall(){
@@ -408,6 +428,7 @@ function renderCall(){
   }else{
     $('call').innerHTML=G.seq.map((c,i)=>`<span class="${i<G.pos?'done':''}">${nameOf(c)}</span>`).join(L>1?'<i>・</i>':'')+(S.mode==='both'?'<small>♪</small>':'');
   }
+  if(G.mno) $('call').innerHTML+=`<small class="mno">メロディ札 No.${G.mno}</small>`;
   $('call').classList.toggle('multi',L>1);
 }
 function renderLine(cards,ok){
@@ -421,7 +442,16 @@ function renderLine(cards,ok){
 function nextRound(){
   const left=G.cards.filter(c=>!c.taken);
   if(!left.length) return finish();
-  G.seq=shuffle(left.slice()).slice(0,Math.min(G.L,left.length));
+  let note='';
+  G.mno=0;
+  if(G.L>1){
+    // 山から読み札をめくり、場の札で作れないものはとばす
+    let seq=null;
+    while(G.mdeck.length&&!seq){ const m=G.mdeck.shift(); seq=mapMelody(m.names,left); if(seq) G.mno=m.no; }
+    if(seq) G.seq=seq;
+    else { G.L=1; $('line').classList.add('hidden'); note='場の札で作れるメロディ札がなくなったので、ここからは1枚ずつ読みます'; }
+  }
+  if(G.L===1) G.seq=[left[Math.random()*left.length|0]];
   G.pos=0; G.picked=[]; G.state='calling'; G.lock=false;
   const rd=$('reader'); rd.classList.remove('pulse'); void rd.offsetWidth; rd.classList.add('pulse');
   renderCall(); renderLine([]);
@@ -429,7 +459,7 @@ function nextRound(){
   if(S.mode!=='sound') speak(G.seq.map(nameOf).join('、'));
   const off=S.mode==='both'?350+G.seq.length*250:0;
   if(S.mode!=='name') setTimeout(()=>playSeq(G.seq),off);
-  setMsg(G.seq.length>1?`${G.seq.length}音のメロディ。順番に取ろう`:'');
+  setMsg(note||(G.seq.length>1?`${G.seq.length}音のメロディ。順番に取ろう`:''));
   if(!G.solo){
     const L=G.seq.length;
     const d=cpuDelay()*(L===1?1:0.75*L)+off+(S.mode!=='name'?(L-1)*GAP:0);
@@ -449,7 +479,7 @@ function tap(c){
     }
     if(G.pos===G.seq.length) takeRound('you',G.picked);
   }else{
-    G.miss++; const back=G.you>0; if(back) G.you--; sfx(false);
+    G.miss++; const h=G.hand.you, back=h.length>0; if(back){ h.sort((a,b)=>val(b)-val(a)); h.pop(); } sfx(false);
     if(navigator.vibrate) try{navigator.vibrate(80)}catch(e){}
     c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');
     const correct=G.cards.filter(x=>!x.taken&&!x.held&&matches(x,want));
@@ -477,8 +507,9 @@ function takeRound(who,cards){
     tag.innerHTML=`${nameOf(c)}<small>${who==='you'?'あなた':'CPU'}${octLabel(c)?' · '+octLabel(c):''}</small>`;
     c.el.classList.add(who==='you'?'taken-you':'taken-cpu');
   });
-  if(who==='you'){ G.you+=L; G.got+=L; } else G.cpu+=L;
-  if(who==='you'){ sfx(true); setMsg(L>1?'メロディ完成！':'取った！','good'); }
+  G.hand[who].push(...cards);
+  const gain=cards.reduce((a,c)=>a+val(c),0), gtxt=gain>L?`（${gain}点）`:'';
+  if(who==='you'){ sfx(true); setMsg((L>1?'メロディ完成！':'取った！')+gtxt,'good'); }
   else setMsg(L>1?'CPUがメロディを完成させました':`CPUが取りました（「${nameOf(cards[0])}」）`,'cpu');
   G.pos=L; renderCall();
   if(L>1) renderLine(cards,true);
@@ -493,13 +524,14 @@ function finish(){
   if(G.solo){
     v.textContent='クリア！'; v.className='verdict win';
     sub.textContent=`${G.cards.length}枚の札を全部取りました`;
-    $('stats').innerHTML=stat(G.cards.length+'枚','取った札')+stat(G.miss,'お手つき');
+    $('stats').innerHTML=stat(pts('you')+'点','手元の札の点')+stat(G.miss,'お手つき');
   }else{
-    const win=G.you>G.cpu, draw=G.you===G.cpu;
+    const py=pts('you'), pc=pts('cpu');
+    const win=py>pc, draw=py===pc;
     v.textContent=draw?'ひきわけ':win?'あなたの勝ち！':'CPUの勝ち';
     v.className='verdict '+(draw?'':win?'win':'lose');
-    sub.textContent=`取り札の枚数　あなた ${G.you} 枚 ／ CPU ${G.cpu} 枚`;
-    $('stats').innerHTML=stat(G.you+'枚','あなたの取り札')+stat(G.cpu+'枚','CPUの取り札')+stat(G.miss,'お手つき');
+    sub.textContent=`あなた ${py} 点（${G.hand.you.length}枚） ／ CPU ${pc} 点（${G.hand.cpu.length}枚）`;
+    $('stats').innerHTML=stat(py+'点','あなた')+stat(pc+'点','CPU')+stat(G.miss,'お手つき');
   }
   REVIEW=G.weak.map(({clef,p,d,lv})=>({clef,p,d,lv}));
   try{localStorage.setItem('onpuKarutaReview',JSON.stringify(REVIEW))}catch(e){}

@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="試作ゲームラボ">
-<meta property="og:description" content="AIと考えた試作ゲームを、ブラウザですぐ遊べる。音楽のゲームと株のゲーム。">
+<meta property="og:description" content="試作ゲームを、ブラウザですぐ遊べる。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -16,7 +16,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="description" content="AIと考えた試作ゲームを、ブラウザですぐ遊べる。音楽のゲームと株のゲーム。">
+<meta name="description" content="試作ゲームを、ブラウザですぐ遊べる。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
 <style>
@@ -194,12 +194,12 @@ const SOON={name:'次の試作を準備中…',icon:'🛠️',color:'#2a2639',de
 
 // カテゴリ（表示順）。新しいカテゴリはここに追加する
 const CATS=[
-  {id:'音楽',label:'音楽のゲーム',icon:'🎵',note:'AIと考えた試作ゲーム'},
-  {id:'株',label:'株のゲーム',icon:'📈',note:'AIと考えた試作ゲーム'},
-  {id:'お酒',label:'お酒のゲーム',icon:'🍶',note:'AIと考えた試作ゲーム（飲みの席で遊べるパーティー系）'},
-  {id:'スポーツ',label:'スポーツのゲーム',icon:'⚾',note:'AIと考えた試作ゲーム'},
-  {id:'宴会',label:'宴会のゲーム',icon:'🎉',note:'AIと考えた試作ゲーム（忘年会など大人数で）'},
-  {id:'こども',label:'こどものゲーム',icon:'🧸',note:'AIと考えた試作ゲーム（小学生向け）'},
+  {id:'音楽',label:'音楽のゲーム',icon:'🎵'},
+  {id:'株',label:'株のゲーム',icon:'📈'},
+  {id:'お酒',label:'お酒のゲーム',icon:'🍶',note:'飲みの席で遊べるパーティー系'},
+  {id:'スポーツ',label:'スポーツのゲーム',icon:'⚾'},
+  {id:'宴会',label:'宴会のゲーム',icon:'🎉',note:'忘年会など大人数で'},
+  {id:'こども',label:'こどものゲーム',icon:'🧸',note:'小学生向け'},
 ];
 let cur='すべて';
 // 遊んだ記録（この端末のブラウザだけに保存）

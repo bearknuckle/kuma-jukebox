@@ -45,7 +45,7 @@ def main():
     inner = icon.split('viewBox="0 0 512 512">', 1)[1].rsplit("</svg>", 1)[0]
     inner = inner.replace('id="bg"', 'id="ibg"').replace("url(#bg)", "url(#ibg)")
     w1, c1 = text_path(black, "試作ゲームラボ")
-    w2, c2 = text_path(bold, "AIと考えた試作ゲームを、ブラウザですぐ遊べる")
+    w2, c2 = text_path(bold, "試作ゲームを、ブラウザですぐ遊べる")
     s1, s2 = 560 / w1, min(600 / w2, 0.034)
     parts = [
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">',

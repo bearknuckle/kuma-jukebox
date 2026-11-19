@@ -7,7 +7,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="せーの株 どうぶつ版｜試作ゲームラボ">
-<meta property="og:description" content="どうぶつたちの取引所で、全員が「せーの」で同時に注文。買いが集まると群れが押し寄せて値上がりし、動いた後の値段で成立する。中身は本物の株取引ルール、見た目は動物。">
+<meta property="og:description" content="どうぶつたちの取引所で、全員が「せーの」で同時に注文。買いが集まると群れが押し寄せて値上がりし、動いた後の値段で成立する。持ち株は切り株、配当は実り、倒産すると伐採されて新芽から再上場。中身は本物の株取引ルール、見た目は動物。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/doubutsu-kabu/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -86,7 +86,8 @@
   .herd{display:grid;gap:6px;margin-top:10px}
   .hrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:#f5f8ee;border:1px solid var(--line);font-size:13px;overflow:hidden}
   .hrow .co{flex:none;width:88px;font-weight:800}
-  .hrow .lane{flex:1;display:flex;gap:2px;min-height:26px;align-items:center}
+  .hrow .lane{flex:1;display:flex;flex-wrap:wrap;gap:2px;min-height:26px;align-items:center}
+  .hrow .say{white-space:nowrap;font-size:12px;margin-left:4px}
   .hrow .mv{flex:none;font-weight:800;width:68px;text-align:right}
   .hrow .a{font-size:22px;display:inline-block}
   .hrow .in{animation:rushIn .6s ease-out both}
@@ -96,6 +97,11 @@
   @keyframes runOut{0%{transform:none;opacity:1}100%{transform:translateX(160px) scaleX(-1);opacity:0}}
   .hrow .out{transform:scaleX(-1)}
   .who{font-size:18px;margin-right:4px}
+  .tree{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:44px;line-height:1}
+  .tree .tr{transition:font-size .4s}
+  .stumps{margin-top:6px;font-size:15px;min-height:20px;line-height:1.2;word-break:break-all}
+  .stumps small{font-size:11px;color:var(--sub)}
+  .sprout{font-size:11px;color:#3f8f5a;font-weight:800}
   .win{font-size:20px;font-weight:800;text-align:center;margin:6px 0 10px}
 </style>
 </head>
@@ -109,12 +115,13 @@
     <div class="panel">
       <h2>ルール</h2>
       <ol class="rules">
-        <li>銘柄は <b>🦦カワウソ水産・🐻クマのハチミツ製菓・🦉フクロウ書房</b> の3社。株価は全部 <b>5</b> から。あなた（🐰）は <b>30コイン</b> で始めます。</li>
+        <li>銘柄は <b>🦦カワウソ水産・🐻クマのハチミツ製菓・🐰ウサギのカブ農園</b> の3社（カブ農園は天気しだいで値動きが荒め）。株価は全部 <b>5</b> から。あなた（🐿️リス）は <b>30コイン</b> で始めます。</li>
         <li>ライバルは <b>🐆チーター</b>（情報が入るとすぐ動く）、<b>🐢カメ</b>（割安な株をコツコツ買う）、<b>🐑ヒツジ</b>（みんなが買った株に乗っかる）。</li>
         <li>各社には裏向きの<b>業績カード</b>（−3／−1／+1／+3 のどれか）があり、あなたは<b>1社だけ</b>こっそり見られます。CPUもそれぞれ1社ずつ知っています。</li>
         <li>毎ラウンド、全員が「銘柄」と「買う／売る／見送り」を1つ選び、<b>せーの</b>で公開。</li>
         <li>買いが集まると群れが押し寄せ、売りが重なると逃げ出します。銘柄ごとに <b>買いの数 − 売りの数</b> だけ株価が動き（1〜10。じっくりモードは1〜20）、<b>動いた後の値段</b>で全員の注文が成立します。1注文は1株。</li>
-        <li>期のはじめに<b>景気カード</b>を1枚めくります（好景気・不景気・ブーム・不祥事・大型受注・平穏）。</li>
+        <li>期のはじめに<b>景気カード</b>を1枚めくります（好景気・不景気・ブーム・不祥事・大型受注・平穏、カブ農園だけに効く「カブの大豊作」「カブ鍋ブーム」）。</li>
+        <li>買った株は、会社の下に<b>切り株</b>🪵として並びます。会社の木は株価が上がると茂り、下がるとしおれます。</li>
         <li>売り買いの代わりに<b>調べる</b>（2コイン）を選ぶと、ほかの会社の業績も見られます。</li>
         <li>6ラウンド後に業績カードを公開。<b>株価 + 業績</b> が最終株価になり、株を換金してお金が一番多い人の勝ち。</li>
       </ol>
@@ -124,8 +131,8 @@
       <ul class="rules" style="padding-left:20px;margin:0">
         <li>6ラウンドを<b>1期</b>として、<b>3期</b>くり返します。</li>
         <li>株価の上限は<b>20</b>。持ち株とお金は<b>次の期へ持ち越し</b>。決算後の株価が次の期のスタート価格です。</li>
-        <li><b>配当：</b>業績がプラスの会社は、決算で1株につき業績と同じ数のコインがもらえます。</li>
-        <li><b>倒産：</b>決算で株価が0になった会社は倒産し、その株は紙くずに。新しい会社として5から再上場します。</li>
+        <li><b>配当：</b>業績がプラスの会社は決算で実がなり（🐟さかな・🍯ハチミツ・🥬カブ）、1株につき業績と同じ数のコインがもらえます。</li>
+        <li><b>倒産：</b>決算で株価が0になった会社は伐採🪓され、その株は紙くずに。次の期に切り株から新芽🌱が出て、新しい会社として5から再上場します。</li>
         <li>業績カードは期ごとに配り直し。知っている会社も入れ替わります。</li>
       </ul>
     </div>
@@ -207,11 +214,13 @@
 
 <script>
 const NAMES=['A','B','C'];
-const LBL={A:'カワウソ水産',B:'クマのハチミツ製菓',C:'フクロウ書房'};
-const SHORT={A:'カワウソ',B:'クマ',C:'フクロウ'};
-const ICO={A:'🦦',B:'🐻',C:'🦉'};
+const LBL={A:'カワウソ水産',B:'クマのハチミツ製菓',C:'ウサギのカブ農園'};
+const SHORT={A:'カワウソ',B:'クマ',C:'カブ農園'};
+const ICO={A:'🦦',B:'🐻',C:'🐰'};
+const FRUIT={A:'🐟',B:'🍯',C:'🥬'}; // 配当の実（カブ農園はカブ）
+const FRUITN={A:'さかな',B:'ハチミツ',C:'カブ'};
 const L=n=>ICO[n]+LBL[n];
-const PICO=['🐰','🐆','🐢','🐑'];
+const PICO=['🐿️','🐆','🐢','🐑'];
 const COLORS={A:'var(--A)',B:'var(--B)',C:'var(--C)'};
 const ROUNDS=6, START_CASH=30, START_PRICE=5;
 const CPU_NAMES=['チーター','カメ','ヒツジ'];
@@ -240,6 +249,7 @@ function startPeriod(){
   if(S.period>1){NAMES.forEach(n=>S.hist[n].push(S.price[n])); S.marks.push(S.hist.A.length-1);} // 期の境目
   const vals=shuffle([-3,-1,1,3]).slice(0,3);
   S.earn={}; NAMES.forEach((n,i)=>S.earn[n]=vals[i]);
+  (S.replant||[]).forEach(n=>S.log.push(`🌱 ${L(n)}の切り株から新芽！新しい会社として5で再上場`));
   drawEvent();
   S.base={...S.price};
   // 誰がどの会社を知っているか（4人で3社→1社は2人が知る）
@@ -258,16 +268,18 @@ const EVENTS=[
   {id:'scandal',icon:'💣',name:'不祥事', w:2, one:true, txt:t=>`${L(t)}の株価 −2`},
   {id:'order', icon:'📦',name:'大型受注', w:2, one:true, txt:t=>`${L(t)}の業績 +2（決算で効く・みんなが知っている）`},
   {id:'calm',  icon:'🍵',name:'平穏',     w:2, txt:()=>'何も起きない'},
+  {id:'harvest',icon:'🥬',name:'カブの大豊作',w:1, fix:'C', txt:t=>`${L(t)}の株価 −2（作りすぎて値くずれ）`},
+  {id:'nabe',  icon:'🍲',name:'カブ鍋ブーム',w:1, fix:'C', txt:t=>`${L(t)}の株価 +2（カブが飛ぶように売れる）`},
 ];
 function drawEvent(){
   const tot=EVENTS.reduce((t,e)=>t+e.w,0); let x=Math.random()*tot, ev=EVENTS[0];
   for(const e of EVENTS){if((x-=e.w)<=0){ev=e;break}}
-  const t=ev.one?NAMES[Math.floor(Math.random()*3)]:null, M=maxP();
+  const t=ev.fix||(ev.one?NAMES[Math.floor(Math.random()*3)]:null), M=maxP();
   const before={...S.price};
   if(ev.id==='boom')NAMES.forEach(n=>S.price[n]=clamp(S.price[n]+1,1,M));
   if(ev.id==='slump')NAMES.forEach(n=>S.price[n]=clamp(S.price[n]-1,1,M));
-  if(ev.id==='fad')S.price[t]=clamp(S.price[t]+2,1,M);
-  if(ev.id==='scandal')S.price[t]=clamp(S.price[t]-2,1,M);
+  if(ev.id==='fad'||ev.id==='nabe')S.price[t]=clamp(S.price[t]+2,1,M);
+  if(ev.id==='scandal'||ev.id==='harvest')S.price[t]=clamp(S.price[t]-2,1,M);
   S.bonus={A:0,B:0,C:0};
   if(ev.id==='order'){S.bonus[t]=2;S.earn[t]+=2;}
   S.event={icon:ev.icon,name:ev.name,txt:ev.txt(t),target:t};
@@ -353,12 +365,13 @@ function render(){
     const bn=(S.bonus&&S.bonus[n])||0;
     const memo=kn(me,n)?`業績メモ：<b style="color:${S.earn[n]>0?'var(--buy)':'var(--sell)'}">${sgn(S.earn[n])}</b>`:(bn?`業績 ？${sgn(bn)}`:'業績 ？');
     return `<div class="stock" style="border-color:${COLORS[n]}">
-      <div class="ani">${ICO[n]}</div><div class="nm" style="color:${COLORS[n]}">${LBL[n]}</div>
+      <div class="tree">${treeOf(n)}<span class="ani">${ICO[n]}</span></div><div class="nm" style="color:${COLORS[n]}">${LBL[n]}</div>${S.replant&&S.replant.includes(n)?'<div class="sprout">🌱 新芽から再上場</div>':''}
       <div class="pr">${S.price[n]}</div>
       <div class="dl ${d>0?'up':d<0?'down':''}">${S.round>1||d?(d>0?'▲'+d:d<0?'▼'+(-d):'±0'):''}</div>
       ${spark(n)}
-      <div class="memo">${memo}</div></div>`}).join('');
-  $('me').innerHTML=`<span>所持金 <b>${me.cash}</b></span>`+NAMES.map(n=>`<span>${ICO[n]} <b>${me.sh[n]}</b>株</span>`).join('')+
+      <div class="memo">${memo}</div>
+      <div class="stumps">${stumps(me.sh[n])}</div></div>`}).join('');
+  $('me').innerHTML=`<span>所持金 <b>${me.cash}</b></span>`+NAMES.map(n=>`<span>${ICO[n]}🪵<b>${me.sh[n]}</b></span>`).join('')+
     `<span>評価額 <b>${worth(me)}</b></span>`;
   $('pick').innerHTML=NAMES.map(n=>`<button data-s="${n}" class="${S.pick===n?'on':''}" style="${S.pick===n?'background:'+COLORS[n]+';border-color:'+COLORS[n]:'color:'+COLORS[n]}">${ICO[n]}<br><small style="font-size:12px">${SHORT[n]}</small></button>`).join('');
   $('pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.pick=b.dataset.s;if(S.act==='pass')S.act=null;render()});
@@ -380,9 +393,20 @@ function render(){
   else if(S.act==='peek')h=`${PEEK_COST}コイン払って${L(S.pick)}の業績を調べます。この回は売り買いできません（ほかの人には「調べもの」とだけ見えます）。`;
   $('hint').textContent=h;
   $('goBtn').disabled=!(S.act==='pass'||(S.act&&S.pick));
-  $('players').innerHTML=`<tr><th class="l">名前</th><th>お金</th><th>🦦</th><th>🐻</th><th>🦉</th><th>評価額</th></tr>`+
+  $('players').innerHTML=`<tr><th class="l">名前</th><th>お金</th><th>🦦</th><th>🐻</th><th>🐰</th><th>評価額</th></tr>`+
     S.players.map((p,i)=>`<tr><td class="l"><span class="who">${PICO[i]}</span>${p.name}</td><td>${p.cash}</td>${NAMES.map(n=>`<td>${p.sh[n]}</td>`).join('')}<td><b>${worth(p)}</b></td></tr>`).join('');
   $('log').innerHTML=S.log.length?S.log.slice().reverse().map(t=>`<div>${t}</div>`).join(''):'<div>まだ取引はありません。</div>';
+}
+// 会社の木：株価が上がると茂り、下がるとしおれる
+function treeOf(n){
+  const p=S.price[n], r=p/maxP();
+  const e=p<=2?'🍂':p<=4?'🌱':p<=7?'🌿':'🌳';
+  return `<span class="tr" style="font-size:${Math.round(18+r*26)}px">${e}</span>`;
+}
+// 持ち株＝切り株
+function stumps(k){
+  if(!k)return '<small>切り株なし</small>';
+  return '🪵'.repeat(Math.min(k,6))+(k>6?`<small>×${k}</small>`:'')+` <small>${k}株</small>`;
 }
 // 株価チャート（直近の期を中心に最大24点）
 function spark(n){
@@ -448,7 +472,7 @@ function herd(orders,before){
     const tot=buy.length+sell.length;
     const alone=tot===1&&(buy[0]===0||sell[0]===0); // あなただけが動いた
     const say=!tot?'<span style="color:var(--sub)">しーん…</span>':buy.length>=3?'<b>大行列！</b>':sell.length>=3?'<b>総崩れ！</b>':'';
-    return `<div class="hrow${alone?' alone':''}"><span class="co" style="color:${COLORS[n]}">${ICO[n]}${SHORT[n]}</span><span class="lane">${lane}${say?' '+say:''}</span><span class="mv ${d>0?'up':d<0?'down':''}">${before[n]}→${S.price[n]}</span></div>`;
+    return `<div class="hrow${alone?' alone':''}"><span class="co" style="color:${COLORS[n]}">${ICO[n]}${SHORT[n]}</span><span class="lane">${lane}${say?'<span class="say">'+say+'</span>':''}</span><span class="mv ${d>0?'up':d<0?'down':''}">${before[n]}→${S.price[n]}</span></div>`;
   }).join('');
   return `<div class="herd">${rows}</div>`;
 }
@@ -463,8 +487,8 @@ function finish(){
   // 配当（じっくりモード）
   const divLines=[];
   if(multi) S.players.forEach(p=>{
-    let d=0; NAMES.forEach(n=>{if(S.earn[n]>0)d+=p.sh[n]*S.earn[n]});
-    p.cash+=d; p.div+=d; if(d)divLines.push(`${p.name} +${d}`);
+    let d=0; const f=[]; NAMES.forEach(n=>{if(S.earn[n]>0&&p.sh[n]){d+=p.sh[n]*S.earn[n];f.push(FRUIT[n].repeat(Math.min(p.sh[n],4)))}});
+    p.cash+=d; p.div+=d; if(d)divLines.push(`${p.name} ${f.join('')} +${d}`);
   });
   // 倒産
   const broke=NAMES.filter(n=>S.price[n]===0);
@@ -475,10 +499,10 @@ function finish(){
   $('finalStocks').innerHTML=`<tr><th class="l">銘柄</th><th>市場の株価</th><th>業績</th><th>決算後</th></tr>`+
     NAMES.map(n=>`<tr><td class="l"><b style="color:${COLORS[n]}">${L(n)}</b></td><td>${mkt[n]}</td><td class="${S.earn[n]>0?'up':'down'}"><b>${sgn(S.earn[n])}</b></td><td><b>${S.price[n]}</b>${broke.includes(n)?' <span class="chip" style="background:var(--ink)">倒産</span>':''}</td></tr>`).join('');
   const notes=[];
-  if(multi)notes.push('💰 配当：'+(divLines.length?divLines.join('、'):'なし'));
+  if(multi)notes.push('🌳 実がなりました（配当）：'+(divLines.length?divLines.join('、'):'なし'));
   broke.forEach(n=>{
     const who=S.players.filter((p,i)=>lost[n][i]>0).map((p,i)=>p.name);
-    notes.push(`💥 ${L(n)}が倒産。`+(who.length?who.join('・')+'の持ち株は紙くずに。':'')+(final?'':'次の期は新しい会社として5から再上場します。'));
+    notes.push(`🪓 ${L(n)}が倒産して伐採されました。`+(who.length?who.join('・')+'の切り株（持ち株）は紙くずに。':'')+(final?'':'次の期は切り株から新芽🌱が出て、新しい会社として5から再上場します。'));
   });
   $('divs').innerHTML=notes.join('<br>');
   S.pastEarn.push({...S.earn});
@@ -508,6 +532,7 @@ function finish(){
 }
 function nextPeriod(){
   if(isFinal())S.periods++; // 続ける：持ち株・お金をそのまま次の期へ
+  S.replant=NAMES.filter(n=>S.price[n]===0);
   NAMES.forEach(n=>{if(S.price[n]===0)S.price[n]=START_PRICE; S.price[n]=clamp(S.price[n],1,maxP())});
   startPeriod();
 }

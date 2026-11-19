@@ -49,6 +49,10 @@ button.sub{background:#5b6b63;box-shadow:0 3px 0 #38443e}
 .card .top{display:flex;justify-content:space-between;align-items:center}
 .card .em{font-size:24px}
 .card .cost{background:var(--gold);border-radius:99px;padding:2px 9px;font-weight:bold;font-size:13px}
+.card .cost s{opacity:.55;font-weight:normal;margin-right:3px}
+.card.sale{border-color:var(--gold)}
+.chips{font-size:11px;color:#b07d00}
+.match{margin-top:8px;font-size:13px;line-height:1.7}
 .card .n{font-weight:bold;font-size:14px}
 .card .d{font-size:12px;color:#555;flex:1}
 .card button{padding:7px;font-size:13px}
@@ -74,7 +78,7 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
 </head>
 <body>
 <div class="wrap">
-<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ スタジアム経営 v0.1</p>
+<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ スタジアム経営 v0.2</p>
 <header>
   <h1>⚾ スタジアム経営</h1>
   <p>AIと考えた試作ゲーム ｜ 球場の売店とイベントで、9試合でいちばん稼いだオーナーの勝ち</p>
@@ -87,12 +91,13 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
   <ul>
     <li>はじめは <b>5コイン・ファン3人</b>（ファンの上限は6）。</li>
     <li>毎回、まず<b>イベントカード</b>を1枚めくります。</li>
-    <li>順番に1回ずつ行動します：<b>施設を1枚買う</b>／<b>広告を出す</b>（2コインでファン+1）／<b>パス</b>。場には施設カードが4枚並びます。</li>
-    <li>全員がサイコロを振って試合をします。<b>4以上で勝ち</b>。勝てばファン+1、負けたらファン−1（最低1人）。</li>
+    <li>最初の先攻はじゃんけんで決め、毎回ひとりずつずらします。順番に1回ずつ行動します：<b>施設を1枚買う</b>／<b>広告を出す</b>（2コインでファン+1）／<b>パス</b>。場には施設カードが4枚並びます。</li>
+    <li>試合は<b>ほかの球場との直接対決</b>。対戦する2人がサイコロを振り、<b>目が大きいほうの勝ち</b>。勝ったほうは負けた球場から<b>ファンを1人奪います</b>（同じ目なら引き分け）。対戦相手は毎回入れかわり、あまった1人はビジター球団と戦って<b>4以上で勝ち</b>（負けたらファン−1）。ファンは最低1人。</li>
+    <li>売れ残った施設には、毎回<b>値引きチップが1枚</b>乗ります（1枚につき1コイン安くなる・最低1コイン）。安くなるのを待つか、先に買うか。</li>
     <li>収入＝<b>チケット代（ファンの数）</b>＋施設の収入。</li>
     <li>9回（9試合）を終えて、<b>コインがいちばん多い人の勝ち</b>。同点ならファンが多い人の勝ち。</li>
   </ul>
-  <p class="muted">アナログ版で使うもの：施設カード18枚（9種類×2枚）、イベントカード10枚、サイコロ、コイン、ファン数のトラック。</p>
+  <p class="muted">アナログ版で使うもの：施設カード18枚（9種類×2枚）、イベントカード10枚、サイコロ、コイン、値引きチップ、ファン数のトラック。</p>
   <div class="row"><button id="startBtn">CPU2人と試合開始</button></div>
 </div>
 
@@ -104,6 +109,7 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
   <div class="panel">
     <h2 id="evTitle">イベント</h2>
     <div class="event" id="event"></div>
+    <div class="match" id="match"></div>
   </div>
   <div class="panel">
     <h2>施設マーケット <span class="tag" id="phaseTag"></span></h2>
@@ -135,7 +141,7 @@ const FAC = {
   beer:{n:"ビール売り子",e:"🍺",c:4,d:"毎試合 +2、勝てばさらに +2",food:true},
   goods:{n:"グッズショップ",e:"🧢",c:5,d:"勝てば +5、負けたら +1"},
   ouen:{n:"応援団",e:"📯",c:4,d:"サイコロの目 +1（2枚まで）"},
-  fanclub:{n:"ファンクラブ",e:"💳",c:5,d:"毎回 +1（雨天中止でも）。負けてもファンが減らない"},
+  fanclub:{n:"ファンクラブ",e:"💳",c:5,d:"毎回 +1（雨天中止でも）。負けてもファンを奪われない"},
   mascot:{n:"マスコット",e:"🐻",c:4,d:"買ったときファン +2。毎試合 +1"},
   seats:{n:"外野席増設",e:"🏟️",c:5,d:"ファンの上限 +3。毎試合 +1"},
   vision:{n:"大型ビジョン",e:"📺",c:6,d:"チケット代 +3"},
@@ -164,7 +170,7 @@ function cap(p){return 6+3*cnt(p,"seats")}
 
 function newGame(){
   const deck=[];Object.keys(FAC).forEach(k=>{deck.push(k,k)});
-  S={round:0,deck:shuffle(deck),market:[],events:shuffle(EVENTS.slice()).slice(0,ROUNDS),
+  S={round:0,start:Math.floor(Math.random()*3),deck:shuffle(deck),market:[],events:shuffle(EVENTS.slice()).slice(0,ROUNDS),
     players:[
       {name:"あなた",icon:"🧑‍💼",cpu:false,coins:5,fans:3,fac:[],last:""},
       {name:"CPU ライオン球場",icon:"🦁",cpu:true,coins:5,fans:3,fac:[],last:""},
@@ -174,12 +180,21 @@ function newGame(){
   $("intro").classList.add("hide");$("end").classList.add("hide");$("game").classList.remove("hide");
   renderCatalog();startRound();
 }
-function refill(){while(S.market.length<4&&S.deck.length)S.market.push(S.deck.pop())}
+function refill(){while(S.market.length<4&&S.deck.length)S.market.push({k:S.deck.pop(),disc:0})}
+function price(m){return Math.max(1,FAC[m.k].c-m.disc)}
+// 対戦の組み合わせ：毎回入れかわる。あまった1人はビジター球団（4以上で勝ち）
+function pairings(){
+  const n=S.players.length,r=S.round+S.start;
+  if(n===3){const P=[[0,1,2],[1,2,0],[0,2,1]][r%3];return {pairs:[[P[0],P[1]]],solo:P[2]}}
+  const idx=[...Array(n).keys()];const rot=[idx[0],...idx.slice(1).map((_,i)=>idx[1+((i+r)%(n-1))])];
+  const pairs=[];for(let i=0;i+1<rot.length;i+=2)pairs.push([rot[i],rot[i+1]]);
+  return {pairs,solo:rot.length%2?rot[rot.length-1]:-1};
+}
 function ev(){return S.events[S.round]}
 
 function startRound(){
   S.phase="buy";
-  const n=S.players.length,st=S.round%n;
+  const n=S.players.length,st=(S.start+S.round)%n;
   S.order=[...Array(n).keys()].map(i=>(st+i)%n);S.turnIdx=0;
   S.players.forEach(p=>p.last="");
   log(`<div class="r"><b>【${S.round+1}回】${ev().e} ${ev().n}</b> ― ${ev().d}<br><span class="muted">先攻：${S.players[S.order[0]].name}</span></div>`);
@@ -194,13 +209,13 @@ function advance(){
   S.phase="play";render();
 }
 function buy(p,idx){
-  const k=S.market[idx],f=FAC[k];
-  if(p.coins<f.c)return false;
+  const m=S.market[idx],k=m.k,f=FAC[k],pr=price(m);
+  if(p.coins<pr)return false;
   if(k==="ouen"&&cnt(p,"ouen")>=2)return false;
-  p.coins-=f.c;p.fac.push(k);S.market.splice(idx,1);refill();
+  p.coins-=pr;p.fac.push(k);S.market.splice(idx,1);refill();
   if(k==="mascot")p.fans=Math.min(cap(p),p.fans+2);
   p.last=`${f.e}${f.n}を建設`;
-  log(`<div>${p.icon} ${p.name}：${f.e}<b>${f.n}</b>を建設（−${f.c}）</div>`);
+  log(`<div>${p.icon} ${p.name}：${f.e}<b>${f.n}</b>を建設（−${pr}${m.disc?"・値引き"+m.disc:""}）</div>`);
   return true;
 }
 function advertise(p){
@@ -224,11 +239,14 @@ function value(p,k){
     case"vision":v=3*games;break;
     case"hanabi":v=2*games+w*left*0.6;break;
   }
-  return v-FAC[k].c;
+  return v;
 }
 function cpuAct(p){
   let best=-1,bv=0.5;
-  S.market.forEach((k,i)=>{if(p.coins>=FAC[k].c){const v=value(p,k);if(v>bv){bv=v;best=i}}});
+  S.market.forEach((m,i)=>{const pr=price(m);if(p.coins>=pr){
+    // 値下がり待ち：まだ時間があり、割安でなければ見送ることも
+    let v=value(p,m.k)-pr;if(pr>1&&ROUNDS-S.round>4&&v<FAC[m.k].c*0.6)v-=1.5;
+    if(v>bv){bv=v;best=i}}});
   if(best>=0&&buy(p,best))return;
   const left=ROUNDS-S.round;
   if(left>=3&&p.fans<cap(p)&&advertise(p))return;
@@ -239,7 +257,29 @@ function humanDone(){S.turnIdx++;advance()}
 function playGame(){
   const e=ev().k;
   let html=`<div class="r"><b>⚾ ${S.round+1}回の試合結果</b><br>`;
-  S.players.forEach(p=>{
+  const res={};
+  const bon=p=>Math.min(2,cnt(p,"ouen"))-(e==="ace"?1:0);
+  if(e!=="rain"){
+    const {pairs,solo}=pairings();
+    pairs.forEach(([a,b])=>{
+      const A=S.players[a],B=S.players[b];
+      const ra=d6(),rb=d6(),ta=ra+bon(A),tb=rb+bon(B);
+      res[a]={roll:ra,bonus:bon(A),result:ta>tb?'w':ta<tb?'l':'d',vs:b};
+      res[b]={roll:rb,bonus:bon(B),result:ta>tb?'l':ta<tb?'w':'d',vs:a};
+    });
+    if(solo>=0){const P=S.players[solo],r=d6(),t=r+bon(P);res[solo]={roll:r,bonus:bon(P),result:t>=4?'w':'l',vs:-1}}
+  }
+  // ファンの移動：勝った球場が負けた球場からファンを奪う（ファンクラブがあれば奪われない）
+  const before=S.players.map(p=>p.fans);
+  S.players.forEach((p,i)=>{
+    const r=res[i];if(!r||r.result!=='w')return;
+    const gain=(e==="rival"?2:1);
+    if(r.vs>=0){const L=S.players[r.vs];if(!cnt(L,"fanclub"))L.fans=Math.max(1,L.fans-gain)}
+    p.fans+=gain+cnt(p,"hanabi");
+  });
+  S.players.forEach((p,i)=>{const r=res[i];if(r&&r.result==='l'&&r.vs<0&&!cnt(p,"fanclub"))p.fans-=1;});
+  S.players.forEach(p=>{p.fans=Math.max(1,Math.min(cap(p),p.fans))});
+  S.players.forEach((p,i)=>{
     let inc=0,parts=[];
     if(e==="rain"){
       const fc=cnt(p,"fanclub");inc=fc;
@@ -248,14 +288,8 @@ function playGame(){
       html+=`${p.icon} ${p.name}：☔中止 → <span class="coin">+${inc}</span>${parts.length?"（"+parts.join(" ")+"）":""}<br>`;
       return;
     }
-    const roll=d6(),bonus=Math.min(2,cnt(p,"ouen"))-(e==="ace"?1:0),tot=roll+bonus,win=tot>=4;
-    // ファン
-    const before=p.fans;
-    if(win){p.fans+= (e==="rival"?2:1)+cnt(p,"hanabi")}
-    else if(!cnt(p,"fanclub")){p.fans-=1}
-    p.fans=Math.max(1,Math.min(cap(p),p.fans));
-    // 収入
-    let ticket=p.fans*(e==="weekend"?2:1)+3*cnt(p,"vision");
+    const r=res[i],win=r.result==='w';
+    const ticket=p.fans*(e==="weekend"?2:1)+3*cnt(p,"vision");
     inc+=ticket;parts.push(`🎟️${ticket}`);
     const add=(k,v)=>{const c=cnt(p,k);if(c&&v){inc+=c*v;parts.push(`${FAC[k].e}${c*v}`)}};
     add("yakisoba",2+(e==="family"?1:0)+(e==="payday"?1:0));
@@ -266,9 +300,14 @@ function playGame(){
     add("seats",1);
     add("hanabi",2);
     p.coins+=inc;
-    const df=p.fans-before;
-    html+=`${p.icon} ${p.name}：<span class="dice">${roll}</span>${bonus?(bonus>0?"+":"")+bonus:""} → ${win?'<span class="w">勝ち</span>':'<span class="l">負け</span>'}　ファン${p.fans}（${df>=0?"+":""}${df}）　<span class="coin">+${inc}</span>　<span class="muted">${parts.join(" ")}</span><br>`;
+    const df=p.fans-before[i];
+    const vs=r.vs>=0?S.players[r.vs].icon:"✈️";
+    const rs=r.result==='w'?'<span class="w">勝ち</span>':r.result==='l'?'<span class="l">負け</span>':'引き分け';
+    html+=`${p.icon} vs ${vs}：<span class="dice">${r.roll}</span>${r.bonus?(r.bonus>0?"+":"")+r.bonus:""} → ${rs}　ファン${p.fans}（${df>=0?"+":""}${df}）　<span class="coin">+${inc}</span>　<span class="muted">${parts.join(" ")}</span><br>`;
   });
+  // 売れ残った施設に値引きチップ
+  let sale=0;S.market.forEach(m=>{if(price(m)>1){m.disc++;sale++}});
+  if(sale)html+=`<span class="muted">🏷️ 売れ残った施設に値引きチップ（${sale}枚）</span><br>`;
   html+="</div>";log(html);
   S.phase="after";render();
 }
@@ -303,11 +342,14 @@ function render(){
     const e=ev();
     $("evTitle").textContent=`${S.round+1}回のイベント`;
     $("event").innerHTML=`<div class="ic">${e.e}</div><div><b>${e.n}</b><small>${e.d}</small></div>`;
+    if(e.k==="rain")$("match").innerHTML="今回は試合なし";
+    else{const {pairs,solo}=pairings(),P=S.players;
+      $("match").innerHTML="<b>今回の対戦</b>　"+pairs.map(([a,b])=>`${P[a].icon}${P[a].name} vs ${P[b].icon}${P[b].name}`).join("　")+(solo>=0?`<br>${P[solo].icon}${P[solo].name} vs ✈️ビジター球団（4以上で勝ち）`:"");}
   }
   const me=S.players[0],myTurn=S.phase==="buy"&&cur===0;
-  $("market").innerHTML=S.market.map((k,i)=>{const f=FAC[k];
-    const ok=myTurn&&me.coins>=f.c&&!(k==="ouen"&&cnt(me,"ouen")>=2);
-    return `<div class="card"><div class="top"><span class="em">${f.e}</span><span class="cost">🪙${f.c}</span></div>
+  $("market").innerHTML=S.market.map((m,i)=>{const k=m.k,f=FAC[k],pr=price(m);
+    const ok=myTurn&&me.coins>=pr&&!(k==="ouen"&&cnt(me,"ouen")>=2);
+    return `<div class="card ${m.disc?"sale":""}"><div class="top"><span class="em">${f.e}</span><span class="cost">${m.disc?`<s>${f.c}</s>`:""}🪙${pr}</span></div>${m.disc?`<div class="chips">🏷️ 値引きチップ×${m.disc}</div>`:""}
     <div class="n">${f.n}</div><div class="d">${f.d}</div>
     <button ${ok?"":"disabled"} onclick="if(buy(S.players[0],${i}))humanDone()">建てる</button></div>`}).join("")||'<p class="muted">山札が尽きました</p>';
   $("adBtn").disabled=!(myTurn&&me.coins>=2&&me.fans<cap(me));

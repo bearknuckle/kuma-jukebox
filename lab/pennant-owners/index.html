@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="ペナント・オーナーズ｜試作ゲームラボ">
-<meta property="og:description" content="選手を取り合うドラフトから、3試合のシリーズへ。打者は1人ずつサイコロで勝負し、最終回は「直球か変化球か」の読み合い。読み勝って逆転、サヨナラも。10分で遊べる1対1の野球カードゲーム。">
+<meta property="og:description" content="選手を交互に取り合って、打者3人と投手1人で3試合のシリーズ。サイコロ＋打力が投手の数字以上ならヒット。最終回は「直球か変化球か」の読み合いで、当たれば逆転のチャンス。ルールは5行の野球カードゲーム。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/pennant-owners/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -90,15 +90,15 @@ details summary{cursor:pointer;font-weight:700}
 <body>
 <div id="app"></div>
 <script>
-// ===== ペナント・オーナーズ v0.3（ドラフト＋読み合い版） =====
-// アナログ版の内容物：選手カード12枚、直球・変化球カード2枚×2人、サイコロ1個、スコア表
+// ===== ペナント・オーナーズ v0.4（いちばんシンプル版） =====
+// アナログ版の内容物：選手カード10枚（打者7・投手3）、直球・変化球カード2枚×2人、サイコロ1個、スコア表
 const rnd=n=>Math.floor(Math.random()*n);
 const d6=()=>1+rnd(6);
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
 const $app=document.getElementById('app');
 
-const BAT_VALS=[5,4,4,3,3,2,2], PIT_VALS=[5,4,3,3,2];
-const NEED_B=3, NEED_P=2, GAMES=3, LAST=3, MAX_INN=5;
+const BAT_VALS=[3,3,2,2,2,1,1], PIT_VALS=[8,7,6];   // 投手の数字＝ヒットに必要な「出目＋打力」
+const NEED_B=3, NEED_P=1, GAMES=3, LAST=3, SAFE_INN=9;
 const PT={c:'直球',h:'変化球'};
 const NAMES=['浅倉','石動','宇佐美','江口','大槻','柏木','桐生','久住','小野寺','榊','篠原','白石','須藤','瀬川','高峰','千早','津田','遠野','長嶺','西園','野々村','橋爪','日向','藤堂','真柴','三雲','村瀬','望月','矢吹','結城'];
 let S=null, uid=0, SPEED=600;
@@ -106,74 +106,65 @@ let S=null, uid=0, SPEED=600;
 const T=i=>S.teams[i];
 const tname=i=>`<span class="dot" style="background:${T(i).color}"></span>${T(i).name}`;
 const bats=i=>T(i).roster.filter(p=>p.type==='B');
-const pits=i=>T(i).roster.filter(p=>p.type==='P');
-const tired=p=>p.last===S.gameNo-1;
-const pv=p=>Math.max(0,p.val-(tired(p)?2:0));
+const pitcher=i=>T(i).roster.find(p=>p.type==='P');
 const wins=i=>S.results.filter(r=>r===i).length;
 
-// ===== ドラフト =====
+// ===== ドラフト：先手が1枚、そのあと2枚ずつ交互（1・2・2・2・1） =====
 function newGame(){
   uid=0; const names=shuffle(NAMES.slice());
-  const pool=[...BAT_VALS.map(v=>({type:'B',val:v})),...PIT_VALS.map(v=>({type:'P',val:v,pitch:rnd(2)?'c':'h'}))]
-    .map(p=>({...p,id:++uid,name:names.pop(),last:-9}));
-  const first=rnd(2), order=[];
-  for(let k=0;k<NEED_B+NEED_P;k++){ order.push(k%2===0?first:1-first); order.push(k%2===0?1-first:first); } // 1・2・2・2…の順
+  const pool=[...PIT_VALS.map(v=>({type:'P',val:v})),...BAT_VALS.map(v=>({type:'B',val:v}))].map(p=>({...p,id:++uid,name:names.pop()}));
+  const first=rnd(2);
   S={phase:'draft',teams:[{name:'ホームスターズ',color:'#d0473f',roster:[]},{name:'湾岸ドルフィンズ',color:'#2f7fd1',roster:[]}],
-     pool,order,pick:0,log:[],results:[],gameNo:0,first};
+     pool,turn:first,first,pk:0,log:[],results:[],gameNo:0};
   cpuDraft(); render();
 }
-function canTake(i,p){return p.type==='B'?bats(i).length<NEED_B:pits(i).length<NEED_P;}
-function take(i,p){S.pool.splice(S.pool.indexOf(p),1);T(i).roster.push(p);S.log.push(`${i===0?'あなた':T(1).name}：${p.name}（${p.type==='B'?'打':'投'}${p.val}${p.pitch?'・'+PT[p.pitch]+'型':''}）`);S.pick++;}
-function cpuDraft(){
-  while(S.pick<S.order.length && S.order[S.pick]===1){
-    const c=S.pool.filter(p=>canTake(1,p)).sort((a,b)=>(b.val+(b.type==='P'?0.3:0))-(a.val+(a.type==='P'?0.3:0)))[0];
-    take(1,c);
-  }
-  if(S.pick>=S.order.length) S.phase='drafted';
+const full=i=>T(i).roster.length>=NEED_B+NEED_P;
+function canTake(i,p){return p.type==='B'?bats(i).length<NEED_B:!pitcher(i);}
+function take(i,p){
+  S.pool.splice(S.pool.indexOf(p),1);T(i).roster.push(p);
+  S.log.push(`${i===0?'あなた':T(1).name}：${p.name}（${p.type==='B'?'打力':'投手'}${p.val}）`);
+  S.pk++; S.turn=[0,1,1,0,0,1,1,0][S.pk]===0?S.first:1-S.first;
+  if(full(0)&&full(1)) S.phase='drafted';
 }
-function humanTake(id){const p=S.pool.find(x=>x.id===id);if(!p||!canTake(0,p)||S.order[S.pick]!==0)return;take(0,p);cpuDraft();render();}
+function cpuDraft(){
+  while(S.phase==='draft'&&S.turn===1){
+    const sc=p=>p.type==='B'?p.val:(p.val-5)+0.5;
+    take(1,S.pool.filter(p=>canTake(1,p)).sort((a,b)=>sc(b)-sc(a))[0]);
+  }
+}
+function humanTake(id){const p=S.pool.find(x=>x.id===id);if(S.phase!=='draft'||S.turn!==0||!p||!canTake(0,p))return;take(0,p);cpuDraft();render();}
 
 // ===== 試合 =====
-function pregame(){
+function startGame(){
   S.gameNo++;
-  const home=S.gameNo%2===1?0:1;           // 第1・3戦はあなたがホーム（後攻）
-  S.G={home,away:1-home,inning:1,half:0,runs:[[],[]],pitcher:[null,null],bats:[],call:['プレイボール前'],need:null,read:null,over:false,winner:undefined,walkoff:false};
-  const best=i=>pits(i).slice().sort((a,b)=>pv(b)-pv(a)||a.val-b.val)[0].id;
-  S.G.pitcher=[best(0),best(1)];
-  S.phase='pregame'; render();
+  const home=S.gameNo%2===1?0:1;           // 第1・3戦はあなたが後攻
+  S.G={home,away:1-home,inning:1,half:0,runs:[[],[]],bats:[],call:['プレイボール！'],need:null,read:null,over:false,winner:undefined,walkoff:false};
+  S.phase='game'; render(); setTimeout(nextHalf,SPEED);
 }
-function setPitcher(id){S.G.pitcher[0]=id;render();}
-function playBall(){S.phase='game';nextHalf();}
 const tot=i=>S.G.runs[i].reduce((s,v)=>s+(v||0),0);
 const atkOf=()=>S.G.half===0?S.G.away:S.G.home;
-const pitcherOf=i=>pits(i).find(p=>p.id===S.G.pitcher[i]);
 const halfName=()=>`${S.G.inning}回${S.G.half?'裏':'表'}`;
 
 function nextHalf(){
   const G=S.G;
   if(G.inning>=LAST){G.need='read';G.read=null;G.bats=[];render();return;}
-  runHalf(0,0);
+  runHalf(0);
 }
 function choose(c){
   const G=S.G; if(G.need!=='read') return;
-  const atk=atkOf(), def=1-atk, P=pitcherOf(def), other=x=>x==='c'?'h':'c';
-  let aim,pitch;
-  if(atk===0){aim=c;pitch=Math.random()<0.55?P.pitch:other(P.pitch);}
-  else{pitch=c;aim=Math.random()<0.6?P.pitch:other(P.pitch);}
-  const hit=aim===pitch, bmod=hit?2:-1, pmod=pitch===P.pitch?1:0;
-  G.read={aim,pitch,hit,pmod,atk};
-  G.need=null;
-  G.call=[`${halfName()} 読み合い：${PT[aim]}狙い × ${PT[pitch]}`,hit?`読み的中！ ${T(atk).name}の打者は全員打力＋2`:`読み外れ！ ${T(atk).name}の打者は全員打力−1`];
+  const atk=atkOf(), cpu=rnd(2)?'c':'h';
+  const aim=atk===0?c:cpu, pitch=atk===0?cpu:c, hit=aim===pitch;
+  G.read={aim,pitch,hit,atk}; G.need=null;
+  G.call=[`${halfName()} 読み合い：${PT[aim]}狙い × ${PT[pitch]}`,hit?`読み的中！ ${T(atk).name}の打者は全員打力＋2`:`読み外れ。打力はそのまま`];
   render();
-  setTimeout(()=>runHalf(bmod,pmod),SPEED*1.6);
+  setTimeout(()=>runHalf(hit?2:0),SPEED*1.6);
 }
-function runHalf(bmod,pmod){
-  const G=S.G, atk=atkOf(), def=1-atk, P=pitcherOf(def);
-  const pitchV=pv(P)+pmod, need=pitchV+5;
+function runHalf(bmod){
+  const G=S.G, atk=atkOf(), P=pitcher(1-atk), need=P.val;
   G.runs[atk][G.inning-1]=0;
   G.bats=bats(atk).map(p=>({p,v:p.val+bmod,d:null,state:''}));
   const head=`${halfName()}　${T(atk).name}の攻撃`;
-  G.call=[head,`投手 ${P.name}（球威${pitchV}）→ サイコロ＋打力が${need}以上でヒット`];
+  G.call=[head,`投手 ${P.name} → 出目＋打力が${need}以上でヒット`];
   render();
   let k=0;
   const step=()=>{
@@ -184,7 +175,6 @@ function runHalf(bmod,pmod){
       if(hit)G.runs[atk][G.inning-1]++;
       const tie=tot(G.home)===tot(G.away);
       G.call=[head,`${b.p.name}：出目${b.d}＋打力${b.v}＝${b.d+b.v} → ${hit?'ヒット！ 1点':'凡退'}${hit&&G.half===1&&G.inning>=LAST&&tie?'　同点！':''}`];
-      // サヨナラ判定：後攻が最終回以降に逆転した瞬間に試合終了
       if(hit&&G.half===1&&G.inning>=LAST&&tot(G.home)>tot(G.away)){G.walkoff=true;render();setTimeout(()=>finish(G.home),SPEED*1.4);return;}
       render(); k++; setTimeout(step,SPEED);
     },SPEED*0.7);
@@ -198,7 +188,7 @@ function endHalf(){
     G.half=1;
   }else{
     if(G.inning>=LAST&&tot(G.home)!==tot(G.away)){finish(tot(G.home)>tot(G.away)?G.home:G.away);return;}
-    if(G.inning>=MAX_INN){finish(null);return;}
+    if(G.inning>=SAFE_INN){finish(null);return;}
     G.inning++;G.half=0;
   }
   G.bats=[];
@@ -208,7 +198,6 @@ function endHalf(){
 }
 function finish(w){
   const G=S.G; G.over=true; G.winner=w; G.need=null;
-  [0,1].forEach(i=>{pitcherOf(i).last=S.gameNo;});
   S.results.push(w);
   G.call=[w===null?'引き分け':G.walkoff?`サヨナラ！ ${T(w).name}の勝利`:`試合終了 ${T(w).name}の勝利`,`${T(G.away).name} ${tot(G.away)} − ${tot(G.home)} ${T(G.home).name}`];
   render();
@@ -217,10 +206,9 @@ const seriesOver=()=>wins(0)>=2||wins(1)>=2||S.gameNo>=GAMES;
 
 // ===== 描画 =====
 function card(p,o={}){
-  const cls=['card',p.type==='B'?'bat':'pit',o.click?'click':'',o.sel?'sel':'',o.off?'off':''].join(' ');
-  const tr=S&&S.gameNo&&p.type==='P'&&tired(p);
-  return `<div class="${cls}" ${o.click?`onclick="${o.click}"`:''}><span class="kind">${p.type==='B'?'打':'投'}</span>${tr?'<span class="st">疲労</span>':''}
-  <div class="num">${p.val}${tr?`<span class="tired">→${pv(p)}</span>`:''}</div><div class="nm">${p.name}</div>${p.pitch?`<div class="ty">${PT[p.pitch]}型</div>`:''}</div>`;
+  const cls=['card',p.type==='B'?'bat':'pit',o.click?'click':'',o.off?'off':''].join(' ');
+  return `<div class="${cls}" ${o.click?`onclick="${o.click}"`:''}><span class="kind">${p.type==='B'?'打':'投'}</span>
+  <div class="num">${p.val}</div><div class="nm">${p.name}</div><div class="ty">${p.type==='B'?'打力':'これ以上でヒット'}</div></div>`;
 }
 function board(){
   const G=S.G, n=Math.max(LAST,G.inning), cols=[...Array(n)].map((_,i)=>i+1);
@@ -230,49 +218,37 @@ function board(){
     return `<td class="${now?'now':''}">${v===undefined?(skip?'x':''):v}</td>`;}).join('')}<td class="tot">${tot(i)}</td></tr>`;
   return `<div class="board"><table><tr><th></th>${cols.map(c=>`<th>${c}</th>`).join('')}<th>計</th></tr>${row(G.away)}${row(G.home)}</table></div>`;
 }
-const BACK='<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ペナント・オーナーズ v0.3</p>';
+const BACK='<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ペナント・オーナーズ v0.4</p>';
 function rules(open){
   return `<details class="panel" ${open?'open':''}><summary>ルール</summary><div class="rules">
-  <p><b>1対1で3試合のシリーズ。2勝した方の優勝。</b></p>
   <ul>
-  <li><b>ドラフト</b>：12枚の選手カードを交互に取る（1・2・2・2…の順）。打者3人と投手2人をそろえる。</li>
-  <li><b>試合は3回まで</b>：打者3人が1人ずつサイコロを振り、<b>出目＋打力 ≥ 相手の球威＋5</b>ならヒットで1点。</li>
-  <li><b>最終回は読み合い</b>：攻める側は「直球狙い／変化球狙い」、守る側は「直球／変化球」のカードを伏せて同時にめくる。読みが当たれば打者全員の打力＋2、外れれば−1。投手が得意な球種で投げると球威＋1。</li>
-  <li>最終回で同点なら延長（読み合いつき）。5回まで同点なら引き分け。後攻が逆転した時点でサヨナラ。</li>
-  <li>前の試合で投げた投手は疲れていて球威−2。</li>
+  <li><b>ドラフト</b>：先手が1枚、そのあとは2枚ずつ交互に取って、打者3人と投手1人をそろえる。</li>
+  <li><b>打つ</b>：打者が1人ずつサイコロを振る。<b>出目＋打力が相手投手の数字以上</b>ならヒットで1点。</li>
+  <li><b>3回まで</b>。最終回は攻める側が「直球／変化球」を狙い、守る側が投げる球を選んで同時に出す。<b>読みが当たれば打者全員＋2</b>。</li>
+  <li>同点なら延長（読み合いつき）。後攻が逆転したらその場でサヨナラ。</li>
+  <li><b>3試合して2勝した方の優勝</b>。</li>
   </ul>
-  <p class="mute">アナログ版の内容物：選手カード12枚、直球・変化球カード2枚×2人、サイコロ1個、スコア表。</p>
+  <p class="mute">アナログ版の内容物：選手カード10枚、直球・変化球カード2枚×2人、サイコロ1個、スコア表。</p>
   </div></details>`;
 }
-function topbar(){
-  return `<div class="top"><span>第${Math.max(1,S.gameNo)}戦</span><span class="series">あなた ${wins(0)}−${wins(1)} 相手</span></div>`;
-}
+const topbar=()=>`<div class="top"><span>第${Math.max(1,S.gameNo)}戦</span><span class="series">あなた ${wins(0)}−${wins(1)} 相手</span></div>`;
 
 function render(){
   if(!S){
-    $app.innerHTML=`<div class="title"><h1 style="margin-top:12px">ペナント・オーナーズ</h1>
-    <div class="sub">ドラフトで選手を取り合い、3試合のシリーズへ。<br>最終回は「直球か、変化球か」。</div></div>
-    <div class="panel"><button class="btn wide" onclick="newGame()">ドラフト会議をはじめる</button></div>${rules(true)}${BACK}`;return;
+    $app.innerHTML=`<div class="title"><span class="badge">AIと考えた試作ゲーム</span><h1 style="margin-top:12px">ペナント・オーナーズ</h1>
+    <div class="sub">選手を取り合って、3人で打つ。<br>最終回は「直球か、変化球か」。</div></div>
+    <div class="panel"><button class="btn wide" onclick="newGame()">ドラフトをはじめる</button></div>${rules(true)}${BACK}`;return;
   }
   let h='';
   if(S.phase==='draft'||S.phase==='drafted'){
-    const mine=S.phase==='draft'&&S.order[S.pick]===0;
-    h+=`<div class="title" style="padding-top:8px"><h1 style="font-size:24px">ドラフト会議</h1><div class="sub">${S.first===0?'あなた':'相手'}から指名。打者3人・投手2人をそろえる</div></div>
-    <div class="panel"><div class="sec">${S.phase==='drafted'?'ドラフト終了':mine?'あなたの指名です（カードをタップ）':'相手が指名中…'}</div>
+    const mine=S.phase==='draft'&&S.turn===0;
+    h+=`<div class="title" style="padding-top:8px"><h1 style="font-size:24px">ドラフト</h1><div class="sub">${S.first===0?'あなた':'相手'}から（1枚→2枚ずつ交互）。打者3人・投手1人をそろえる</div></div>
+    <div class="panel"><div class="sec">${S.phase==='drafted'?'ドラフト終了':mine?'あなたの番です（カードをタップ）':'相手が指名中…'}</div>
     <div class="cards">${S.pool.map(p=>card(p,{click:mine&&canTake(0,p)?`humanTake(${p.id})`:'',off:mine&&!canTake(0,p)})).join('')}</div>
     ${S.log.length?`<ul class="log">${S.log.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
-    ${S.phase==='drafted'?`<div style="margin-top:12px"><button class="btn wide" onclick="pregame()">第1戦へ</button></div>`:''}</div>
-    <div class="panel"><div class="sec">あなたのチーム（打者${bats(0).length}/3・投手${pits(0).length}/2）</div><div class="cards">${T(0).roster.map(p=>card(p)).join('')}</div>
+    ${S.phase==='drafted'?`<div style="margin-top:12px"><button class="btn wide" onclick="startGame()">第1戦 プレイボール！</button></div>`:''}</div>
+    <div class="panel"><div class="sec">あなたのチーム</div><div class="cards">${T(0).roster.map(p=>card(p)).join('')}</div>
     <div class="sec" style="margin-top:12px">${T(1).name}</div><div class="cards">${T(1).roster.map(p=>card(p)).join('')}</div></div>`;
-  }
-  else if(S.phase==='pregame'){
-    const G=S.G, op=pitcherOf(1);
-    h+=topbar()+`<div class="panel"><div class="sec">第${S.gameNo}戦：あなたは${G.home===0?'後攻（ホーム）':'先攻（ビジター）'}</div>
-    <div class="mute" style="margin-top:4px">相手の先発：${op.name}（球威${pv(op)}・${PT[op.pitch]}型）</div>
-    <div style="margin-top:10px"><b>先発投手を選ぶ</b></div>
-    <div class="cards">${pits(0).map(p=>card(p,{click:`setPitcher(${p.id})`,sel:G.pitcher[0]===p.id})).join('')}</div>
-    <div style="margin-top:10px"><b>打線</b></div><div class="cards">${bats(0).map(p=>card(p)).join('')}</div>
-    <div style="margin-top:12px"><button class="btn wide" onclick="playBall()">プレイボール！</button></div></div>`;
   }
   else if(S.phase==='game'){
     const G=S.G;
@@ -282,18 +258,17 @@ function render(){
       const w=G.winner;
       h+=`<div class="big" style="color:${w===0?'var(--red)':'var(--ink)'}">${w===null?'引き分け':w===0?(G.walkoff?'サヨナラ勝ち！':'勝利！'):(G.walkoff?'サヨナラ負け…':'敗戦…')}</div>
       <div class="call">${G.call.map(x=>`<div>${x}</div>`).join('')}</div>
-      <div style="margin-top:12px">${seriesOver()?`<button class="btn wide" onclick="S.phase='end';render()">シリーズの結果へ</button>`:`<button class="btn wide" onclick="pregame()">第${S.gameNo+1}戦へ</button>`}</div>`;
+      <div style="margin-top:12px">${seriesOver()?`<button class="btn wide" onclick="S.phase='end';render()">シリーズの結果へ</button>`:`<button class="btn wide" onclick="startGame()">第${S.gameNo+1}戦 プレイボール！</button>`}</div>`;
     }else if(G.need==='read'){
-      const atk=atkOf(), def=1-atk, P=pitcherOf(def), me=atk===0;
+      const me=atkOf()===0;
       h+=`<div class="situ">${halfName()}${G.inning>LAST?'（延長）':'（最終回）'}　${T(G.away).name.slice(0,3)} ${tot(G.away)} − ${tot(G.home)} ${T(G.home).name.slice(0,3)}</div>
       <div class="read"><h3>${me?'どっちを狙う？':'どっちで勝負する？'}</h3>
-      <div class="mute" style="margin-top:4px">${me?`相手投手 ${P.name}（球威${pv(P)}）は<b>${PT[P.pitch]}型</b>。得意な球なら球威＋1。`:`あなたの投手 ${P.name}（球威${pv(P)}）は<b>${PT[P.pitch]}型</b>。得意な球なら球威＋1。でも読まれやすい。`}
-      <br>読みが当たれば打者全員＋2、外れれば−1。</div>
+      <div class="mute" style="margin-top:4px">${me?'当たれば、あなたの打者全員が打力＋2。':'読まれたら、相手の打者全員が打力＋2。'}</div>
       <div class="two"><button class="btn" onclick="choose('c')">${me?'直球を狙う':'直球で勝負'}</button><button class="btn blue" onclick="choose('h')">${me?'変化球を狙う':'変化球で勝負'}</button></div></div>`;
     }else{
       if(G.read&&G.inning>=LAST){
         const r=G.read;
-        h+=`<div class="reveal"><div class="c"><div class="mute">${r.atk===0?'あなた':'相手'}の狙い</div>${PT[r.aim]}</div><div style="font-size:20px">${r.hit?'⭕':'❌'}</div><div class="c"><div class="mute">${r.atk===0?'相手':'あなた'}の球</div>${PT[r.pitch]}${r.pmod?'（得意）':''}</div></div>`;
+        h+=`<div class="reveal"><div class="c"><div class="mute">${r.atk===0?'あなた':'相手'}の狙い</div>${PT[r.aim]}</div><div style="font-size:20px">${r.hit?'⭕':'❌'}</div><div class="c"><div class="mute">${r.atk===0?'相手':'あなた'}の球</div>${PT[r.pitch]}</div></div>`;
       }
       if(G.bats.length){
         h+=`<div class="bats">${G.bats.map(b=>`<div class="bat ${b.state}"><div style="font-weight:700">${b.p.name}</div><div class="mute">打力${b.v}</div><div class="die">${b.state==='roll'?'?':(b.d??'')}</div><div class="res">${b.state==='hit'?'ヒット':b.state==='out'?'凡退':''}</div></div>`).join('')}</div>`;

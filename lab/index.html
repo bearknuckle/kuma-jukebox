@@ -75,6 +75,11 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 // ゲームを増やすときはここに1件追加する
 const GAMES=[
   {
+    id:'stadium-keiei', name:'スタジアム経営', icon:'🏟️', color:'#0f3d2e',
+    desc:'球場のオーナーになって、屋台・ビール売り子・グッズショップなどの施設を建てて稼ぐ経営ゲーム。試合の勝ち負けはサイコロまかせ。毎回のイベント（雨天中止・週末デーゲーム・猛暑日…）で稼ぎどころが変わる。9試合でいちばん稼いだオーナーの勝ち。',
+    players:'1人（CPU 2球場）', time:'10〜20分', genre:'スポーツ', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
+  },
+  {
     id:'bonenkai-highlow', name:'ハイ＆ロー サバイバル', icon:'🎉', color:'#c8323a',
     desc:'会社の忘年会向け。全員起立して、次のカードが大きいか小さいかをポーズで予想。外れたら着席、最後まで残った人が景品スロットを回す。景品は等級・個数を登録でき、在庫が減っていくしくみ。スマホ不要、スクリーンに映して大人数で。',
     players:'何人でも（1台をスクリーンに映して）', time:'15〜30分', genre:'宴会', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true,
@@ -129,6 +134,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-19', id:'stadium-keiei',    version:'0.1', text:'新しく登場（スポーツのゲーム・球場の売店とイベントで稼ぐ経営ゲーム）'},
   {date:'2026-11-19', id:'uwasa-kabu',       version:'0.7', text:'情報屋が無料に（1ゲーム2回まで）、最初の所持金を15コインに'},
   {date:'2026-11-19', id:'pennant-owners',   version:'0.2', text:'シンプル版に作り直し：年俸・イベント・成長をなくし、1ラウンドは「買う→3人で打つ→賞金」だけに'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.3', text:'景気カードをせーの株と同じ6種類にそろえた（カブ農園に出たブーム・不祥事は「カブ鍋ブーム」「カブの大豊作」として表示）'},

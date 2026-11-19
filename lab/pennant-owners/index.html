@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="ペナント・オーナーズ｜試作ゲームラボ">
-<meta property="og:description" content="選手を買って、打者3人と投手1人で勝負する、10分で遊べる野球カードゲーム。カードに書いてあるのは能力と値段だけ。サイコロ＋打力で打ち、勝てば賞金。エースは連投すると疲れる。">
+<meta property="og:description" content="選手を取り合うドラフトから、3試合のシリーズへ。打者は1人ずつサイコロで勝負し、最終回は「直球か変化球か」の読み合い。読み勝って逆転、サヨナラも。10分で遊べる1対1の野球カードゲーム。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/pennant-owners/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -23,239 +23,294 @@
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font-family:"Zen Kaku Gothic New",system-ui,sans-serif;color:var(--ink);background:repeating-linear-gradient(90deg,var(--field) 0 48px,var(--field2) 48px 96px);min-height:100vh}
-#app{max-width:640px;margin:0 auto;padding:14px 12px 50px}
+#app{max-width:600px;margin:0 auto;padding:12px 12px 50px}
 h1,h2,h3{margin:0}
 .panel{background:var(--paper);border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 3px 0 rgba(0,0,0,.18)}
 .title{color:var(--chalk);text-align:center;padding:26px 8px 6px}
 .title h1{font-size:34px;font-weight:900;text-shadow:0 3px 0 rgba(0,0,0,.25)}
-.title .sub{font-size:13px;opacity:.85;margin-top:6px}
+.title .sub{font-size:13px;opacity:.9;margin-top:6px}
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--gold);color:var(--ink);font-weight:700}
 .btn{appearance:none;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:700;font-size:16px;cursor:pointer;background:var(--red);color:#fff;box-shadow:0 3px 0 #8c2b25}
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #8c2b25}
-.btn.sub{background:#e9e2cf;color:var(--ink);box-shadow:0 3px 0 #bdb49c}
-.btn.small{padding:6px 10px;font-size:13px;border-radius:9px}
-.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.blue{background:var(--blue);box-shadow:0 3px 0 #1f448c}
 .btn.wide{width:100%}
-.top{color:var(--chalk);display:flex;justify-content:space-between;align-items:center}
-.round{font-family:"DotGothic16",monospace;font-size:20px}
-.money{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.top{color:var(--chalk);display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.top .series{font-family:"DotGothic16",monospace;font-size:18px}
 .sec{font-size:15px;font-weight:900}
 .mute{color:var(--mute);font-size:13px}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{padding:5px 4px;text-align:center;border-bottom:1px solid var(--line)}
-th{font-size:11px;color:var(--mute)}
-td.l,th.l{text-align:left}
-tr.me td{background:#fff1c9;font-weight:700}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:8px}
-.card{position:relative;background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px 6px 6px;text-align:center;font-size:12px;min-height:104px;display:flex;flex-direction:column}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:8px}
+.card{position:relative;background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px 6px 6px;text-align:center;font-size:12px;min-height:96px;display:flex;flex-direction:column}
 .card.click{cursor:pointer}
-.card.sel{border-color:var(--red);box-shadow:0 0 0 2px var(--red) inset}
-.card.pit.sel{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue) inset}
-.card.off{opacity:.45}
+.card.click:hover{border-color:#bdb49c}
+.card.sel{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue) inset}
+.card.off{opacity:.35;cursor:not-allowed}
 .card .kind{position:absolute;top:5px;left:5px;font-size:11px;font-weight:900;color:#fff;border-radius:5px;padding:1px 5px}
 .card.bat .kind{background:var(--red)}
 .card.pit .kind{background:var(--blue)}
-.card .num{font-family:"DotGothic16",monospace;font-size:34px;line-height:1;margin-top:12px}
-.card .nm{font-weight:700;font-size:13px;margin-top:4px}
-.card .price{margin-top:auto;font-size:12px;font-weight:700;border-top:1px dashed var(--line);padding-top:4px}
+.card .num{font-family:"DotGothic16",monospace;font-size:32px;line-height:1;margin-top:12px}
+.card .nm{font-weight:700;font-size:13px;margin-top:3px}
+.card .ty{font-size:11px;color:var(--blue);font-weight:700}
 .card .st{position:absolute;top:5px;right:5px;font-size:10px;font-weight:700;padding:1px 4px;border-radius:4px;background:#333;color:#fff}
-.card .tired{color:var(--red);font-size:12px;font-family:"Zen Kaku Gothic New"}
-.log{font-size:13px;line-height:1.7;margin:8px 0 0;padding-left:18px}
-.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;text-align:center;margin:8px 0}
-.vs .sc{font-family:"DotGothic16",monospace;font-size:44px;line-height:1}
-.vs .tn{font-size:13px;font-weight:700}
-.result-big{text-align:center;font-size:26px;font-weight:900}
-.atk{border-top:1px solid var(--line);padding:8px 0;font-size:13px}
-.dice{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.die{display:inline-flex;flex-direction:column;align-items:center;font-size:11px;color:var(--mute)}
-.die b{width:30px;height:30px;border-radius:7px;background:#fff;border:1.5px solid #bbb;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink)}
-.die.hit b{background:var(--gold);border-color:#b38512}
-details summary{cursor:pointer;font-weight:700}
+.card .tired{color:var(--red);font-size:12px}
+.board{font-family:"DotGothic16",monospace;background:#16251c;color:#f8f3dc;border-radius:10px;padding:8px 6px;overflow-x:auto}
+.board table{border-collapse:collapse;width:100%}
+.board th{color:#a9b9ab;font-weight:400;font-size:12px;padding:2px}
+.board td{text-align:center;font-size:18px;padding:3px 2px;border-top:1px solid #2c3f32;min-width:22px}
+.board td.tn{text-align:left;font-family:"Zen Kaku Gothic New";font-size:12px;font-weight:700;white-space:nowrap;padding-right:6px}
+.board td.tot{color:var(--gold);font-size:22px}
+.board td.now{background:#2b4a36}
+.situ{margin-top:8px;font-weight:900;font-size:15px;text-align:center}
+.bats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.bat{background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;font-size:12px;min-height:92px}
+.bat .die{width:38px;height:38px;margin:6px auto 2px;border-radius:8px;border:2px dashed #ccc;display:flex;align-items:center;justify-content:center;font-family:"DotGothic16",monospace;font-size:22px}
+.bat.hit{border-color:#b38512;background:#fff6d6}
+.bat.hit .die{background:var(--gold);border:2px solid #b38512}
+.bat.out .die{background:#eee;border:2px solid #bbb;color:#888}
+.bat.roll .die{animation:sp .25s linear infinite}
+@keyframes sp{50%{transform:rotate(90deg) scale(.9)}}
+.bat .res{font-weight:900;font-size:13px;margin-top:2px}
+.call{margin-top:10px;background:#16251c;color:#f8f3dc;border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.7;min-height:64px}
+.call div:first-child{font-weight:700;color:var(--gold)}
+.read{border:3px solid var(--gold);border-radius:12px;padding:12px;background:#fffbe9;margin-top:10px}
+.read h3{font-size:17px}
+.reveal{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;text-align:center;margin-top:8px;font-weight:900}
+.reveal .c{background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px 4px}
+.big{text-align:center;font-size:30px;font-weight:900;margin:4px 0}
 .rules{font-size:13px;line-height:1.75}
 .rules ul{margin:6px 0;padding-left:18px}
+details summary{cursor:pointer;font-weight:700}
+.log{font-size:13px;line-height:1.7;margin:8px 0 0;padding-left:18px}
+.speed{font-size:12px;color:var(--chalk);text-align:right;margin-top:4px}
+.speed button{background:none;border:1px solid rgba(255,255,255,.4);color:var(--chalk);border-radius:6px;font:inherit;padding:2px 8px;cursor:pointer}
 .back{text-align:center;margin:18px 0 0;font-size:13px}.back a{color:var(--chalk)}
-.hint{background:#f1ead6;border-radius:8px;padding:6px 9px;font-size:13px;margin-top:8px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-// ===== ペナント・オーナーズ v0.2（シンプル版） =====
-// アナログ版の内容物：選手カード（打者・投手）、6面サイコロ3個、お金トークン、疲労マーカー、勝敗表
+// ===== ペナント・オーナーズ v0.3（ドラフト＋読み合い版） =====
+// アナログ版の内容物：選手カード12枚、直球・変化球カード2枚×2人、サイコロ1個、スコア表
 const rnd=n=>Math.floor(Math.random()*n);
 const d6=()=>1+rnd(6);
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
 const $app=document.getElementById('app');
 
-const ROUNDS=6, MARKET=4, START_MONEY=3, PRIZE_WIN=3, PRIZE_LOSE=1;
-const PRICE={3:2,4:3,5:5};
-// 市場デッキ：[種類, 能力, 枚数]
-const DECK_SPEC=[['B',3,6],['B',4,6],['B',5,3],['P',3,4],['P',4,3],['P',5,2]];
-const START=[['B',2],['B',2],['B',2],['P',2],['P',2]];
-const SCHED=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
-const NAMES=['浅倉','石動','宇佐美','江口','大槻','柏木','桐生','久住','小野寺','榊','篠原','白石','須藤','瀬川','高峰','千早','津田','遠野','長嶺','西園','野々村','橋爪','日向','藤堂','真柴','三雲','村瀬','望月','矢吹','結城','吉良','若林','相沢','綾瀬','伊吹','碓氷','皆川','葛城','黒崎','五十嵐','佐伯','志賀','菅原','芹沢','武藤','立花','月岡','鳴海','楢崎','南雲','服部','氷室','広瀬'];
+const BAT_VALS=[5,4,4,3,3,2,2], PIT_VALS=[5,4,3,3,2];
+const NEED_B=3, NEED_P=2, GAMES=3, LAST=3, MAX_INN=5;
+const PT={c:'直球',h:'変化球'};
+const NAMES=['浅倉','石動','宇佐美','江口','大槻','柏木','桐生','久住','小野寺','榊','篠原','白石','須藤','瀬川','高峰','千早','津田','遠野','長嶺','西園','野々村','橋爪','日向','藤堂','真柴','三雲','村瀬','望月','矢吹','結城'];
+let S=null, uid=0, SPEED=600;
 
-let S=null, uid=0, pool=[];
-const mk=(type,val)=>({id:++uid,name:pool.pop(),type,val,price:PRICE[val]||0,last:-9});
-const bats=t=>t.roster.filter(p=>p.type==='B');
-const pits=t=>t.roster.filter(p=>p.type==='P');
-const tired=p=>p.type==='P'&&p.last===S.round-1;
-const pv=p=>p?Math.max(0,p.val-(tired(p)?2:0)):0;   // 投手の今日の球威
-const byId=(t,id)=>t.roster.find(p=>p.id===id);
-const human=()=>S.teams[0];
-const tname=t=>`<span class="dot" style="background:${t.color}"></span>${t.name}`;
-const oppOf=id=>{const m=SCHED[(S.round-1)%3].find(m=>m.includes(id));return S.teams[m[0]===id?m[1]:m[0]];};
+const T=i=>S.teams[i];
+const tname=i=>`<span class="dot" style="background:${T(i).color}"></span>${T(i).name}`;
+const bats=i=>T(i).roster.filter(p=>p.type==='B');
+const pits=i=>T(i).roster.filter(p=>p.type==='P');
+const tired=p=>p.last===S.gameNo-1;
+const pv=p=>Math.max(0,p.val-(tired(p)?2:0));
+const wins=i=>S.results.filter(r=>r===i).length;
 
+// ===== ドラフト =====
 function newGame(){
-  uid=0; pool=shuffle(NAMES.slice());
-  const defs=[['ホームスターズ','#d0473f'],['湾岸ドルフィンズ','#2f7fd1'],['高原フォックス','#e08a1e'],['下町モグラーズ','#7a5bc4']];
-  S={round:0,teams:defs.map(([name,color],i)=>({id:i,name,color,human:i===0,roster:START.map(s=>mk(...s)),money:START_MONEY,w:0,l:0,d:0,lineup:[],pitcher:null})),deck:[]};
-  DECK_SPEC.forEach(([t,v,n])=>{for(let i=0;i<n;i++)S.deck.push(mk(t,v));});
-  shuffle(S.deck);
-  nextRound();
+  uid=0; const names=shuffle(NAMES.slice());
+  const pool=[...BAT_VALS.map(v=>({type:'B',val:v})),...PIT_VALS.map(v=>({type:'P',val:v,pitch:rnd(2)?'c':'h'}))]
+    .map(p=>({...p,id:++uid,name:names.pop(),last:-9}));
+  const first=rnd(2), order=[];
+  for(let k=0;k<NEED_B+NEED_P;k++){ order.push(k%2===0?first:1-first); order.push(k%2===0?1-first:first); } // 1・2・2・2…の順
+  S={phase:'draft',teams:[{name:'ホームスターズ',color:'#d0473f',roster:[]},{name:'湾岸ドルフィンズ',color:'#2f7fd1',roster:[]}],
+     pool,order,pick:0,log:[],results:[],gameNo:0,first};
+  cpuDraft(); render();
 }
-
-// ===== ① 補強 =====
-function nextRound(){
-  S.round++;
-  if(S.round>ROUNDS){S.phase='end';render();return;}
-  S.market=S.deck.splice(0,MARKET);
-  const order=S.teams.slice().sort((a,b)=>a.w-b.w||a.money-b.money||rnd(3)-1);
-  S.order=order.map(t=>t.id); S.idx=0; S.log=[];
-  S.phase='draft';
-  cpuUntilHuman(); render();
-}
-function cpuUntilHuman(){
-  while(S.idx<S.order.length && !S.teams[S.order[S.idx]].human){cpuBuy(S.teams[S.order[S.idx]]);S.idx++;}
-}
-function buy(t,c){
-  S.market.splice(S.market.indexOf(c),1); t.money-=c.price; t.roster.push(c);
-  S.log.push(`${t.human?'あなた':t.name}：${c.name}（${c.type==='B'?'打':'投'}${c.val}）を${c.price}億で獲得`);
-}
-function cpuBuy(t){
-  const b=bats(t).map(p=>p.val).sort((x,y)=>y-x), p=pits(t).map(p=>p.val).sort((x,y)=>y-x);
-  let best=null,bv=0;
-  S.market.forEach(c=>{
-    if(c.price>t.money) return;
-    const gain=c.val-(c.type==='B'?b[2]:p[1]) - c.price*0.15;
-    if(gain>bv){bv=gain;best=c;}
-  });
-  if(best) buy(t,best); else S.log.push(`${t.name}：パス`);
-}
-function humanBuy(id){const c=S.market.find(x=>x.id===id),t=human();if(!c||c.price>t.money)return;buy(t,c);S.idx++;cpuUntilHuman();render();}
-function humanPass(){S.log.push('あなた：パス');S.idx++;cpuUntilHuman();render();}
-
-// ===== ② 編成 =====
-function autoLineup(t){
-  t.lineup=bats(t).sort((a,b)=>b.val-a.val).slice(0,3).map(p=>p.id);
-  const ps=pits(t).sort((a,b)=>pv(b)-pv(a)||a.val-b.val);
-  t.pitcher=ps.length?ps[0].id:null;
-}
-function goLineup(){S.teams.forEach(autoLineup);S.phase='lineup';render();}
-function toggleBat(id){const t=human(),i=t.lineup.indexOf(id);if(i>=0)t.lineup.splice(i,1);else if(t.lineup.length<3)t.lineup.push(id);render();}
-function setPitcher(id){human().pitcher=id;render();}
-
-// ===== ③ 試合 =====
-function attack(X,Y){
-  const need=pv(byId(Y,Y.pitcher))+4;
-  const dice=X.lineup.map(id=>{const p=byId(X,id),d=d6();return {name:p.name,val:p.val,d,hit:d+p.val>=need};});
-  return {need,dice,runs:dice.filter(x=>x.hit).length};
-}
-function playGame(A,B){
-  const g={a:A.id,b:B.id,rounds:[]};
-  for(let k=0;k<2;k++){            // 同点なら1回だけ延長
-    const r={x:attack(A,B),y:attack(B,A)}; g.rounds.push(r);
-    if(r.x.runs!==r.y.runs) break;
+function canTake(i,p){return p.type==='B'?bats(i).length<NEED_B:pits(i).length<NEED_P;}
+function take(i,p){S.pool.splice(S.pool.indexOf(p),1);T(i).roster.push(p);S.log.push(`${i===0?'あなた':T(1).name}：${p.name}（${p.type==='B'?'打':'投'}${p.val}${p.pitch?'・'+PT[p.pitch]+'型':''}）`);S.pick++;}
+function cpuDraft(){
+  while(S.pick<S.order.length && S.order[S.pick]===1){
+    const c=S.pool.filter(p=>canTake(1,p)).sort((a,b)=>(b.val+(b.type==='P'?0.3:0))-(a.val+(a.type==='P'?0.3:0)))[0];
+    take(1,c);
   }
-  const last=g.rounds[g.rounds.length-1];
-  g.ra=g.rounds.reduce((s,r)=>s+r.x.runs,0); g.rb=g.rounds.reduce((s,r)=>s+r.y.runs,0);
-  g.win=last.x.runs>last.y.runs?A.id:last.y.runs>last.x.runs?B.id:null;
-  [A,B].forEach(t=>{
-    const res=g.win===null?'d':g.win===t.id?'w':'l'; t[res]++;
-    t.money+=res==='w'?PRIZE_WIN:PRIZE_LOSE+(res==='d'?1:0);
-    const p=byId(t,t.pitcher); if(p) p.last=S.round;
-  });
-  return g;
+  if(S.pick>=S.order.length) S.phase='drafted';
 }
-function playBall(){
-  if(human().lineup.length<Math.min(3,bats(human()).length)) return;
-  S.games=SCHED[(S.round-1)%3].map(([i,j])=>playGame(S.teams[i],S.teams[j]));
-  S.phase='game'; render();
+function humanTake(id){const p=S.pool.find(x=>x.id===id);if(!p||!canTake(0,p)||S.order[S.pick]!==0)return;take(0,p);cpuDraft();render();}
+
+// ===== 試合 =====
+function pregame(){
+  S.gameNo++;
+  const home=S.gameNo%2===1?0:1;           // 第1・3戦はあなたがホーム（後攻）
+  S.G={home,away:1-home,inning:1,half:0,runs:[[],[]],pitcher:[null,null],bats:[],call:['プレイボール前'],need:null,read:null,over:false,winner:undefined,walkoff:false};
+  const best=i=>pits(i).slice().sort((a,b)=>pv(b)-pv(a)||a.val-b.val)[0].id;
+  S.G.pitcher=[best(0),best(1)];
+  S.phase='pregame'; render();
 }
+function setPitcher(id){S.G.pitcher[0]=id;render();}
+function playBall(){S.phase='game';nextHalf();}
+const tot=i=>S.G.runs[i].reduce((s,v)=>s+(v||0),0);
+const atkOf=()=>S.G.half===0?S.G.away:S.G.home;
+const pitcherOf=i=>pits(i).find(p=>p.id===S.G.pitcher[i]);
+const halfName=()=>`${S.G.inning}回${S.G.half?'裏':'表'}`;
+
+function nextHalf(){
+  const G=S.G;
+  if(G.inning>=LAST){G.need='read';G.read=null;G.bats=[];render();return;}
+  runHalf(0,0);
+}
+function choose(c){
+  const G=S.G; if(G.need!=='read') return;
+  const atk=atkOf(), def=1-atk, P=pitcherOf(def), other=x=>x==='c'?'h':'c';
+  let aim,pitch;
+  if(atk===0){aim=c;pitch=Math.random()<0.55?P.pitch:other(P.pitch);}
+  else{pitch=c;aim=Math.random()<0.6?P.pitch:other(P.pitch);}
+  const hit=aim===pitch, bmod=hit?2:-1, pmod=pitch===P.pitch?1:0;
+  G.read={aim,pitch,hit,pmod,atk};
+  G.need=null;
+  G.call=[`${halfName()} 読み合い：${PT[aim]}狙い × ${PT[pitch]}`,hit?`読み的中！ ${T(atk).name}の打者は全員打力＋2`:`読み外れ！ ${T(atk).name}の打者は全員打力−1`];
+  render();
+  setTimeout(()=>runHalf(bmod,pmod),SPEED*1.6);
+}
+function runHalf(bmod,pmod){
+  const G=S.G, atk=atkOf(), def=1-atk, P=pitcherOf(def);
+  const pitchV=pv(P)+pmod, need=pitchV+5;
+  G.runs[atk][G.inning-1]=0;
+  G.bats=bats(atk).map(p=>({p,v:p.val+bmod,d:null,state:''}));
+  const head=`${halfName()}　${T(atk).name}の攻撃`;
+  G.call=[head,`投手 ${P.name}（球威${pitchV}）→ サイコロ＋打力が${need}以上でヒット`];
+  render();
+  let k=0;
+  const step=()=>{
+    if(k>=G.bats.length){setTimeout(endHalf,SPEED);return;}
+    const b=G.bats[k]; b.state='roll'; render();
+    setTimeout(()=>{
+      b.d=d6(); const hit=b.d+b.v>=need; b.state=hit?'hit':'out';
+      if(hit)G.runs[atk][G.inning-1]++;
+      const tie=tot(G.home)===tot(G.away);
+      G.call=[head,`${b.p.name}：出目${b.d}＋打力${b.v}＝${b.d+b.v} → ${hit?'ヒット！ 1点':'凡退'}${hit&&G.half===1&&G.inning>=LAST&&tie?'　同点！':''}`];
+      // サヨナラ判定：後攻が最終回以降に逆転した瞬間に試合終了
+      if(hit&&G.half===1&&G.inning>=LAST&&tot(G.home)>tot(G.away)){G.walkoff=true;render();setTimeout(()=>finish(G.home),SPEED*1.4);return;}
+      render(); k++; setTimeout(step,SPEED);
+    },SPEED*0.7);
+  };
+  setTimeout(step,SPEED);
+}
+function endHalf(){
+  const G=S.G;
+  if(G.half===0){
+    if(G.inning>=LAST&&tot(G.home)>tot(G.away)){finish(G.home);return;}
+    G.half=1;
+  }else{
+    if(G.inning>=LAST&&tot(G.home)!==tot(G.away)){finish(tot(G.home)>tot(G.away)?G.home:G.away);return;}
+    if(G.inning>=MAX_INN){finish(null);return;}
+    G.inning++;G.half=0;
+  }
+  G.bats=[];
+  G.call=[halfName()+(G.inning>LAST?'（延長）':G.inning===LAST?'（最終回）':''),G.inning>=LAST?'読み合いの準備…':'次の攻撃へ'];
+  render();
+  setTimeout(nextHalf,SPEED*1.2);
+}
+function finish(w){
+  const G=S.G; G.over=true; G.winner=w; G.need=null;
+  [0,1].forEach(i=>{pitcherOf(i).last=S.gameNo;});
+  S.results.push(w);
+  G.call=[w===null?'引き分け':G.walkoff?`サヨナラ！ ${T(w).name}の勝利`:`試合終了 ${T(w).name}の勝利`,`${T(G.away).name} ${tot(G.away)} − ${tot(G.home)} ${T(G.home).name}`];
+  render();
+}
+const seriesOver=()=>wins(0)>=2||wins(1)>=2||S.gameNo>=GAMES;
 
 // ===== 描画 =====
 function card(p,o={}){
   const cls=['card',p.type==='B'?'bat':'pit',o.click?'click':'',o.sel?'sel':'',o.off?'off':''].join(' ');
-  return `<div class="${cls}" ${o.click?`onclick="${o.click}"`:''}><span class="kind">${p.type==='B'?'打':'投'}</span>${tired(p)?'<span class="st">疲労</span>':''}
-  <div class="num">${p.val}${tired(p)?`<span class="tired">→${pv(p)}</span>`:''}</div><div class="nm">${p.name}</div>
-  ${o.price?`<div class="price">${p.price}億</div>`:''}${o.extra||''}</div>`;
+  const tr=S&&S.gameNo&&p.type==='P'&&tired(p);
+  return `<div class="${cls}" ${o.click?`onclick="${o.click}"`:''}><span class="kind">${p.type==='B'?'打':'投'}</span>${tr?'<span class="st">疲労</span>':''}
+  <div class="num">${p.val}${tr?`<span class="tired">→${pv(p)}</span>`:''}</div><div class="nm">${p.name}</div>${p.pitch?`<div class="ty">${PT[p.pitch]}型</div>`:''}</div>`;
 }
-function standings(){
-  const ts=S.teams.slice().sort((a,b)=>b.w-a.w||b.d-a.d||b.money-a.money);
-  return `<table><tr><th class="l">チーム</th><th>勝</th><th>敗</th><th>分</th><th>お金</th></tr>${ts.map(t=>`<tr class="${t.human?'me':''}"><td class="l">${tname(t)}</td><td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.money}</td></tr>`).join('')}</table>`;
+function board(){
+  const G=S.G, n=Math.max(LAST,G.inning), cols=[...Array(n)].map((_,i)=>i+1);
+  const row=i=>`<tr><td class="tn">${tname(i)}</td>${cols.map(c=>{
+    const v=G.runs[i][c-1]; const now=!G.over&&c===G.inning&&atkOf()===i;
+    const skip=G.over&&i===G.home&&v===undefined&&c===n&&G.winner===G.home&&!G.walkoff;
+    return `<td class="${now?'now':''}">${v===undefined?(skip?'x':''):v}</td>`;}).join('')}<td class="tot">${tot(i)}</td></tr>`;
+  return `<div class="board"><table><tr><th></th>${cols.map(c=>`<th>${c}</th>`).join('')}<th>計</th></tr>${row(G.away)}${row(G.home)}</table></div>`;
 }
-const BACK='<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ペナント・オーナーズ v0.2</p>';
+const BACK='<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ペナント・オーナーズ v0.3</p>';
 function rules(open){
   return `<details class="panel" ${open?'open':''}><summary>ルール</summary><div class="rules">
-  <p>4球団で${ROUNDS}ラウンド戦い、<b>勝った数が一番多い球団の優勝</b>（同じならお金が多い方）。1ラウンドは次の3つだけ。</p>
+  <p><b>1対1で3試合のシリーズ。2勝した方の優勝。</b></p>
   <ul>
-  <li><b>① 補強</b>：選手カードを${MARKET}枚並べ、勝ちが少ない球団から順に1枚買うかパス。値段は能力3が2億、4が3億、5が5億。</li>
-  <li><b>② 編成</b>：打者3人と投手1人を出す。前のラウンドに投げた投手は疲労して球威−2。</li>
-  <li><b>③ 試合</b>：打者1人がサイコロ1個。<b>出目＋打力 ≥ 相手の球威＋4</b>ならヒットで1点。点が多い方の勝ち（同点ならもう1回だけ振り、それでも同点なら引き分け）。賞金は勝ち${PRIZE_WIN}億、負け${PRIZE_LOSE}億、引き分け2億。</li>
+  <li><b>ドラフト</b>：12枚の選手カードを交互に取る（1・2・2・2…の順）。打者3人と投手2人をそろえる。</li>
+  <li><b>試合は3回まで</b>：打者3人が1人ずつサイコロを振り、<b>出目＋打力 ≥ 相手の球威＋5</b>ならヒットで1点。</li>
+  <li><b>最終回は読み合い</b>：攻める側は「直球狙い／変化球狙い」、守る側は「直球／変化球」のカードを伏せて同時にめくる。読みが当たれば打者全員の打力＋2、外れれば−1。投手が得意な球種で投げると球威＋1。</li>
+  <li>最終回で同点なら延長（読み合いつき）。5回まで同点なら引き分け。後攻が逆転した時点でサヨナラ。</li>
+  <li>前の試合で投げた投手は疲れていて球威−2。</li>
   </ul>
-  <p class="mute">アナログ版の内容物：選手カード24枚＋初期選手20枚、サイコロ3個、お金トークン、疲労マーカー、勝敗表。</p>
+  <p class="mute">アナログ版の内容物：選手カード12枚、直球・変化球カード2枚×2人、サイコロ1個、スコア表。</p>
   </div></details>`;
+}
+function topbar(){
+  return `<div class="top"><span>第${Math.max(1,S.gameNo)}戦</span><span class="series">あなた ${wins(0)}−${wins(1)} 相手</span></div>`;
 }
 
 function render(){
   if(!S){
-    $app.innerHTML=`<div class="title"><span class="badge">AIと考えた試作ゲーム</span><h1 style="margin-top:12px">ペナント・オーナーズ</h1><div class="sub">選手を買って、3人で打つ。10分の野球カードゲーム</div></div>
-    <div class="panel"><button class="btn wide" onclick="newGame()">シーズン開幕</button></div>${rules(true)}${BACK}`;return;
+    $app.innerHTML=`<div class="title"><span class="badge">AIと考えた試作ゲーム</span><h1 style="margin-top:12px">ペナント・オーナーズ</h1>
+    <div class="sub">ドラフトで選手を取り合い、3試合のシリーズへ。<br>最終回は「直球か、変化球か」。</div></div>
+    <div class="panel"><button class="btn wide" onclick="newGame()">ドラフト会議をはじめる</button></div>${rules(true)}${BACK}`;return;
   }
-  const t=human();
-  if(S.phase==='end'){
-    const ts=S.teams.slice().sort((a,b)=>b.w-a.w||b.d-a.d||b.money-a.money), rank=ts.indexOf(t)+1;
-    $app.innerHTML=`<div class="title"><span class="badge">シーズン終了</span><h1 style="margin-top:12px">${rank===1?'🏆 優勝！':rank+'位'}</h1></div>
-    <div class="panel">${standings()}<div style="margin-top:12px"><button class="btn wide" onclick="newGame()">もう1シーズン</button></div></div>${BACK}`;
-    window.scrollTo(0,0);return;
-  }
-  let h=`<div class="top"><span class="round">ROUND ${S.round}/${ROUNDS}</span><span class="money">💰 ${t.money}億</span></div>`;
-  if(S.phase==='draft'){
-    const mine=S.idx<S.order.length&&S.teams[S.order[S.idx]].human, done=S.idx>=S.order.length;
-    h+=`<div class="panel"><div class="sec">① 補強：1人買うかパス</div>
-    <div class="mute" style="margin-top:4px">順番：${S.order.map(i=>S.teams[i].human?'<b>あなた</b>':S.teams[i].name).join(' → ')}</div>
-    <div class="cards">${S.market.map(c=>card(c,{price:true,off:mine&&c.price>t.money,extra:mine?`<button class="btn small" style="margin-top:5px" ${c.price>t.money?'disabled':''} onclick="humanBuy(${c.id})">買う</button>`:''})).join('')||'<span class="mute">売り切れ</span>'}</div>
-    ${mine?`<div style="margin-top:10px"><button class="btn sub wide" onclick="humanPass()">パス</button></div>`:''}
+  let h='';
+  if(S.phase==='draft'||S.phase==='drafted'){
+    const mine=S.phase==='draft'&&S.order[S.pick]===0;
+    h+=`<div class="title" style="padding-top:8px"><h1 style="font-size:24px">ドラフト会議</h1><div class="sub">${S.first===0?'あなた':'相手'}から指名。打者3人・投手2人をそろえる</div></div>
+    <div class="panel"><div class="sec">${S.phase==='drafted'?'ドラフト終了':mine?'あなたの指名です（カードをタップ）':'相手が指名中…'}</div>
+    <div class="cards">${S.pool.map(p=>card(p,{click:mine&&canTake(0,p)?`humanTake(${p.id})`:'',off:mine&&!canTake(0,p)})).join('')}</div>
     ${S.log.length?`<ul class="log">${S.log.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
-    ${done?`<div style="margin-top:12px"><button class="btn wide" onclick="goLineup()">② 編成へ</button></div>`:''}</div>
-    <div class="panel"><div class="sec">あなたの選手</div><div class="cards">${t.roster.map(p=>card(p)).join('')}</div></div>`;
+    ${S.phase==='drafted'?`<div style="margin-top:12px"><button class="btn wide" onclick="pregame()">第1戦へ</button></div>`:''}</div>
+    <div class="panel"><div class="sec">あなたのチーム（打者${bats(0).length}/3・投手${pits(0).length}/2）</div><div class="cards">${T(0).roster.map(p=>card(p)).join('')}</div>
+    <div class="sec" style="margin-top:12px">${T(1).name}</div><div class="cards">${T(1).roster.map(p=>card(p)).join('')}</div></div>`;
   }
-  else if(S.phase==='lineup'){
-    const o=oppOf(0), op=byId(o,o.pitcher), need=Math.min(3,bats(t).length);
-    h+=`<div class="panel"><div class="sec">② 編成：相手は ${tname(o)}</div>
-    <div class="hint">相手の投手は球威${pv(op)}${op&&tired(op)?'（疲労中）':''} → <b>出目＋打力が${pv(op)+4}以上</b>でヒット</div>
-    <div style="margin-top:10px"><b>打者を3人</b> <span class="mute">${t.lineup.length}/${need}</span></div>
-    <div class="cards">${bats(t).map(p=>card(p,{click:`toggleBat(${p.id})`,sel:t.lineup.includes(p.id)})).join('')}</div>
-    <div style="margin-top:10px"><b>投手を1人</b></div>
-    <div class="cards">${pits(t).map(p=>card(p,{click:`setPitcher(${p.id})`,sel:t.pitcher===p.id})).join('')}</div>
-    <div style="margin-top:12px"><button class="btn wide" ${t.lineup.length<need?'disabled':''} onclick="playBall()">③ プレイボール！</button></div></div>`;
+  else if(S.phase==='pregame'){
+    const G=S.G, op=pitcherOf(1);
+    h+=topbar()+`<div class="panel"><div class="sec">第${S.gameNo}戦：あなたは${G.home===0?'後攻（ホーム）':'先攻（ビジター）'}</div>
+    <div class="mute" style="margin-top:4px">相手の先発：${op.name}（球威${pv(op)}・${PT[op.pitch]}型）</div>
+    <div style="margin-top:10px"><b>先発投手を選ぶ</b></div>
+    <div class="cards">${pits(0).map(p=>card(p,{click:`setPitcher(${p.id})`,sel:G.pitcher[0]===p.id})).join('')}</div>
+    <div style="margin-top:10px"><b>打線</b></div><div class="cards">${bats(0).map(p=>card(p)).join('')}</div>
+    <div style="margin-top:12px"><button class="btn wide" onclick="playBall()">プレイボール！</button></div></div>`;
   }
   else if(S.phase==='game'){
-    const g=S.games.find(g=>g.a===0||g.b===0), other=S.games.find(x=>x!==g);
-    const A=S.teams[g.a],B=S.teams[g.b];
-    const res=g.win===null?'引き分け':g.win===0?'勝利！':'敗戦…';
-    const side=(X,a)=>`<div class="atk"><b>${X.name}</b>（${a.need}以上でヒット）→ ${a.runs}点<div class="dice">${a.dice.map(x=>`<span class="die ${x.hit?'hit':''}"><b>${x.d}</b>${x.name}+${x.val}</span>`).join('')}</div></div>`;
-    h+=`<div class="panel"><div class="result-big" style="color:${g.win===0?'var(--red)':'var(--ink)'}">${res}</div>
-    <div class="vs"><div><div class="sc">${g.ra}</div><div class="tn">${A.name}</div></div><div>−</div><div><div class="sc">${g.rb}</div><div class="tn">${B.name}</div></div></div>
-    ${g.rounds.map((r,i)=>`${i?'<div class="sec" style="margin-top:6px">延長</div>':''}${side(A,r.x)}${side(B,r.y)}`).join('')}
-    <div class="atk">他会場：${S.teams[other.a].name} ${other.ra} − ${other.rb} ${S.teams[other.b].name}</div>
-    <div class="mute">賞金：勝ち${PRIZE_WIN}億・引き分け2億・負け${PRIZE_LOSE}億</div>
-    <div style="margin-top:12px"><button class="btn wide" onclick="nextRound()">${S.round>=ROUNDS?'最終結果へ':'次のラウンドへ'}</button></div></div>
-    <div class="panel"><div class="sec">順位</div>${standings()}</div>`;
+    const G=S.G;
+    h+=topbar()+`<div class="speed"><button onclick="SPEED=SPEED>200?120:600;render()">${SPEED>200?'▶▶ はやく':'▶ ふつう'}</button></div>
+    <div class="panel">${board()}`;
+    if(G.over){
+      const w=G.winner;
+      h+=`<div class="big" style="color:${w===0?'var(--red)':'var(--ink)'}">${w===null?'引き分け':w===0?(G.walkoff?'サヨナラ勝ち！':'勝利！'):(G.walkoff?'サヨナラ負け…':'敗戦…')}</div>
+      <div class="call">${G.call.map(x=>`<div>${x}</div>`).join('')}</div>
+      <div style="margin-top:12px">${seriesOver()?`<button class="btn wide" onclick="S.phase='end';render()">シリーズの結果へ</button>`:`<button class="btn wide" onclick="pregame()">第${S.gameNo+1}戦へ</button>`}</div>`;
+    }else if(G.need==='read'){
+      const atk=atkOf(), def=1-atk, P=pitcherOf(def), me=atk===0;
+      h+=`<div class="situ">${halfName()}${G.inning>LAST?'（延長）':'（最終回）'}　${T(G.away).name.slice(0,3)} ${tot(G.away)} − ${tot(G.home)} ${T(G.home).name.slice(0,3)}</div>
+      <div class="read"><h3>${me?'どっちを狙う？':'どっちで勝負する？'}</h3>
+      <div class="mute" style="margin-top:4px">${me?`相手投手 ${P.name}（球威${pv(P)}）は<b>${PT[P.pitch]}型</b>。得意な球なら球威＋1。`:`あなたの投手 ${P.name}（球威${pv(P)}）は<b>${PT[P.pitch]}型</b>。得意な球なら球威＋1。でも読まれやすい。`}
+      <br>読みが当たれば打者全員＋2、外れれば−1。</div>
+      <div class="two"><button class="btn" onclick="choose('c')">${me?'直球を狙う':'直球で勝負'}</button><button class="btn blue" onclick="choose('h')">${me?'変化球を狙う':'変化球で勝負'}</button></div></div>`;
+    }else{
+      if(G.read&&G.inning>=LAST){
+        const r=G.read;
+        h+=`<div class="reveal"><div class="c"><div class="mute">${r.atk===0?'あなた':'相手'}の狙い</div>${PT[r.aim]}</div><div style="font-size:20px">${r.hit?'⭕':'❌'}</div><div class="c"><div class="mute">${r.atk===0?'相手':'あなた'}の球</div>${PT[r.pitch]}${r.pmod?'（得意）':''}</div></div>`;
+      }
+      if(G.bats.length){
+        h+=`<div class="bats">${G.bats.map(b=>`<div class="bat ${b.state}"><div style="font-weight:700">${b.p.name}</div><div class="mute">打力${b.v}</div><div class="die">${b.state==='roll'?'?':(b.d??'')}</div><div class="res">${b.state==='hit'?'ヒット':b.state==='out'?'凡退':''}</div></div>`).join('')}</div>`;
+      }
+      h+=`<div class="call">${G.call.map(x=>`<div>${x}</div>`).join('')}</div>`;
+    }
+    h+=`</div>`;
+  }
+  else if(S.phase==='end'){
+    const a=wins(0),b=wins(1);
+    h+=`<div class="title"><span class="badge">シリーズ終了</span><h1 style="margin-top:12px">${a>b?'🏆 優勝！':a<b?'準優勝':'引き分け'}</h1>
+    <div class="sub">${T(0).name} ${a}勝 − ${b}勝 ${T(1).name}</div></div>
+    <div class="panel"><div class="mute">${S.results.map((r,i)=>`第${i+1}戦：${r===null?'引き分け':r===0?'○ 勝ち':'● 負け'}`).join('<br>')}</div>
+    <div style="margin-top:12px"><button class="btn wide" onclick="newGame()">もう一度ドラフトから</button></div></div>`;
+    $app.innerHTML=h+BACK;window.scrollTo(0,0);return;
   }
   $app.innerHTML=h+rules(false)+BACK;
-  window.scrollTo(0,0);
 }
 render();
 </script>

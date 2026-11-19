@@ -92,8 +92,8 @@ const GAMES=[
   },
   {
     id:'pennant-owners', name:'ペナント・オーナーズ', icon:'⚾', color:'#1d5a37',
-    desc:'選手を買って、打者3人と投手1人で勝負する野球カードゲーム。カードに書いてあるのは能力と値段だけ。サイコロ＋打力で打ち、勝てば賞金でまた補強。エースは連投すると疲れる。',
-    players:'1人（CPU 3球団）', time:'10分', genre:'スポーツ', added:'2026-11-19', version:'0.2', updated:'2026-11-19', isNew:true
+    desc:'選手を取り合うドラフトから、3試合のシリーズへ。打者は1人ずつサイコロで勝負し、最終回は「直球か変化球か」の読み合い。読み勝って逆転、サヨナラも。',
+    players:'1人（CPU 1人）', time:'10分', genre:'スポーツ', added:'2026-11-19', version:'0.3', updated:'2026-11-20', isNew:true
   },
   {
     id:'kanpai', name:'カンパイ！', icon:'🍻', color:'#b8322a',
@@ -139,6 +139,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-20', id:'pennant-owners',   version:'0.3', text:'お金をなくしてドラフト＋3試合シリーズに。打者は1人ずつ打ち、最終回は直球・変化球の読み合い、サヨナラもあり'},
   {date:'2026-11-19', id:'draft-kaigi',      version:'0.1', text:'新しく登場（スポーツのゲーム・同時指名とくじ引きの野球ドラフトゲーム）'},
   {date:'2026-11-19', id:'stadium-keiei',    version:'0.1', text:'新しく登場（スポーツのゲーム・球場の売店とイベントで稼ぐ経営ゲーム）'},
   {date:'2026-11-19', id:'uwasa-kabu',       version:'0.7', text:'情報屋が無料に（1ゲーム2回まで）、最初の所持金を15コインに'},

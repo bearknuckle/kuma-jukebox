@@ -23,7 +23,8 @@
   --ink:#f7f3e8; --mute:#a9b0cc; --card:#fffdf6;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0;min-height:100%}
+html{background:#0f1630}
 body{
   background:radial-gradient(ellipse at top,#22306a 0%,var(--bg) 60%) fixed;
   color:var(--ink); font-family:"M PLUS Rounded 1c",sans-serif; overflow-x:hidden;
@@ -89,10 +90,20 @@ input[type=number]{width:80px}
 
 /* draw */
 .drawgrid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
-.slot{height:190px;border-radius:22px;background:#0b1026;border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;box-shadow:inset 0 0 40px #000a}
-.slot .reel{font-family:"Dela Gothic One";font-size:46px;text-align:center;padding:0 20px}
-.slot .rank{display:block;font-size:24px;color:var(--gold)}
-.slot.win{box-shadow:0 0 40px var(--gold),inset 0 0 40px #000a}
+.kuji{display:flex;gap:24px;align-items:center;justify-content:center;min-height:230px;flex-wrap:wrap}
+.box{width:200px;height:170px;border-radius:14px;background:linear-gradient(#d23a42,#a5242c);position:relative;box-shadow:0 14px 30px #0008;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:16px}
+.box::before{content:"";position:absolute;top:22px;left:50%;width:90px;height:22px;margin-left:-45px;border-radius:999px;background:#2a0b0e;box-shadow:inset 0 4px 8px #000}
+.box .lbl{font-family:"Dela Gothic One";font-size:26px;color:#fff}
+.box .cnt{color:#ffe7a8;font-weight:800}
+.ticket{width:300px;min-height:170px;background:#fffaf0;color:#222;border-radius:6px;box-shadow:0 12px 26px #0007;padding:18px;text-align:center;position:relative;
+  background-image:repeating-linear-gradient(transparent 0 30px,#e7ddc8 30px 31px)}
+.ticket::after{content:"";position:absolute;inset:8px;border:2px dashed #d9c9a5;border-radius:4px;pointer-events:none}
+.ticket .rank{font-family:"Dela Gothic One";font-size:30px;color:#c8323a}
+.ticket .nm{font-family:"Dela Gothic One";font-size:30px;margin-top:8px;line-height:1.3}
+.ticket.folded{display:flex;align-items:center;justify-content:center;background:#efe4cc;color:#8a7a5a;font-weight:800;font-size:20px}
+.unfold{animation:unfold .45s ease}
+@keyframes unfold{0%{transform:scaleY(.1)}100%{transform:scaleY(1)}}
+.slip{display:inline-block;background:#fffaf0;color:#222;border-radius:4px;padding:6px 10px;margin:4px;font-size:14px;font-weight:800}
 .stock li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #ffffff20;font-size:17px}
 .stock ul,.log ul{list-style:none;margin:0;padding:0}
 .stock .zero{opacity:.35;text-decoration:line-through}
@@ -136,8 +147,8 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
     <div class="rules">
       <div class="rule"><b>1</b>全員起立！ 画面のカードが今の数字です。</div>
       <div class="rule"><b>2</b>次のカードは<strong style="color:#ff7a7e">大きい（HIGH）</strong>か<strong style="color:#7fb2ff">小さい（LOW）</strong>か？<br>HIGH → 両手を頭の上<br>LOW → 両手を腰に</div>
-      <div class="rule"><b>3</b>カードをめくって、外れた人は着席。同じ数字なら全員セーフ。</div>
-      <div class="rule"><b>4</b>最後まで立っていた人が<strong style="color:var(--gold)">景品スロット</strong>を回せます！</div>
+      <div class="rule"><b>3</b>カードをめくって、外れた人は着席。同じ数字なら全員セーフ。<br><span class="muted">A＝1がいちばん小さく、K＝13がいちばん大きい</span></div>
+      <div class="rule"><b>4</b>立っている人が<strong style="color:var(--gold)">景品くじの残り枚数以下</strong>になったら勝負あり。1人ずつ<strong style="color:var(--gold)">くじ箱</strong>からくじを引きます！<br><span class="muted">全員座ってしまったら、そのラウンドは無効で全員復活</span></div>
     </div>
   </div>
 
@@ -157,6 +168,17 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
       <button class="btn gold" style="margin-left:auto" data-go="game">ゲーム開始 →</button>
     </div>
   </div>
+
+  <div class="panel" style="margin-top:20px">
+    <h2>アプリなしで遊ぶとき</h2>
+    <div class="rules" style="margin-top:0">
+      <div class="rule"><b>用意するもの</b>トランプ1組（ジョーカーは抜く）<br>景品くじ（下の一覧を紙に書く）<br>くじを入れる箱か袋<br>司会1人</div>
+      <div class="rule"><b>くじの作り方</b>景品1個につき紙1枚。等級と景品名を書いて四つ折りにし、箱に入れます。等級の順に渡したいときは、箱に入れずに等級順に重ねておきます。</div>
+      <div class="rule"><b>司会の進め方</b>山札から1枚めくって全員に見せる → ポーズを決めてもらう → 次の1枚をめくる。山札がなくなったら、めくったカードを混ぜて山札にします。</div>
+    </div>
+    <h3 style="margin-top:18px">書き写す景品くじ（<span id="slipCount">0</span>枚）</h3>
+    <div id="slips"></div>
+  </div>
 </section>
 
 <!-- GAME -->
@@ -164,6 +186,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
   <div class="hud">
     <span class="pill" id="roundPill">ROUND 1</span>
     <span class="pill" id="deckPill">山札 52</span>
+    <span class="pill" id="kujiPill">景品くじ 残り 0枚</span>
     <div class="row" style="gap:8px">
       <button class="btn ghost small" id="revive">🔥 敗者復活（全員起立）</button>
       <button class="btn ghost small" id="newGame">最初から</button>
@@ -191,7 +214,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
   <div class="controls">
     <button class="btn red" id="open">🥁 オープン！</button>
     <button class="btn gold" id="next" style="display:none">次のラウンドへ</button>
-    <button class="btn gold" id="toDraw">🏆 勝者決定 → 景品抽選</button>
+    <button class="btn gold" id="toDraw">🏆 勝負あり → 景品くじへ</button>
   </div>
   <div class="history" id="hist"></div>
 </section>
@@ -201,31 +224,33 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
   <div class="drawgrid">
     <div class="panel">
       <div class="row" style="justify-content:space-between;margin-bottom:14px">
-        <h2 style="margin:0">景品スロット</h2>
+        <h2 style="margin:0">景品くじ</h2>
         <div class="seg" id="mode">
-          <button data-m="rand" class="on">完全ランダム</button>
-          <button data-m="low">下位の景品から</button>
-          <button data-m="high">上位の景品から</button>
+          <button data-m="rand" class="on">箱から引く</button>
+          <button data-m="low">下の等級から渡す</button>
+          <button data-m="high">上の等級から渡す</button>
         </div>
       </div>
-      <div class="slot" id="slot"><div class="reel" id="reel"><span class="rank">READY</span>スロットを回そう</div></div>
-      <div class="row" style="margin-top:16px">
-        <input type="text" id="winner" placeholder="当選者の名前（任意）" style="flex:1;min-width:180px">
-        <button class="btn gold" id="spin">🎰 回す！</button>
+      <div class="kuji">
+        <div class="box"><div class="lbl">景品くじ</div><div class="cnt" id="boxCnt">残り 0枚</div></div>
+        <div class="ticket folded" id="ticket">くじを引いてね</div>
       </div>
-      <p class="muted" style="margin:12px 0 0">勝ち残った人が1人ずつ前に出て回します。回すたびに在庫が1つ減ります。</p>
+      <div class="row" style="margin-top:16px;justify-content:center">
+        <button class="btn gold" id="spin">🎫 くじを引く</button>
+      </div>
+      <p class="muted" style="margin:12px 0 0" id="modeNote"></p>
     </div>
     <div class="panel">
-      <div class="stock"><h3>残りの景品</h3><ul id="stock"></ul></div>
+      <div class="stock"><h3>箱に残っているくじ</h3><ul id="stock"></ul></div>
       <div class="log" style="margin-top:20px">
-        <div class="row" style="justify-content:space-between"><h3 style="margin:0">当選記録</h3><button class="btn ghost small" id="undo">1つ取り消す</button></div>
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">引かれたくじ</h3><button class="btn ghost small" id="undo">最後のくじを箱に戻す</button></div>
         <ul id="log" style="margin-top:8px"></ul>
       </div>
       <div class="row" style="margin-top:16px"><button class="btn ghost small" data-go="game">← ゲームに戻る（次の勝負へ）</button></div>
     </div>
   </div>
 </section>
-  <p style="text-align:center;margin:30px 0 0"><a href="../" style="color:var(--mute);font-size:14px">← 試作ゲームラボに戻る</a> ・ ハイ＆ロー サバイバル v0.1</p>
+  <p style="text-align:center;margin:30px 0 0"><a href="../" style="color:var(--mute);font-size:14px">← 試作ゲームラボに戻る</a> ・ ハイ＆ロー サバイバル v0.2</p>
 </main>
 
 <div class="modal" id="modal"><div class="box"><p id="modalText" style="font-size:18px;margin-top:0"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost small" id="mNo">やめる</button><button class="btn red small" id="mYes">OK</button></div></div></div>
@@ -280,9 +305,12 @@ function renderRows(){
   updateTotal();
 }
 function updateTotal(){const t=S.prizes.reduce((a,p)=>a+p.qty,0),l=S.prizes.reduce((a,p)=>a+p.left,0);
-  $("totalCount").textContent=`景品 合計 ${t} 個（残り ${l} 個）`;}
+  $("totalCount").textContent=`景品くじ 合計 ${t} 枚（箱に残り ${l} 枚）`;
+  $("kujiPill").textContent=`景品くじ 残り ${l}枚`;$("boxCnt").textContent=`残り ${l}枚`;
+  $("slipCount").textContent=t;
+  $("slips").innerHTML=S.prizes.filter(p=>p.qty>0).map(p=>Array.from({length:p.qty},()=>`<span class="slip">${esc(p.rank)}｜${esc(p.name)}</span>`).join("")).join("")||`<span class="muted">景品を登録すると、ここにくじの一覧が出ます</span>`;}
 $("addRow").onclick=()=>{S.prizes.push({id:Date.now(),rank:"",name:"",qty:1,left:1});save();renderRows()};
-$("resetStock").onclick=()=>ask("在庫を最初の個数に戻し、当選記録も消します。よろしいですか？",()=>{S.prizes.forEach(p=>p.left=p.qty);S.log=[];save();renderRows();});
+$("resetStock").onclick=()=>ask("引いたくじを全部箱に戻します。よろしいですか？",()=>{S.prizes.forEach(p=>p.left=p.qty);S.log=[];save();renderRows();});
 renderRows();
 
 // ---------- sound ----------
@@ -336,15 +364,19 @@ $("open").onclick=()=>{
 $("next").onclick=()=>{round++;revealed=false;renderGame();tone(660,.08)};
 $("revive").onclick=()=>{$("verdict").textContent="敗者復活！";$("verdict").className="verdict eq";$("sub").textContent="座っている人も全員起立！ もう一度チャンス";fanfare();};
 $("newGame").onclick=()=>ask("山札を混ぜ直して、ラウンド1からやり直しますか？（景品の在庫はそのまま）",startGame);
-$("toDraw").onclick=()=>{fanfare();burst();go("draw")};
+$("toDraw").onclick=()=>{fanfare();go("draw")};
 startGame();
 
 // ---------- draw ----------
-document.querySelectorAll("#mode button").forEach(b=>{b.classList.toggle("on",b.dataset.m===S.mode);
-  b.onclick=()=>{S.mode=b.dataset.m;save();document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x===b))}});
+const MODE_NOTE={rand:"四つ折りのくじを箱に入れて、勝ち残った人が1人ずつ引きます。",
+  low:"くじを等級の低い順に重ねておき、上から1枚ずつ渡します。特賞が最後に残ります。",
+  high:"くじを等級の高い順に重ねておき、上から1枚ずつ渡します。"};
+function setMode(m){S.mode=m;save();document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x.dataset.m===m));$("modeNote").textContent=MODE_NOTE[m];}
+document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+setMode(S.mode in MODE_NOTE?S.mode:"rand");
 function renderStock(){
   $("stock").innerHTML=S.prizes.filter(p=>p.qty>0).map(p=>`<li class="${p.left?"":"zero"}"><span><b style="color:var(--gold)">${esc(p.rank)}</b> ${esc(p.name)}</span><span>残り ${p.left} / ${p.qty}</span></li>`).join("")||`<li class="muted">景品が登録されていません</li>`;
-  $("log").innerHTML=S.log.slice().reverse().map((l,i)=>`<li><span class="muted">#${S.log.length-i}</span> <span class="r">${esc(l.rank)}</span>${esc(l.name)}${l.who?` → <b>${esc(l.who)}</b> さん`:""}</li>`).join("")||`<li class="muted">まだ当選者はいません</li>`;
+  $("log").innerHTML=S.log.slice().reverse().map((l,i)=>`<li><span class="muted">#${S.log.length-i}</span> <span class="r">${esc(l.rank)}</span>${esc(l.name)}</li>`).join("")||`<li class="muted">まだ誰も引いていません</li>`;
 }
 function pick(){
   const avail=S.prizes.filter(p=>p.left>0);if(!avail.length)return null;
@@ -353,24 +385,19 @@ function pick(){
   let r=Math.random()*avail.reduce((a,p)=>a+p.left,0);
   for(const p of avail){r-=p.left;if(r<0)return p}return avail[avail.length-1];
 }
-let spinning=false;
+let drawing=false;
 $("spin").onclick=()=>{
-  if(spinning)return;const prize=pick();
-  if(!prize){$("reel").innerHTML=`<span class="rank">SOLD OUT</span>景品はすべて出ました`;buzz();return;}
-  spinning=true;$("slot").classList.remove("win");
-  const pool=S.prizes.filter(p=>p.qty>0);let t=0,delay=50,steps=0,total=28+Math.floor(Math.random()*8);
-  const tick=()=>{const p=steps>=total?prize:pool[Math.floor(Math.random()*pool.length)];
-    $("reel").innerHTML=`<span class="rank">${esc(p.rank)}</span>${esc(p.name)}`;tone(500+Math.random()*400,.04,"square",.05);
-    steps++;if(steps>total){finish(prize);return}delay*=1.09;setTimeout(tick,delay);};
-  tick();
+  if(drawing)return;const prize=pick();const t=$("ticket");
+  if(!prize){t.className="ticket folded";t.textContent="くじはもうありません";buzz();return;}
+  drawing=true;t.className="ticket folded";t.textContent="ガサゴソ……";drumroll(1200);
+  setTimeout(()=>{
+    prize.left--;S.log.push({rank:prize.rank,name:prize.name});save();
+    t.className="ticket unfold";t.innerHTML=`<div class="rank">${esc(prize.rank)}</div><div class="nm">${esc(prize.name)}</div>`;
+    fanfare();burst(prize===S.prizes.find(x=>x.qty>0)?260:140);renderStock();updateTotal();drawing=false;
+  },1250);
 };
-function finish(p){
-  p.left--;S.log.push({rank:p.rank,name:p.name,who:$("winner").value.trim()});save();
-  $("slot").classList.add("win");fanfare();burst(p===S.prizes.find(x=>x.qty>0)?260:140);
-  $("winner").value="";renderStock();updateTotal();spinning=false;
-}
 $("undo").onclick=()=>{const l=S.log[S.log.length-1];if(!l)return;
-  ask(`直前の当選「${l.rank} ${l.name}」を取り消して在庫に戻しますか？`,()=>{S.log.pop();
+  ask(`最後に引いた「${l.rank} ${l.name}」のくじを箱に戻しますか？`,()=>{S.log.pop();
     const p=S.prizes.find(x=>x.rank===l.rank&&x.name===l.name);if(p&&p.left<p.qty)p.left++;save();renderStock();updateTotal();});};
 
 // ---------- confetti ----------

@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="おかわり！給食じゃんけんバトル｜試作ゲームラボ">
-<meta property="og:description" content="めくられた給食を、はらぺこカードの数字で取りあう。一番大きい数を出した人がゲット、同じ数ならじゃんけんで決着。ピーマンなどのにがてカードは一番小さい数の人が引き取る。主食・おかず・汁物・牛乳・デザートがそろえば完食ボーナス。">
+<meta property="og:description" content="めくられた給食を、はらぺこカードの数字で取りあう。一番大きい数を出した人がゲット、同じ数ならじゃんけんで決着。ピーマンなどのにがてカードは一番小さい数の人が引き取るけれど、トレーのどの種類のかわりにもなる。次の3枚が見える献立表つき。主食・おかず・汁物・牛乳・デザートがそろえば完食ボーナス。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/okawari/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -56,6 +56,15 @@
   .fcard .v{font-size:20px;font-weight:bold}
   .fcard.bad{border-color:#6c8a4a;background:#eef4e2}
   .fcard.bad .v{color:var(--bad)}
+  .menu{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;text-align:center}
+  .menu .t{font-size:12px;color:var(--sub);margin-bottom:4px}
+  .menu .cards{display:flex;justify-content:center;gap:6px}
+  .mcard{width:62px;border:2px solid var(--line);border-radius:10px;padding:3px 0;font-size:10px;background:#fffdf4}
+  .mcard .e{font-size:22px;line-height:1.2}
+  .mcard .v{font-weight:bold;font-size:12px}
+  .mcard.bad{background:#eef4e2}
+  .mcard.bad .v{color:var(--bad)}
+  .tray span.wild{filter:none;opacity:1;background:#e2efd2}
   .roundinfo{text-align:center;font-size:13px;color:var(--sub);margin-bottom:6px}
   .hint{text-align:center;font-size:14px;margin-top:8px;min-height:20px}
 
@@ -92,7 +101,7 @@
 <body>
 <div class="wrap">
   <h1>おかわり！給食じゃんけんバトル</h1>
-  <span class="tag">v0.1</span>
+  <span class="tag">v0.2</span>
 
   <section id="title">
     <div class="panel rules">
@@ -103,10 +112,12 @@
         <li>🫑<b>にがてカード</b>（マイナス点）は<b>一番小さい数</b>を出した人が引き取る</li>
         <li>同じ数でならんだら<b>じゃんけん</b>で決着！にがてカードはじゃんけんで負けた人が引き取る</li>
         <li>出したはらぺこカードはもう使えない。10回やって合計点が高い人の勝ち</li>
+        <li>📋<b>献立表</b>：次に出てくる3枚が見えている。大きい数をどこで使うか考えよう</li>
       </ul>
       <div><b>完食ボーナス</b></div>
       <ul>
         <li>🍚主食・🍗おかず・🥣汁物・🥛牛乳・🍮デザートのうち<b>3種類で「バランスよし」＋2点</b>、<b>5種類ぜんぶで「完食」＋5点</b></li>
+        <li>🫑<b>にがてを食べたらえらい！</b>にがてカードはマイナス点だけど、トレーの<b>どの種類のかわりにもなる</b></li>
         <li>あげパンやプリンなど人気メニューは点数が高い</li>
       </ul>
     </div>
@@ -130,6 +141,7 @@
       <div class="roundinfo" id="roundInfo"></div>
       <div class="food" id="food"></div>
       <div class="hint" id="foodHint"></div>
+      <div class="menu" id="menu"></div>
     </div>
 
     <div class="panel">
@@ -212,11 +224,23 @@ $("titleBtn").onclick = ()=>show("title");
 function show(id){["title","game","result"].forEach(s=>$(s).classList.toggle("hidden",s!==id));window.scrollTo(0,0);}
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function kind(id){return KINDS.find(k=>k.id===id);}
-function kindsHave(p){return KINDS.filter(k=>p.got.some(f=>f.k===k.id)).length;}
+function realKinds(p){return KINDS.filter(k=>p.got.some(f=>f.k===k.id)).length;}
+function wilds(p){return p.got.filter(f=>f.k==="bad").length;}
+// にがてカードはどの種類のかわりにもなる（なんでも枠）
+function kindsHave(p){return Math.min(KINDS.length,realKinds(p)+wilds(p));}
 function hasSet(p){return kindsHave(p)===KINDS.length;}
 // 3種類で「バランスよし」+2、5種類そろうと「完食」+5
 function bonus(p){const n=kindsHave(p);return n>=5?BONUS:n>=3?HALF:0;}
 function bonusName(p){const n=kindsHave(p);return n>=5?"完食！":n>=3?"バランスよし":"";}
+function trayHtml(p){
+  const bads=p.got.filter(f=>f.k==="bad"); let w=0;
+  return KINDS.map(k=>{
+    if(p.got.some(f=>f.k===k.id)) return `<span class="ok">${k.e}</span>`;
+    if(w<bads.length) return `<span class="wild">${bads[w++].e}</span>`;
+    return `<span>${k.e}</span>`;
+  }).join("");
+}
+function upcoming(){return G.deck.slice(-Math.min(3,ROUNDS-G.round)).reverse();}
 function total(p){return p.got.reduce((t,f)=>t+f.v,0)+bonus(p);}
 
 function start(){
@@ -240,13 +264,15 @@ function render(){
     <div class="sc ${i===0?"me":""}">
       <div>${p.name}</div>
       <div class="pt">${total(p)}<span style="font-size:12px">点</span></div>
-      <div class="tray">${KINDS.map(k=>`<span class="${p.got.some(f=>f.k===k.id)?"ok":""}">${k.e}</span>`).join("")}</div>
+      <div class="tray">${trayHtml(p)}</div>
       <div class="done">${bonus(p)?bonusName(p)+" +"+bonus(p):""}</div>
     </div>`).join("");
   $("roundInfo").textContent=`${G.round} / ${ROUNDS} 回目　（山札のこり ${G.deck.length}枚）`;
   const f=G.cur, bad=f.k==="bad";
   $("food").innerHTML=`<div class="fcard ${bad?"bad":""}"><div class="e">${f.e}</div><div>${f.n}</div>
     <div class="k">${bad?"にがて":kind(f.k).e+kind(f.k).n}</div><div class="v">${f.v>0?"+":""}${f.v}</div></div>`;
+  const up=upcoming();
+  $("menu").innerHTML = up.length ? `<div class="t">📋 献立表（このあと出てくる順）</div><div class="cards">${up.map(c=>`<div class="mcard ${c.k==="bad"?"bad":""}"><div class="e">${c.e}</div><div>${c.n}</div><div class="v">${c.v>0?"+":""}${c.v}</div></div>`).join("")}</div>` : `<div class="t">📋 これが最後の給食！</div>`;
   $("foodHint").innerHTML = bad ? "一番<b>小さい数</b>の人が引き取る…" : "一番<b>大きい数</b>の人がゲット！";
 
   $("table").innerHTML=G.players.map((p,i)=>{
@@ -360,11 +386,10 @@ async function resolve(choices){
 const PERSONA=[0.6,1.0,0.45,1.2,0.8];
 const NOISE=0.9;
 function cardWorth(p,f){
-  if(f.k==="bad") return f.v;
   let w=f.v;
-  if(!p.got.some(g=>g.k===f.k)){
+  if(f.k==="bad"||!p.got.some(g=>g.k===f.k)){
     const have=kindsHave(p);
-    w += have===2?HALF : have===4?BONUS-HALF : 0.6; // 次でボーナスに届く種類なら上乗せ
+    if(have<KINDS.length) w += have===2?HALF : have===4?BONUS-HALF : 0.6; // 次でボーナスに届くなら上乗せ（にがてはなんでも枠）
   }
   return w;
 }
@@ -374,8 +399,9 @@ function cpuChoose(p,idx){
   const f=G.cur, bad=f.k==="bad";
   const worth=cardWorth(p,f);
   const others=G.players.filter((q,i)=>i!==idx);
-  const left=G.deck.filter(x=>x.k!=="bad");
-  const avgFood=left.length?left.reduce((t,x)=>t+x.v,0)/left.length+1:2.5;
+  // 献立表に見えている先の給食が良いほど、大きい数をとっておく
+  const up=upcoming().filter(x=>x.k!=="bad");
+  const avgFood=up.length?up.reduce((t,x)=>t+x.v,0)/up.length+1:1.5;
   const TRIALS=80;
   let best=null,bestScore=-1e9;
   hand.forEach(n=>{

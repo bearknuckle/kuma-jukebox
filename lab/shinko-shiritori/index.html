@@ -129,10 +129,10 @@ td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}
   <div class="panel">
     <h2 style="font-size:16px;margin-top:0">ルール</h2>
     <p>1. 全員に6枚ずつ配り、場には最初に I を置きます。場のカードは重ねずに、楽譜のように左から右へ並べます（4枚で1小節、5枚目から次の行）。</p>
-    <p>2. 自分の番には、最後に置かれたコードにつながるカードを1枚出します。出せないときは山札から1枚引いてパスします（山札がなければそのままパス）。</p>
+    <p>2. 自分の番には、最後に置かれたコードにつながるカードを1枚出します。出せないときは山札から1枚引きます。<b>引いたカードがつながるなら、そのまま出してかまいません</b>。つながらなければパスです（山札がなければそのままパス）。</p>
     <p>2b. <b>小節の頭はリセット：</b>新しい小節の1枚目（5枚目・9枚目・13枚目）は、どのカードを出してもかまいません。</p>
-    <p>3. つながらないカードを出して「はったり」をかけてもOKです。ただし、ダウトされてバレたらカードを戻して2枚引きます。正しいのにダウトした人は1枚引きます。</p>
-    <p>4. 場の流れで<b>有名なコード進行</b>が完成すると、出した人以外が全員1枚引きます。</p>
+    <p>3. つながらないカードを出して「はったり」をかけてもOKです。ただし、ダウトされてバレたらカードを戻して2枚引きます。正しいのにダウトした人は1枚引きます。<b>ダウトできるのは、次の人がカードを出す前まで</b>です。つながりの早見表は、ダウトが宣言されたときだけ見て答え合わせします（アプリでは自動で判定します）。</p>
+    <p>4. 場の流れで<b>有名なコード進行</b>が完成すると、完成させた人がチップを2枚もらえます。</p>
     <p>5. <b>終止ボーナス：</b>小節の4枚目に I を置いて締めた人は、チップを1枚もらえます。</p>
     <p>6. <b>1曲完成で終了：</b>4小節（16枚）そろったらゲーム終了。「手札の枚数−チップの数」が点数で、点数がいちばん少ない人の勝ちです（チップ1枚＝手札1枚分）。同点ならチップの多い人の勝ちです。途中で誰かが手札をなくしたら、その時点でゲーム終了。手札をなくした人は上がりボーナスでチップを1枚もらってから点数を比べます。</p>
     <h3 style="font-size:14px">つながり表</h3>
@@ -285,10 +285,15 @@ async function humanPlay(){
 }
 async function humanDraw(){
   if(S.phase!=='human')return;
-  S.sel=null;const had=S.deck.length;drawTo(0,1);log(had?'あなた：1枚引いてパス':'あなた：パス（山札なし）');S.phase='wait';
+  S.sel=null;const had=S.deck.length;
+  if(had){const dd=S.deck[S.deck.length-1];drawTo(0,1);
+    if(legal(fieldTop(),dd)){S.phase='drawn';S.drawn=dd;playChord(fieldTop(),0,.9);playChord(dd,.6,1.4);render(`${ROMAN[dd]}（${cname(dd)}）を引きました。${ROMAN[fieldTop()]} につながるので、このまま出せます`);return}}
+  log(had?'あなた：1枚引いてパス':'あなた：パス（山札なし）');S.phase='wait';
   if(passCheck())return;render();
   await sleep(500);nextTurn();
 }
+async function drawnPlay(){if(S.phase!=='drawn')return;S.sel=S.players[0].hand.indexOf(S.drawn);S.phase='human';await humanPlay()}
+async function drawnPass(){if(S.phase!=='drawn')return;log('あなた：1枚引いてパス');S.phase='wait';if(passCheck())return;render();await sleep(500);nextTurn()}
 async function cpuTurn(pi){
   S.phase='cpu';render(`${S.players[pi].name}が考えています…`);
   await sleep(900);
@@ -300,7 +305,10 @@ async function cpuTurn(pi){
     if(!choice)choice=opts.find(o=>comboFor([...S.field,o.d]))||null;
     if(!choice){const s=opts.filter(o=>o.r==='strong');const pool=(s.length&&Math.random()<.7)?s:opts;choice=pool[Math.floor(Math.random()*pool.length)]}
   }else if(P.hand.length&&Math.random()<.45){const i=Math.floor(Math.random()*P.hand.length);choice={d:P.hand[i],i,r:null}}
-  if(!choice){const had=S.deck.length;drawTo(pi,1);log(had?`${P.name}：1枚引いてパス`:`${P.name}：パス（山札なし）`);if(passCheck())return;render();await sleep(600);return nextTurn()}
+  if(!choice){const had=S.deck.length;let rr=null,dd=null;
+    if(had){dd=S.deck[S.deck.length-1];drawTo(pi,1);rr=legal(prev,dd)}
+    if(rr){choice={d:dd,i:P.hand.indexOf(dd),r:rr};log(`${P.name}：1枚引いて、つながったのでそのまま出す`)}
+    else{log(had?`${P.name}：1枚引いてパス`:`${P.name}：パス（山札なし）`);if(passCheck())return;render();await sleep(600);return nextTurn()}}
   P.hand.splice(choice.i,1);S.combo=null;S.field.push(choice.d);playChord(choice.d);
   S.pending={pi,prev,d:choice.d,r:choice.r};
   if(choice.r==='free'){S.phase='wait';render();await sleep(500);return resolve(pi,prev,choice.d,'free',null)}
@@ -328,8 +336,8 @@ async function resolve(pi,prev,d,r,ch){
   }
   if(stays){
     const c=comboFor(S.field);
-    if(c){S.combo={from:S.field.length-c.seq.length,to:S.field.length};L.push(`🎉 <b>${c.name}</b>（${c.seq.map(x=>ROMAN[x]).join('→')}）完成！ ${P.name}以外の全員が1枚引きます`);
-      S.players.forEach((q,k)=>{if(k!==pi)drawTo(k,1)});
+    if(c){S.combo={from:S.field.length-c.seq.length,to:S.field.length};L.push(`🎉 <b>${c.name}</b>（${c.seq.map(x=>ROMAN[x]).join('→')}）完成！ ${P.name}がチップ2枚`);
+      P.chips+=2;
       setTimeout(()=>playSeq(S.field.slice(-c.seq.length)),400);flash(c.name)}
     if(S.field.length%4===0&&d===0){P.chips++;L.push(`🪙 <b>終止ボーナス</b>：小節を I で締めた ${P.name}がチップ1枚`)}
   }
@@ -381,13 +389,17 @@ function render(promptText){
   const prev=fieldTop();
   document.getElementById('hand').innerHTML=S.players[0].hand.map((d,i)=>{
     let c='';if(hint&&S.phase==='human'){const r=legal(prev,d);if(r)c=(r==='free'?'strong':r)}
+    if(S.phase==='drawn'&&d===S.drawn&&i===S.players[0].hand.indexOf(S.drawn))c+=' sel';
     if(S.sel===i)c+=' sel';return cardHTML(d,c,`data-i="${i}"`)}).join('');
   let pr=promptText;const A=[];
   if(S.phase==='human'){
     pr=pr||(S.sel===null?(barHead()?'あなたの番：小節の頭なので、どのカードを出してもOK':`あなたの番：${ROMAN[prev]} につながるカードを選んでください${S.field.length%4===3?'（I で小節を締めるとチップ）':''}`):`${ROMAN[prev]}→${ROMAN[S.players[0].hand[S.sel]]} を出しますか？`);
     A.push(`<button class="btn primary" data-act="play" ${S.sel===null?'disabled':''}>このカードを出す</button>`);
-    A.push(`<button class="btn" data-act="draw">1枚引いてパス</button>`);
+    A.push(`<button class="btn" data-act="draw">1枚引く</button>`);
     A.push(`<button class="btn" data-act="listen">最後の4つを聴く</button>`);
+  }else if(S.phase==='drawn'){
+    A.push(`<button class="btn primary" data-act="dplay">引いたカードを出す</button>`);
+    A.push(`<button class="btn" data-act="dpass">出さずにパス</button>`);
   }else if(S.phase==='judge'){
     A.push(`<button class="btn danger" data-act="doubt">ダウト！</button>`);
     A.push(`<button class="btn primary" data-act="ok">つながってる</button>`);
@@ -396,7 +408,7 @@ function render(promptText){
     A.push(`<button class="btn primary" data-act="again">もう一度遊ぶ</button>`);
     A.push(`<button class="btn" data-act="listen">最後の4つを聴く</button>`);
   }
-  if(promptText!==undefined||S.phase==='human'||S.phase==='over'||S.phase==='judge')document.getElementById('prompt').textContent=pr||'';
+  if(promptText!==undefined||S.phase==='human'||S.phase==='drawn'||S.phase==='over'||S.phase==='judge')document.getElementById('prompt').textContent=pr||'';
   document.getElementById('actions').innerHTML=A.join('');
   document.getElementById('log').innerHTML=S.log.map(x=>`<div>${x}</div>`).join('');
 }
@@ -412,6 +424,8 @@ document.addEventListener('click',e=>{
   const act=a.dataset.act;
   if(act==='play')humanPlay();
   else if(act==='draw')humanDraw();
+  else if(act==='dplay')drawnPlay();
+  else if(act==='dpass')drawnPass();
   else if(act==='listen')playSeq(S.field.slice(-4));
   else if(act==='doubt')judge(true);
   else if(act==='ok')judge(false);

@@ -113,7 +113,7 @@ const GAMES=[
   {
     id:'shinko-shiritori', name:'進行しりとり', icon:'🎹', color:'#2f8f5f',
     desc:'場のコードに「自然につながる」コードをつないでいく、しりとり型カードゲーム。はったりとダウトあり。遊びながらコード進行の流れが身につく。',
-    players:'1人（CPU 1〜3人）', time:'5〜10分', genre:'音楽', added:'2026-11-18', version:'0.4', updated:'2026-11-19', isNew:true
+    players:'1人（CPU 1〜3人）', time:'5〜10分', genre:'音楽', added:'2026-11-18', version:'0.5', updated:'2026-11-20', isNew:true
   },
   {
     id:'onechord', name:'ワンコード', icon:'🎵', color:'#4f8cff',
@@ -143,6 +143,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-20', id:'shinko-shiritori', version:'0.5', text:'有名な進行の完成はチップ2枚に。引いたカードがつながればそのまま出せるように'},
   {date:'2026-11-20', id:'pennant-owners',   version:'0.4', text:'ルールを5行に：投手は1人で数字がそのままヒットの目安に、得意球と疲労をなくし、読み合いは当たれば＋2だけ'},
   {date:'2026-11-20', id:'okawari',          version:'0.2', text:'次の3枚が見える「献立表」と、にがてカードがトレーのどの種類のかわりにもなる「にがてを食べたらえらい」を追加'},
   {date:'2026-11-20', id:'setori-shokunin',  version:'0.3', text:'テンポが点数に関係するように：「遅い」の次に「速い」でギアチェンジ +1、同じテンポが3曲続くと単調 −1'},

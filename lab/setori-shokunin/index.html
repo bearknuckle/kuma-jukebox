@@ -4,13 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
-<link rel="icon" href="data:," />
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <title>セトリ職人</title>
 <!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="セトリ職人｜試作ゲームラボ">
-<meta property="og:description" content="ライブのセットリストを組むカードゲーム。ドラフトで楽曲カードを8枚集め、曲順を並べて採点。ジャンルの流れ、盛り上がりの上がり方、バラードの挟み方、最後の一曲でCPU店長と勝負。">
+<meta property="og:description" content="ライブのセットリストを組むカードゲーム。取った曲はすぐ1〜8曲目の枠に置き、あとからは動かせない。中盤で一度落とす聴かせどころから、アンコールまで上げきってCPU店長と勝負。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/setori-shokunin/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -103,11 +104,24 @@
   details.rules summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
   .rules ul{margin:6px 0 4px;padding-left:1.3em;font-size:13.5px}
   .rules li{margin:3px 0}
-  .roundinfo{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-  .roundinfo .r{font-weight:800;font-size:16px}
+  .roundinfo{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px;margin-bottom:8px}
+  .roundinfo .r{font-weight:800;font-size:16px;white-space:nowrap}
   .mine{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
   .mine span{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--panel2)}
   .hidden{display:none!important}
+  .slot:disabled{cursor:default}
+  .slot.pickable{border-color:var(--accent);border-style:dashed;background:var(--panel)}
+  .slot.pickable .empty{color:var(--accent);font-weight:700}
+  .slot.swapsel{outline:3px solid var(--accent);outline-offset:-1px}
+  .slot.dip .no::after{content:"↓";margin-left:3px;color:var(--ballad)}
+  .slot .zone{font-size:10.5px;color:var(--ballad);font-weight:700;white-space:nowrap}
+  .cpuboard{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+  .cpuboard div{font-size:11px;border:1px solid var(--line);border-radius:8px;padding:4px 5px;background:var(--panel2);min-height:40px;line-height:1.35}
+  .cpuboard div b{display:block;color:var(--ink2);font-size:10.5px}
+  .cpuboard div.on{background:var(--panel)}
+  .cpumsg{font-size:12.5px;color:var(--ink2);margin:8px 0 0;min-height:1.4em}
+  .preview{font-size:13.5px;margin:10px 0 0}
+  .preview b{font-size:16px}
   @media (max-width:380px){ .cards{grid-template-columns:repeat(3,1fr);gap:6px} .card .ttl{font-size:12.5px} }
 </style>
 </head>
@@ -115,11 +129,11 @@
 <div style="max-width:720px;margin:0 auto;padding:12px 16px 0;"><a href="../" style="color:#c4501f;font-size:14px;text-decoration:none;">← 試作ゲームラボに戻る</a></div>
 <div class="wrap">
   <h1><span class="disc" aria-hidden="true"></span>セトリ職人</h1>
-  <p class="lead">ライブの曲順を組むカードゲーム。ドラフトで8曲集めて、気持ちいいセットリストを作ろう。</p>
+  <p class="lead">ライブの曲順を組むカードゲーム。取った曲はすぐ枠に置き、あとからは動かせません。中盤で一度落として、アンコールまで上げきろう。</p>
 
   <div class="phasebar" aria-hidden="true">
     <span id="pb1" class="on">① ドラフト</span>
-    <span id="pb2">② セトリ作成</span>
+    <span id="pb2">② リハーサル</span>
     <span id="pb3">③ 結果</span>
   </div>
 
@@ -128,12 +142,19 @@
     <details class="rules">
       <summary>ルールと得点（タップで開く）</summary>
       <ul>
-        <li><b>ドラフト：</b>全8ラウンド。各ラウンド3枚から1枚選んで集めます。ライバルのCPU店長も裏で8曲集めています。</li>
-        <li><b>セトリ作成：</b>集めた8枚を、タップした順に1曲目→8曲目（アンコール）へ配置。置いた曲はタップで外せます。</li>
-        <li><b>同じジャンル：</b>隣同士が同じジャンルだと1組 +2点</li>
-        <li><b>盛り上がり上昇：</b>隣より上がった分だけ加点（例：2→4で +2点）</li>
-        <li><b>緩急ボーナス +3点：</b>バラードがちょうど1枚だけ、かつ1曲目でも最後でもないとき</li>
-        <li><b>アンコールボーナス +5点：</b>最後の曲の盛り上がりが、セトリ内で単独最高のとき</li>
+        <li><b>ドラフト：</b>全8ラウンド。毎回3枚から1枚取り、すぐに1〜8曲目の空いている枠に置きます。<b>置いた曲は動かせません。</b>8曲目はアンコールです。</li>
+        <li><b>CPU店長：</b>自分の3枚から1枚取って、同じように枠に置きます。CPU店長のセトリは表向きで見えています。</li>
+        <li><b>リハーサル：</b>8曲そろったら、自分のセトリの2曲を<b>1回だけ</b>入れ替えられます（入れ替えずに開演してもOK）。</li>
+      </ul>
+      <p class="muted" style="margin:8px 0 2px"><b>得点</b></p>
+      <ul>
+        <li><b>同じジャンル +2点：</b>隣同士が同じジャンル（1組ごと）</li>
+        <li><b>盛り上がり上昇 +1点：</b>前の曲より盛り上がりが上がったら（上がった回数を数えます）</li>
+        <li><b>聴かせどころ +3点：</b>盛り上がりが下がるのが1回だけで、それが4〜6曲目のとき（そこから最後まで一度も下がらない）</li>
+        <li><b>聴かせどころがバラード +2点：</b>その下げた曲がバラードのとき</li>
+        <li><b>流れが切れる −1点：</b>盛り上がりが下がる2回目以降（1回ごと）</li>
+        <li><b>つかみ +2点：</b>1曲目の盛り上がりが3以上</li>
+        <li><b>アンコール +5点：</b>8曲目の盛り上がりが、セトリ内で単独最高</li>
         <li><b>失速 −2点：</b>盛り上がり5の直後に1が来たとき（1回ごと）</li>
       </ul>
     </details>
@@ -143,27 +164,28 @@
   <section id="phase-draft" class="panel">
     <div class="roundinfo">
       <span class="r" id="round-label">ラウンド 1 / 8</span>
-      <span class="muted">3枚から1枚選んでください</span>
+      <span class="muted" id="draft-hint">3枚から1枚選んでください</span>
     </div>
     <div class="cards" id="draft-cards"></div>
-    <p class="muted" style="margin:12px 0 4px">あなたのコレクション（<span id="mine-count">0</span> / 8枚）</p>
-    <div class="mine" id="mine-list"><span>まだありません</span></div>
+    <p class="muted" style="margin:14px 0 6px">あなたのセトリ（<span id="placed-count">0</span> / 8曲）</p>
+    <div class="slots" id="draft-slots"></div>
+    <p class="cpumsg" id="cpu-msg"></p>
+    <p class="muted" style="margin:10px 0 0">CPU店長のセトリ</p>
+    <div class="cpuboard" id="cpu-board"></div>
   </section>
 
-  <!-- フェーズ2：セトリ作成 -->
-  <section id="phase-arrange" class="panel hidden">
-    <h2>セトリを組もう</h2>
-    <p class="muted" style="margin-top:0">下の手札をタップした順に、1曲目から並びます。左の枠をタップすると、その曲を外せます。</p>
-    <div class="slots" id="slots"></div>
-    <p class="muted" style="margin:14px 0 6px">手札（タップで配置）</p>
-    <div class="pool" id="pool"></div>
+  <!-- フェーズ2：リハーサル -->
+  <section id="phase-rehearsal" class="panel hidden">
+    <h2>リハーサル</h2>
+    <p class="muted" style="margin-top:0" id="rehearsal-hint">入れ替えたい2曲を順にタップすると、1回だけ入れ替えられます。</p>
+    <div class="slots" id="rehearsal-slots"></div>
+    <p class="preview" id="preview"></p>
     <div class="btnrow">
-      <button class="btn ghost" id="btn-auto" type="button">おまかせ並べ替え</button>
-      <button class="btn ghost" id="btn-clear" type="button">全部外す</button>
+      <button class="btn ghost hidden" id="btn-undo" type="button">入れ替えを戻す</button>
+      <button class="btn primary" id="btn-finish" type="button">このセトリで開演！</button>
     </div>
-    <div class="btnrow">
-      <button class="btn primary" id="btn-finish" type="button" disabled>このセトリで開演！</button>
-    </div>
+    <p class="muted" style="margin:14px 0 0">CPU店長のセトリ（開演前にCPU店長もリハーサルします）</p>
+    <div class="cpuboard" id="cpu-board2"></div>
   </section>
 
   <!-- フェーズ3：結果 -->
@@ -188,6 +210,7 @@
     </div>
     <div class="panel">
       <h2>CPU店長のセトリ</h2>
+      <p class="muted" id="cpu-swap-note" style="margin:0"></p>
       <ol class="setlist-mini" id="list-cpu"></ol>
     </div>
 
@@ -211,6 +234,8 @@ var GENRES = [
   { key:"ballad", name:"バラード", cls:"g-ballad" }
 ];
 var TEMPOS = ["速い","普通","遅い"];
+var N = 8;
+var KIKI_FROM = 3, KIKI_TO = 5; // 聴かせどころ：4〜6曲目（0始まりで3〜5）
 function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function buildDeck(){
   var deck = [];
@@ -232,71 +257,87 @@ function buildDeck(){
 
 /* ============ 採点 ============ */
 function scoreSetlist(list){
-  var genrePts = 0, risePts = 0, stallPts = 0, i;
+  var genrePts = 0, rise = 0, stall = 0, drops = [], i;
   for (i = 0; i < list.length - 1; i++){
-    if (list[i].genre === list[i+1].genre) genrePts += 2;
-    var d = list[i+1].heat - list[i].heat;
-    if (d > 0) risePts += d;
-    if (list[i].heat === 5 && list[i+1].heat === 1) stallPts -= 2;
+    var a = list[i], b = list[i+1];
+    if (a.genre === b.genre) genrePts += 2;
+    if (b.heat > a.heat) rise += 1;
+    if (b.heat < a.heat) drops.push(i + 1);
+    if (a.heat === 5 && b.heat === 1) stall -= 2;
   }
-  var ballads = list.filter(function(c){ return c.genre === "ballad"; });
-  var kankyu = 0;
-  if (ballads.length === 1){
-    var idx = list.indexOf(ballads[0]);
-    if (idx !== 0 && idx !== list.length - 1) kankyu = 3;
+  var kiki = 0, kikiBallad = 0, kikiPos = -1;
+  if (drops.length === 1 && drops[0] >= KIKI_FROM && drops[0] <= KIKI_TO){
+    kikiPos = drops[0];
+    kiki = 3;
+    if (list[kikiPos].genre === "ballad") kikiBallad = 2;
   }
+  var cut = -Math.max(0, drops.length - 1);
+  var tsukami = list[0].heat >= 3 ? 2 : 0;
   var maxHeat = Math.max.apply(null, list.map(function(c){ return c.heat; }));
-  var last = list[list.length - 1];
   var maxCount = list.filter(function(c){ return c.heat === maxHeat; }).length;
-  var encore = (last.heat === maxHeat && maxCount === 1) ? 5 : 0;
-  var total = genrePts + risePts + kankyu + encore + stallPts;
-  return { genre:genrePts, rise:risePts, kankyu:kankyu, encore:encore, stall:stallPts, total:total };
+  var encore = (list[list.length-1].heat === maxHeat && maxCount === 1) ? 5 : 0;
+  var total = genrePts + rise + kiki + kikiBallad + cut + tsukami + encore + stall;
+  return { genre:genrePts, rise:rise, kiki:kiki, kikiBallad:kikiBallad, cut:cut, tsukami:tsukami,
+           encore:encore, stall:stall, total:total, drops:drops, kikiPos:kikiPos };
 }
 
 /* ============ CPU ============ */
-function cpuBuildSetlist(cards){
-  // 盛り上がり概ね右肩上がり＋少しランダム。最後は最大に。
-  var arr = cards.slice();
-  var maxCard = arr.reduce(function(a,b){ return b.heat > a.heat ? b : a; }, arr[0]);
-  arr.splice(arr.indexOf(maxCard), 1);
-  arr.sort(function(a,b){ return (a.heat + Math.random()*2.2) - (b.heat + Math.random()*2.2); });
-  arr.push(maxCard);
-  // たまにジャンルが隣り合うよう軽く寄せる
-  for (var i = 1; i < arr.length - 1; i++){
-    if (arr[i-1].genre === arr[i+1].genre && arr[i].genre !== arr[i-1].genre && Math.random() < 0.5){
-      var t = arr[i]; arr[i] = arr[i+1]; arr[i+1] = t;
+// 空き枠を「理想の形」の仮の曲で埋めて採点し、一番伸びる置き方を選ぶ
+var CPU_SHAPE = [3,4,4,2,3,4,4,5];
+function cpuEstimate(slots){
+  var list = slots.map(function(c, i){ return c || { heat:CPU_SHAPE[i], genre:"_" + i }; });
+  return scoreSetlist(list).total;
+}
+function cpuPlace(slots, choices){
+  var best = null;
+  choices.forEach(function(c, ci){
+    for (var i = 0; i < N; i++){
+      if (slots[i]) continue;
+      var trial = slots.slice(); trial[i] = c;
+      var v = cpuEstimate(trial) + Math.random() * 1.2;
+      if (!best || v > best.v) best = { v:v, ci:ci, slot:i };
     }
+  });
+  return best;
+}
+function bestSwap(list){
+  var base = scoreSetlist(list).total, best = null;
+  for (var i = 0; i < N; i++) for (var j = i + 1; j < N; j++){
+    var t = list.slice(); var x = t[i]; t[i] = t[j]; t[j] = x;
+    var v = scoreSetlist(t).total;
+    if (v > base && (!best || v > best.v)) best = { v:v, i:i, j:j };
   }
-  return arr;
+  return best;
 }
 
 /* ============ ゲーム状態 ============ */
 var state;
 function newGame(){
-  var deck = buildDeck();
   state = {
-    deck: deck,
+    deck: buildDeck(),      // 48枚 = 8ラウンド × 3枚 × 2人
     round: 1,
-    mine: [],
-    cpuHand: [],
-    placed: [] // 配置済みカード（順番どおり）
+    slots: new Array(N).fill(null),
+    cpuSlots: new Array(N).fill(null),
+    choices: [],
+    sel: -1,
+    swapSel: -1,
+    swapped: null,
+    cpuSwap: null
   };
-  // CPUは裏で別枠から確保：残りデッキから先に8枚
-  // ドラフト用に十分な枚数を残す（8ラウンド×3枚=24枚 + CPU 8枚 = 32 ≤ 48）
-  state.cpuHand = state.deck.splice(0, 8);
+  document.getElementById("cpu-msg").textContent = "";
   showPhase(1);
-  renderDraft();
-  document.getElementById("phase-result").classList.add("hidden");
-  document.getElementById("phase-arrange").classList.add("hidden");
-  document.getElementById("phase-draft").classList.remove("hidden");
+  startRound();
 }
 function showPhase(n){
-  [1,2,3].forEach(function(i){
-    document.getElementById("pb"+i).classList.toggle("on", i === n);
-  });
+  [1,2,3].forEach(function(i){ document.getElementById("pb"+i).classList.toggle("on", i === n); });
+  document.getElementById("phase-draft").classList.toggle("hidden", n !== 1);
+  document.getElementById("phase-rehearsal").classList.toggle("hidden", n !== 2);
+  document.getElementById("phase-result").classList.toggle("hidden", n !== 3);
 }
+function emptyCount(slots){ return slots.filter(function(c){ return !c; }).length; }
+function slotLabel(i){ return (i === N - 1) ? (i+1) + "曲目・アンコール" : (i+1) + "曲目"; }
 
-/* ============ 描画：ドラフト ============ */
+/* ============ 描画：共通 ============ */
 function hearts(h){
   var s = "";
   for (var i = 1; i <= 5; i++) s += i <= h ? "●" : '<span class="off">●</span>';
@@ -308,125 +349,191 @@ function cardHTML(c){
     '<span class="heat">' + hearts(c.heat) + '<small>盛り上がり ' + c.heat + '</small></span>' +
     '<span class="tempo">テンポ：' + c.tempo + '</span>';
 }
-var currentChoices = [];
+function renderCpuBoard(id){
+  var box = document.getElementById(id);
+  box.innerHTML = "";
+  state.cpuSlots.forEach(function(c, i){
+    var d = document.createElement("div");
+    d.className = c ? "on" : "";
+    d.innerHTML = "<b>" + (i === N - 1 ? "8・アンコール" : (i+1) + "曲目") + "</b>" +
+      (c ? c.genreName + "・熱" + c.heat : "—");
+    box.appendChild(d);
+  });
+}
+function dropsOf(slots){
+  var set = {};
+  for (var i = 1; i < N; i++){
+    if (slots[i] && slots[i-1] && slots[i].heat < slots[i-1].heat) set[i] = true;
+  }
+  return set;
+}
+function slotButton(c, i, opts){
+  var b = document.createElement("button");
+  b.type = "button";
+  var cls = "slot" + (c ? " filled" : "");
+  if (opts.pickable) cls += " pickable";
+  if (opts.swapsel) cls += " swapsel";
+  if (opts.dip) cls += " dip";
+  b.className = cls;
+  var zone = (i >= KIKI_FROM && i <= KIKI_TO) ? '<span class="zone">聴かせどころ候補</span>' : "";
+  if (c){
+    b.innerHTML = '<span class="no">' + slotLabel(i) + '</span><span class="sttl">' + c.title + '</span>' +
+      '<span class="smeta">' + c.genreName + "／熱" + c.heat + '</span>';
+  } else {
+    b.innerHTML = '<span class="no">' + slotLabel(i) + '</span><span class="empty">' +
+      (opts.pickable ? "ここに置く" : "（空き）") + '</span>' + zone;
+  }
+  if (opts.onClick) b.addEventListener("click", opts.onClick); else b.disabled = true;
+  return b;
+}
+
+/* ============ フェーズ1：ドラフト ============ */
+function startRound(){
+  state.choices = state.deck.splice(0, 3);
+  state.sel = -1;
+  renderDraft();
+}
 function renderDraft(){
-  document.getElementById("round-label").textContent = "ラウンド " + state.round + " / 8";
-  currentChoices = state.deck.splice(0, 3);
+  document.getElementById("round-label").textContent = "ラウンド " + state.round + " / " + N;
+  var last = emptyCount(state.slots) === 1;
+  document.getElementById("draft-hint").textContent =
+    state.sel < 0 ? (last ? "最後の1枚を選ぶと、残りの枠に入ります" : "3枚から1枚選んでください")
+                  : "置く枠を選んでください（あとから動かせません）";
   var box = document.getElementById("draft-cards");
   box.innerHTML = "";
-  currentChoices.forEach(function(c, i){
+  state.choices.forEach(function(c, i){
     var b = document.createElement("button");
     b.type = "button";
-    b.className = "card " + c.cls;
-    b.innerHTML = cardHTML(c) + '<span class="pickhint">タップで取る</span>';
-    b.addEventListener("click", function(){ pickCard(i); });
+    b.className = "card " + c.cls + (state.sel === i ? " sel" : "");
+    b.innerHTML = cardHTML(c) + '<span class="pickhint">' + (state.sel === i ? "選択中" : "タップで選ぶ") + '</span>';
+    b.addEventListener("click", function(){
+      if (last){ placeCard(i, state.slots.indexOf(null)); return; }
+      state.sel = (state.sel === i) ? -1 : i;
+      renderDraft();
+    });
     box.appendChild(b);
   });
-  renderMine();
-}
-function renderMine(){
-  document.getElementById("mine-count").textContent = state.mine.length;
-  var box = document.getElementById("mine-list");
-  if (!state.mine.length){ box.innerHTML = "<span>まだありません</span>"; return; }
-  box.innerHTML = "";
-  state.mine.forEach(function(c){
-    var s = document.createElement("span");
-    s.textContent = c.title + "（" + c.genreName + "・" + c.heat + "）";
-    box.appendChild(s);
+  document.getElementById("placed-count").textContent = N - emptyCount(state.slots);
+  var slotsBox = document.getElementById("draft-slots");
+  slotsBox.innerHTML = "";
+  var dips = dropsOf(state.slots);
+  state.slots.forEach(function(c, i){
+    var can = !c && state.sel >= 0;
+    slotsBox.appendChild(slotButton(c, i, {
+      pickable: can, dip: !!dips[i],
+      onClick: can ? function(){ placeCard(state.sel, i); } : null
+    }));
   });
+  renderCpuBoard("cpu-board");
 }
-function pickCard(i){
-  state.mine.push(currentChoices[i]);
-  // 残り2枚は捨て札
-  if (state.round >= 8){
-    showPhase(2);
-    document.getElementById("phase-draft").classList.add("hidden");
-    document.getElementById("phase-arrange").classList.remove("hidden");
-    renderArrange();
+function placeCard(ci, slot){
+  state.slots[slot] = state.choices[ci];
+  // CPU店長の番：自分の3枚から1枚取って置く
+  var cpuChoices = state.deck.splice(0, 3);
+  var mv = cpuPlace(state.cpuSlots, cpuChoices);
+  var cc = cpuChoices[mv.ci];
+  state.cpuSlots[mv.slot] = cc;
+  document.getElementById("cpu-msg").textContent =
+    "CPU店長は「" + cc.title + "」（" + cc.genreName + "・熱" + cc.heat + "）を" + slotLabel(mv.slot) + "に置いた";
+  if (state.round >= N){
+    startRehearsal();
   } else {
     state.round++;
-    renderDraft();
+    startRound();
   }
 }
 
-/* ============ 描画：セトリ作成 ============ */
-function renderArrange(){
-  var slots = document.getElementById("slots");
-  slots.innerHTML = "";
-  for (var i = 0; i < 8; i++){
-    (function(i){
-      var c = state.placed[i];
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "slot" + (c ? " filled" : "");
-      var label = (i === 7) ? (i+1) + "曲目・アンコール" : (i+1) + "曲目";
-      if (c){
-        b.innerHTML = '<span class="no">' + label + '</span><span class="sttl">' + c.title + '</span>' +
-          '<span class="smeta">' + c.genreName + "／熱" + c.heat + '</span><span class="x">外す</span>';
-        b.addEventListener("click", function(){
-          state.placed.splice(i, 1);
-          renderArrange();
-        });
-      } else {
-        b.innerHTML = '<span class="no">' + label + '</span><span class="empty">（未配置）</span>';
-        b.disabled = true;
-      }
-      slots.appendChild(b);
-    })(i);
-  }
-  var pool = document.getElementById("pool");
-  pool.innerHTML = "";
-  state.mine.forEach(function(c){
-    var used = state.placed.indexOf(c) !== -1;
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "card " + c.cls + (used ? " used" : "");
-    b.innerHTML = cardHTML(c) + (used ? '<span class="pickhint">配置済み</span>' : '<span class="pickhint">タップで配置</span>');
-    if (!used){
-      b.addEventListener("click", function(){
-        if (state.placed.length < 8){ state.placed.push(c); renderArrange(); }
-      });
-    }
-    pool.appendChild(b);
-  });
-  document.getElementById("btn-finish").disabled = state.placed.length !== 8;
+/* ============ フェーズ2：リハーサル ============ */
+function startRehearsal(){
+  state.swapSel = -1;
+  state.swapped = null;
+  showPhase(2);
+  renderRehearsal();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
-document.getElementById("btn-clear").addEventListener("click", function(){
-  state.placed = [];
-  renderArrange();
-});
-document.getElementById("btn-auto").addEventListener("click", function(){
-  state.placed = cpuBuildSetlist(state.mine);
-  renderArrange();
+function doSwap(i, j){
+  var t = state.slots[i]; state.slots[i] = state.slots[j]; state.slots[j] = t;
+}
+function renderRehearsal(){
+  var box = document.getElementById("rehearsal-slots");
+  box.innerHTML = "";
+  var dips = dropsOf(state.slots);
+  state.slots.forEach(function(c, i){
+    var clickable = !state.swapped;
+    box.appendChild(slotButton(c, i, {
+      swapsel: state.swapSel === i,
+      dip: !!dips[i],
+      onClick: clickable ? function(){
+        if (state.swapSel < 0){ state.swapSel = i; }
+        else if (state.swapSel === i){ state.swapSel = -1; }
+        else { doSwap(state.swapSel, i); state.swapped = [state.swapSel, i]; state.swapSel = -1; }
+        renderRehearsal();
+      } : null
+    }));
+  });
+  var hint = document.getElementById("rehearsal-hint");
+  if (state.swapped){
+    hint.textContent = (state.swapped[0]+1) + "曲目と" + (state.swapped[1]+1) + "曲目を入れ替えました。リハーサルはここまでです。";
+  } else if (state.swapSel >= 0){
+    hint.textContent = (state.swapSel+1) + "曲目と入れ替える曲をタップしてください（もう一度タップで取り消し）。";
+  } else {
+    hint.textContent = "入れ替えたい2曲を順にタップすると、1回だけ入れ替えられます。入れ替えずに開演してもOK。";
+  }
+  document.getElementById("btn-undo").classList.toggle("hidden", !state.swapped);
+  var s = scoreSetlist(state.slots);
+  var parts = [];
+  if (s.kiki) parts.push("聴かせどころ " + (s.kikiPos+1) + "曲目" + (s.kikiBallad ? "（バラード）" : ""));
+  else if (s.drops.length === 0) parts.push("聴かせどころなし（一度も下がっていない）");
+  else if (s.drops.length > 1) parts.push("下がる所が" + s.drops.length + "か所");
+  else parts.push("下がる所が4〜6曲目の外");
+  if (s.encore) parts.push("アンコール成立");
+  document.getElementById("preview").innerHTML = "今の得点 <b>" + s.total + "点</b>　<span class='muted'>" + parts.join("・") + "</span>";
+  renderCpuBoard("cpu-board2");
+}
+document.getElementById("btn-undo").addEventListener("click", function(){
+  if (!state.swapped) return;
+  doSwap(state.swapped[0], state.swapped[1]);
+  state.swapped = null;
+  renderRehearsal();
 });
 document.getElementById("btn-finish").addEventListener("click", showResult);
 
-/* ============ 描画：結果 ============ */
+/* ============ フェーズ3：結果 ============ */
 function fmt(n){ return (n > 0 ? "+" + n : "" + n); }
-function listHTML(list){
-  return list.map(function(c){
-    return "<li><b>" + c.title + "</b>　" + c.genreName + "／盛り上がり " + c.heat + "／" + c.tempo + "</li>";
+function listHTML(list, sc){
+  return list.map(function(c, i){
+    var mark = (i === sc.kikiPos) ? "　<b>← 聴かせどころ</b>" : (sc.drops.indexOf(i) !== -1 ? "　↓" : "");
+    return "<li><b>" + c.title + "</b>　" + c.genreName + "／盛り上がり " + c.heat + "／" + c.tempo + mark + "</li>";
   }).join("");
 }
 function showResult(){
-  var cpuList = cpuBuildSetlist(state.cpuHand);
-  var ps = scoreSetlist(state.placed);
-  var cs = scoreSetlist(cpuList);
+  // CPU店長のリハーサル：得点が上がる入れ替えがあれば1回だけ行う
+  var sw = bestSwap(state.cpuSlots);
+  var note = "";
+  if (sw){
+    var t = state.cpuSlots[sw.i]; state.cpuSlots[sw.i] = state.cpuSlots[sw.j]; state.cpuSlots[sw.j] = t;
+    note = "リハーサルで" + (sw.i+1) + "曲目と" + (sw.j+1) + "曲目を入れ替えました。";
+  } else {
+    note = "リハーサルでは入れ替えませんでした。";
+  }
+  var ps = scoreSetlist(state.slots);
+  var cs = scoreSetlist(state.cpuSlots);
   showPhase(3);
-  document.getElementById("phase-arrange").classList.add("hidden");
-  document.getElementById("phase-result").classList.remove("hidden");
 
   var v = document.getElementById("verdict-text");
   var sub = document.getElementById("verdict-sub");
   if (ps.total > cs.total){ v.textContent = "あなたの勝ち！"; sub.textContent = "会場が一番沸いたのは、あなたのセトリでした。"; }
-  else if (ps.total < cs.total){ v.textContent = "CPU店長の勝ち"; sub.textContent = "あと少し。ジャンルの流れと終盤の上げ方を見直してみよう。"; }
+  else if (ps.total < cs.total){ v.textContent = "CPU店長の勝ち"; sub.textContent = "あと少し。聴かせどころの位置と、アンコール用の曲の取っておき方を見直してみよう。"; }
   else { v.textContent = "引き分け"; sub.textContent = "互角の名勝負。もう一回やれば決着がつくかも。"; }
 
   var rows = [
     ["隣同士・同じジャンル（1組 +2）", ps.genre, cs.genre],
-    ["盛り上がりの上昇分", ps.rise, cs.rise],
-    ["緩急ボーナス（バラード1枚・中盤）", ps.kankyu, cs.kankyu],
-    ["アンコールボーナス（最後が単独最高）", ps.encore, cs.encore],
+    ["盛り上がりが上がった回数（+1ずつ）", ps.rise, cs.rise],
+    ["聴かせどころ（4〜6曲目で1回だけ下げる）", ps.kiki, cs.kiki],
+    ["聴かせどころがバラード", ps.kikiBallad, cs.kikiBallad],
+    ["流れが切れる（2回目以降の下降）", ps.cut, cs.cut],
+    ["つかみ（1曲目が盛り上がり3以上）", ps.tsukami, cs.tsukami],
+    ["アンコール（最後が単独最高）", ps.encore, cs.encore],
     ["失速（5の直後に1）", ps.stall, cs.stall]
   ];
   var html = "";
@@ -435,8 +542,9 @@ function showResult(){
   });
   html += "<tr class='tot'><td>合計</td><td>" + ps.total + "点</td><td>" + cs.total + "点</td></tr>";
   document.getElementById("score-body").innerHTML = html;
-  document.getElementById("list-player").innerHTML = listHTML(state.placed);
-  document.getElementById("list-cpu").innerHTML = listHTML(cpuList);
+  document.getElementById("list-player").innerHTML = listHTML(state.slots, ps);
+  document.getElementById("list-cpu").innerHTML = listHTML(state.cpuSlots, cs);
+  document.getElementById("cpu-swap-note").textContent = note;
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 document.getElementById("btn-again").addEventListener("click", function(){

@@ -75,6 +75,12 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 // ゲームを増やすときはここに1件追加する
 const GAMES=[
   {
+    id:'bonenkai-highlow', name:'ハイ＆ロー サバイバル', icon:'🎉', color:'#c8323a',
+    desc:'会社の忘年会向け。全員起立して、次のカードが大きいか小さいかをポーズで予想。外れたら着席、最後まで残った人が景品スロットを回す。景品は等級・個数を登録でき、在庫が減っていくしくみ。スマホ不要、スクリーンに映して大人数で。',
+    players:'何人でも（1台をスクリーンに映して）', time:'15〜30分', genre:'宴会', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true,
+    note:'景品の登録と当選記録は、開いたブラウザにだけ保存されます'
+  },
+  {
     id:'pennant-owners', name:'ペナント・オーナーズ', icon:'⚾', color:'#1d5a37',
     desc:'球団オーナー兼監督になって、選手カードの獲得・打線と先発の編成・給料日のやりくりで6か月のシーズンを戦う、監督・経営型の野球カードゲーム。打者1人にサイコロ1個で試合はサクッと決着。スターを集めると年俸で首が回らなくなる。若手は伸び、ベテランは衰え、エースは連投で疲れる。',
     players:'1人（CPU 3球団）', time:'15分', genre:'スポーツ', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
@@ -123,6 +129,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-19', id:'bonenkai-highlow', version:'0.1', text:'新しく登場（宴会のゲーム・景品スロットつきの忘年会ゲーム）'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.2', text:'ウサギのカブ農園が上場、持ち株は切り株・配当は実り・倒産は伐採と新芽で再上場'},
   {date:'2026-11-19', id:'pennant-owners',   version:'0.1', text:'新しく登場（スポーツのゲーム・監督と経営の野球カードゲーム）'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.1', text:'新しく登場（せーの株を動物の取引所の見た目で）'},
@@ -163,6 +170,7 @@ const CATS=[
   {id:'株',label:'株のゲーム',icon:'📈',note:'AIと考えた試作ゲーム'},
   {id:'お酒',label:'お酒のゲーム',icon:'🍶',note:'AIと考えた試作ゲーム（飲みの席で遊べるパーティー系）'},
   {id:'スポーツ',label:'スポーツのゲーム',icon:'⚾',note:'AIと考えた試作ゲーム'},
+  {id:'宴会',label:'宴会のゲーム',icon:'🎉',note:'AIと考えた試作ゲーム（忘年会など大人数で）'},
 ];
 let cur='すべて';
 // 遊んだ記録（この端末のブラウザだけに保存）

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ハイ＆ロー サバイバル</title>
+<!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="試作ゲームラボ">
+<meta property="og:title" content="ハイ＆ロー サバイバル｜試作ゲームラボ">
+<meta property="og:description" content="会社の忘年会向け。全員起立して、次のカードが大きいか小さいかをポーズで予想。外れたら着席、最後まで残った人が景品スロットを回す。景品は等級・個数を登録でき、在庫が減っていくしくみ。スマホ不要、スクリーンに映して大人数で。">
+<meta property="og:url" content="https://game-lab-oj9t.onrender.com/bonenkai-highlow/">
+<meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1630; --bg2:#18224a; --gold:#f5c542; --red:#e5484d; --blue:#3e8ef7;
+  --ink:#f7f3e8; --mute:#a9b0cc; --card:#fffdf6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(ellipse at top,#22306a 0%,var(--bg) 60%) fixed;
+  color:var(--ink); font-family:"M PLUS Rounded 1c",sans-serif; overflow-x:hidden;
+}
+.display{font-family:"Dela Gothic One",sans-serif;letter-spacing:.02em}
+header{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid #ffffff18}
+header h1{margin:0;font-size:22px;color:var(--gold)}
+header nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:transparent;border:1px solid #ffffff30;color:var(--ink);padding:8px 14px;border-radius:999px;font:inherit;font-weight:800;cursor:pointer}
+.tab.on{background:var(--gold);color:#1a1a1a;border-color:var(--gold)}
+main{max-width:1200px;margin:0 auto;padding:22px}
+section{display:none} section.on{display:block}
+.btn{font:inherit;font-weight:800;border:none;border-radius:14px;padding:14px 26px;font-size:20px;cursor:pointer;transition:transform .08s}
+.btn:active{transform:scale(.96)}
+.btn.gold{background:var(--gold);color:#1a1a1a}
+.btn.red{background:var(--red);color:#fff}
+.btn.ghost{background:#ffffff14;color:var(--ink);border:1px solid #ffffff30}
+.btn.small{padding:8px 14px;font-size:15px;border-radius:10px}
+.panel{background:#ffffff0d;border:1px solid #ffffff1a;border-radius:20px;padding:22px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--mute)}
+
+/* setup */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;color:var(--mute);font-weight:500;padding:6px}
+td{padding:4px 6px}
+input[type=text],input[type=number]{width:100%;background:#0b1026;border:1px solid #ffffff2a;color:var(--ink);border-radius:8px;padding:9px 10px;font:inherit;font-size:16px}
+input[type=number]{width:80px}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:16px}
+.rule{background:#ffffff0d;border-radius:16px;padding:18px;font-size:17px;line-height:1.6}
+.rule b{color:var(--gold);font-size:28px;display:block}
+
+/* game */
+.stage{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;min-height:430px}
+.pcard{width:230px;height:320px;border-radius:20px;background:var(--card);color:#222;position:relative;box-shadow:0 18px 40px #0008;display:flex;align-items:center;justify-content:center;margin:auto}
+.pcard .big{font-family:"Dela Gothic One";font-size:130px;line-height:1}
+.pcard .corner{position:absolute;font-family:"Dela Gothic One";font-size:30px;line-height:1;text-align:center}
+.pcard .tl{top:14px;left:16px}.pcard .br{bottom:14px;right:16px;transform:rotate(180deg)}
+.pcard.red{color:#d0242b}
+.pcard.back{background:repeating-linear-gradient(45deg,#c8323a 0 14px,#a5242c 14px 28px);border:8px solid var(--card)}
+.pcard.back .q{font-family:"Dela Gothic One";font-size:110px;color:#fff;text-shadow:0 4px 0 #0004}
+.flip{animation:flip .5s ease}
+@keyframes flip{0%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+.shake{animation:shake .12s linear infinite}
+@keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,1px) rotate(-1deg)}75%{transform:translate(3px,-1px) rotate(1deg)}}
+.cardlabel{text-align:center;color:var(--mute);margin-top:10px;font-size:18px}
+.mid{display:flex;flex-direction:column;align-items:center;gap:14px}
+.vs{font-family:"Dela Gothic One";font-size:34px;color:var(--gold)}
+.poses{display:flex;gap:18px}
+.pose{border-radius:16px;padding:14px 18px;text-align:center;min-width:150px}
+.pose.hi{background:#e5484d22;border:2px solid var(--red)}
+.pose.lo{background:#3e8ef722;border:2px solid var(--blue)}
+.pose .t{font-family:"Dela Gothic One";font-size:30px}
+.pose .s{font-size:15px;color:var(--mute)}
+.verdict{font-family:"Dela Gothic One";font-size:64px;text-align:center;min-height:84px;margin-top:6px}
+.verdict.hi{color:var(--red)} .verdict.lo{color:#6aa8ff} .verdict.eq{color:var(--gold)}
+.sub{text-align:center;font-size:22px;min-height:32px}
+.hud{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.pill{background:#ffffff14;border-radius:999px;padding:8px 16px;font-weight:800;font-size:18px}
+.controls{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.history{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.history span{background:#ffffff14;border-radius:8px;padding:4px 10px;font-weight:800}
+
+/* draw */
+.drawgrid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
+.slot{height:190px;border-radius:22px;background:#0b1026;border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;box-shadow:inset 0 0 40px #000a}
+.slot .reel{font-family:"Dela Gothic One";font-size:46px;text-align:center;padding:0 20px}
+.slot .rank{display:block;font-size:24px;color:var(--gold)}
+.slot.win{box-shadow:0 0 40px var(--gold),inset 0 0 40px #000a}
+.stock li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #ffffff20;font-size:17px}
+.stock ul,.log ul{list-style:none;margin:0;padding:0}
+.stock .zero{opacity:.35;text-decoration:line-through}
+.log li{padding:6px 0;border-bottom:1px solid #ffffff12;font-size:16px}
+.log .r{color:var(--gold);font-weight:800;margin-right:6px}
+.seg{display:inline-flex;background:#ffffff14;border-radius:12px;padding:4px}
+.seg button{background:none;border:none;color:var(--ink);font:inherit;font-weight:800;padding:8px 12px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--gold);color:#1a1a1a}
+h2{margin:0 0 12px;font-size:22px}
+h3{margin:0 0 10px;font-size:18px;color:var(--gold)}
+canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:40}
+.modal.on{display:flex}
+.modal .box{background:var(--bg2);border:1px solid #ffffff30;border-radius:20px;padding:24px;max-width:420px;width:90%}
+@media (max-width:820px){
+  .stage{grid-template-columns:1fr;min-height:0}
+  .drawgrid{grid-template-columns:1fr}
+  .pcard{width:170px;height:240px}.pcard .big{font-size:90px}
+  .verdict{font-size:44px}
+}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header>
+  <h1 class="display">🎉 ハイ＆ロー サバイバル</h1>
+  <nav>
+    <button class="tab on" data-go="setup">① 準備</button>
+    <button class="tab" data-go="game">② ゲーム</button>
+    <button class="tab" data-go="draw">③ 景品抽選</button>
+    <button class="tab" id="fs">⛶ 全画面</button>
+    <a class="tab" href="../" style="text-decoration:none">⌂ ラボ</a>
+  </nav>
+</header>
+
+<main>
+<!-- SETUP -->
+<section id="setup" class="on">
+  <div class="panel">
+    <h2>遊び方（スクリーンに映して説明）</h2>
+    <div class="rules">
+      <div class="rule"><b>1</b>全員起立！ 画面のカードが今の数字です。</div>
+      <div class="rule"><b>2</b>次のカードは<strong style="color:#ff7a7e">大きい（HIGH）</strong>か<strong style="color:#7fb2ff">小さい（LOW）</strong>か？<br>HIGH → 両手を頭の上<br>LOW → 両手を腰に</div>
+      <div class="rule"><b>3</b>カードをめくって、外れた人は着席。同じ数字なら全員セーフ。</div>
+      <div class="rule"><b>4</b>最後まで立っていた人が<strong style="color:var(--gold)">景品スロット</strong>を回せます！</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">景品リスト</h2>
+      <span class="muted">上ほど豪華（等級の順に並べてください）</span>
+    </div>
+    <table style="margin-top:10px">
+      <thead><tr><th style="width:22%">等級</th><th>景品名</th><th style="width:100px">個数</th><th style="width:60px"></th></tr></thead>
+      <tbody id="prizeRows"></tbody>
+    </table>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost small" id="addRow">＋ 景品を追加</button>
+      <button class="btn ghost small" id="resetStock">在庫を元に戻す</button>
+      <span class="muted" id="totalCount"></span>
+      <button class="btn gold" style="margin-left:auto" data-go="game">ゲーム開始 →</button>
+    </div>
+  </div>
+</section>
+
+<!-- GAME -->
+<section id="game">
+  <div class="hud">
+    <span class="pill" id="roundPill">ROUND 1</span>
+    <span class="pill" id="deckPill">山札 52</span>
+    <div class="row" style="gap:8px">
+      <button class="btn ghost small" id="revive">🔥 敗者復活（全員起立）</button>
+      <button class="btn ghost small" id="newGame">最初から</button>
+    </div>
+  </div>
+  <div class="stage">
+    <div>
+      <div id="curCard"></div>
+      <div class="cardlabel">いまのカード</div>
+    </div>
+    <div class="mid">
+      <div class="vs">次は…？</div>
+      <div class="poses">
+        <div class="pose hi"><div class="t">🙌 HIGH</div><div class="s">両手を頭の上</div></div>
+        <div class="pose lo"><div class="t">🤲 LOW</div><div class="s">両手を腰に</div></div>
+      </div>
+    </div>
+    <div>
+      <div id="nextCard"></div>
+      <div class="cardlabel">次のカード</div>
+    </div>
+  </div>
+  <div class="verdict" id="verdict"></div>
+  <div class="sub" id="sub">ポーズを決めたら「オープン！」</div>
+  <div class="controls">
+    <button class="btn red" id="open">🥁 オープン！</button>
+    <button class="btn gold" id="next" style="display:none">次のラウンドへ</button>
+    <button class="btn gold" id="toDraw">🏆 勝者決定 → 景品抽選</button>
+  </div>
+  <div class="history" id="hist"></div>
+</section>
+
+<!-- DRAW -->
+<section id="draw">
+  <div class="drawgrid">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:14px">
+        <h2 style="margin:0">景品スロット</h2>
+        <div class="seg" id="mode">
+          <button data-m="rand" class="on">完全ランダム</button>
+          <button data-m="low">下位の景品から</button>
+          <button data-m="high">上位の景品から</button>
+        </div>
+      </div>
+      <div class="slot" id="slot"><div class="reel" id="reel"><span class="rank">READY</span>スロットを回そう</div></div>
+      <div class="row" style="margin-top:16px">
+        <input type="text" id="winner" placeholder="当選者の名前（任意）" style="flex:1;min-width:180px">
+        <button class="btn gold" id="spin">🎰 回す！</button>
+      </div>
+      <p class="muted" style="margin:12px 0 0">勝ち残った人が1人ずつ前に出て回します。回すたびに在庫が1つ減ります。</p>
+    </div>
+    <div class="panel">
+      <div class="stock"><h3>残りの景品</h3><ul id="stock"></ul></div>
+      <div class="log" style="margin-top:20px">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">当選記録</h3><button class="btn ghost small" id="undo">1つ取り消す</button></div>
+        <ul id="log" style="margin-top:8px"></ul>
+      </div>
+      <div class="row" style="margin-top:16px"><button class="btn ghost small" data-go="game">← ゲームに戻る（次の勝負へ）</button></div>
+    </div>
+  </div>
+</section>
+  <p style="text-align:center;margin:30px 0 0"><a href="../" style="color:var(--mute);font-size:14px">← 試作ゲームラボに戻る</a> ・ ハイ＆ロー サバイバル v0.1</p>
+</main>
+
+<div class="modal" id="modal"><div class="box"><p id="modalText" style="font-size:18px;margin-top:0"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost small" id="mNo">やめる</button><button class="btn red small" id="mYes">OK</button></div></div></div>
+
+<script>
+// ---------- state ----------
+const DEFAULT_PRIZES=[
+  {rank:"特賞",name:"ワイヤレスイヤホン",qty:1},
+  {rank:"1等",name:"高級和牛ギフト",qty:2},
+  {rank:"2等",name:"カフェギフト券",qty:3},
+  {rank:"3等",name:"お菓子詰め合わせ",qty:5},
+  {rank:"参加賞",name:"ご当地ドリンク",qty:10},
+];
+let S={prizes:[],log:[],mode:"rand"};
+function save(){try{localStorage.setItem("bonenkai-hl",JSON.stringify(S))}catch(e){}}
+function load(){
+  try{const d=JSON.parse(localStorage.getItem("bonenkai-hl"));if(d&&d.prizes){S=d;return}}catch(e){}
+  S.prizes=DEFAULT_PRIZES.map((p,i)=>({...p,id:i+1,left:p.qty}));
+}
+load();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- nav ----------
+function go(id){
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===id));
+  document.querySelectorAll(".tab[data-go]").forEach(t=>t.classList.toggle("on",t.dataset.go===id));
+  if(id==="draw")renderStock();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+$("fs").onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}catch(e){}};
+
+// ---------- confirm modal ----------
+function ask(text,yes){$("modalText").textContent=text;$("modal").classList.add("on");
+  $("mYes").onclick=()=>{$("modal").classList.remove("on");yes()};$("mNo").onclick=()=>$("modal").classList.remove("on");}
+
+// ---------- setup ----------
+function renderRows(){
+  $("prizeRows").innerHTML=S.prizes.map((p,i)=>`<tr>
+    <td><input type="text" value="${esc(p.rank)}" data-i="${i}" data-k="rank"></td>
+    <td><input type="text" value="${esc(p.name)}" data-i="${i}" data-k="name"></td>
+    <td><input type="number" min="0" value="${p.qty}" data-i="${i}" data-k="qty"></td>
+    <td><button class="btn ghost small" data-del="${i}">✕</button></td></tr>`).join("");
+  $("prizeRows").querySelectorAll("input").forEach(inp=>inp.oninput=()=>{
+    const p=S.prizes[inp.dataset.i],k=inp.dataset.k;
+    if(k==="qty"){const used=p.qty-p.left;p.qty=Math.max(0,parseInt(inp.value)||0);p.left=Math.max(0,p.qty-used);}
+    else p[k]=inp.value;
+    save();updateTotal();
+  });
+  $("prizeRows").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{S.prizes.splice(+b.dataset.del,1);save();renderRows()});
+  updateTotal();
+}
+function updateTotal(){const t=S.prizes.reduce((a,p)=>a+p.qty,0),l=S.prizes.reduce((a,p)=>a+p.left,0);
+  $("totalCount").textContent=`景品 合計 ${t} 個（残り ${l} 個）`;}
+$("addRow").onclick=()=>{S.prizes.push({id:Date.now(),rank:"",name:"",qty:1,left:1});save();renderRows()};
+$("resetStock").onclick=()=>ask("在庫を最初の個数に戻し、当選記録も消します。よろしいですか？",()=>{S.prizes.forEach(p=>p.left=p.qty);S.log=[];save();renderRows();});
+renderRows();
+
+// ---------- sound ----------
+let AC=null;
+function ac(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();}catch(e){}return AC}
+function tone(f,d=.12,type="square",v=.08,when=0){const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,a.currentTime+when);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+when+d);
+  o.connect(g).connect(a.destination);o.start(a.currentTime+when);o.stop(a.currentTime+when+d+.02);}
+function drumroll(ms){const a=ac();if(!a)return;const n=Math.floor(ms/45);for(let i=0;i<n;i++)noise(.04,.05+.1*i/n,i*.045);}
+function noise(d,v,when){const a=ac();if(!a)return;const b=a.createBuffer(1,a.sampleRate*d,a.sampleRate),c=b.getChannelData(0);
+  for(let i=0;i<c.length;i++)c[i]=(Math.random()*2-1)*(1-i/c.length);const s=a.createBufferSource(),g=a.createGain();
+  s.buffer=b;g.gain.value=v;s.connect(g).connect(a.destination);s.start(a.currentTime+when);}
+function fanfare(){[523,659,784,1046].forEach((f,i)=>tone(f,.25,"triangle",.12,i*.12));tone(1046,.6,"triangle",.12,.5)}
+function buzz(){tone(140,.4,"sawtooth",.08)}
+
+// ---------- game ----------
+const SUITS=["♠","♥","♦","♣"],LABEL={1:"A",11:"J",12:"Q",13:"K"};
+let deck=[],cur=null,round=1,revealed=false,hist=[];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function newDeck(){deck=shuffle(SUITS.flatMap(s=>Array.from({length:13},(_,i)=>({v:i+1,s}))))}
+function draw1(){if(!deck.length)newDeck();return deck.pop()}
+function cardHTML(c,anim){if(!c)return `<div class="pcard back"><div class="q">?</div></div>`;
+  const l=LABEL[c.v]||c.v,red=(c.s==="♥"||c.s==="♦")?" red":"";
+  return `<div class="pcard${red}${anim?" flip":""}"><div class="corner tl">${l}<br>${c.s}</div><div class="big">${l}</div><div class="corner br">${l}<br>${c.s}</div></div>`;}
+function startGame(){newDeck();cur=draw1();round=1;hist=[cur];revealed=false;renderGame();}
+function renderGame(nextC,anim){
+  $("curCard").innerHTML=cardHTML(cur);
+  $("nextCard").innerHTML=cardHTML(nextC||null,anim);
+  $("roundPill").textContent="ROUND "+round;
+  $("deckPill").textContent="山札 "+deck.length;
+  $("hist").innerHTML=hist.map(c=>`<span>${LABEL[c.v]||c.v}</span>`).join("");
+  if(!nextC){$("verdict").textContent="";$("verdict").className="verdict";
+    let hint=cur.v<=3?"小さい数字…HIGHが有利？":cur.v>=11?"大きい数字…LOWが有利？":"どっちだ…！";
+    $("sub").textContent=`ポーズを決めたら「オープン！」（${hint}）`;
+    $("open").style.display="";$("next").style.display="none";}
+}
+$("open").onclick=()=>{
+  if(revealed)return;revealed=true;$("open").style.display="none";
+  const back=$("nextCard").querySelector(".pcard");back.classList.add("shake");
+  $("sub").textContent="ドゥルルルル……";drumroll(1600);
+  setTimeout(()=>{
+    const n=draw1();renderGame(n,true);hist.push(n);
+    $("hist").innerHTML=hist.map(c=>`<span>${LABEL[c.v]||c.v}</span>`).join("");
+    const v=$("verdict");
+    if(n.v>cur.v){v.textContent="HIGH！";v.className="verdict hi";$("sub").textContent="🤲 LOW（腰）の人は着席！";tone(880,.3,"triangle",.12);}
+    else if(n.v<cur.v){v.textContent="LOW！";v.className="verdict lo";$("sub").textContent="🙌 HIGH（頭）の人は着席！";tone(330,.3,"triangle",.12);}
+    else{v.textContent="同じ数字！";v.className="verdict eq";$("sub").textContent="全員セーフ！ そのまま続行";fanfare();}
+    $("next").style.display="";cur=n;
+  },1650);
+};
+$("next").onclick=()=>{round++;revealed=false;renderGame();tone(660,.08)};
+$("revive").onclick=()=>{$("verdict").textContent="敗者復活！";$("verdict").className="verdict eq";$("sub").textContent="座っている人も全員起立！ もう一度チャンス";fanfare();};
+$("newGame").onclick=()=>ask("山札を混ぜ直して、ラウンド1からやり直しますか？（景品の在庫はそのまま）",startGame);
+$("toDraw").onclick=()=>{fanfare();burst();go("draw")};
+startGame();
+
+// ---------- draw ----------
+document.querySelectorAll("#mode button").forEach(b=>{b.classList.toggle("on",b.dataset.m===S.mode);
+  b.onclick=()=>{S.mode=b.dataset.m;save();document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x===b))}});
+function renderStock(){
+  $("stock").innerHTML=S.prizes.filter(p=>p.qty>0).map(p=>`<li class="${p.left?"":"zero"}"><span><b style="color:var(--gold)">${esc(p.rank)}</b> ${esc(p.name)}</span><span>残り ${p.left} / ${p.qty}</span></li>`).join("")||`<li class="muted">景品が登録されていません</li>`;
+  $("log").innerHTML=S.log.slice().reverse().map((l,i)=>`<li><span class="muted">#${S.log.length-i}</span> <span class="r">${esc(l.rank)}</span>${esc(l.name)}${l.who?` → <b>${esc(l.who)}</b> さん`:""}</li>`).join("")||`<li class="muted">まだ当選者はいません</li>`;
+}
+function pick(){
+  const avail=S.prizes.filter(p=>p.left>0);if(!avail.length)return null;
+  if(S.mode==="low")return avail[avail.length-1];
+  if(S.mode==="high")return avail[0];
+  let r=Math.random()*avail.reduce((a,p)=>a+p.left,0);
+  for(const p of avail){r-=p.left;if(r<0)return p}return avail[avail.length-1];
+}
+let spinning=false;
+$("spin").onclick=()=>{
+  if(spinning)return;const prize=pick();
+  if(!prize){$("reel").innerHTML=`<span class="rank">SOLD OUT</span>景品はすべて出ました`;buzz();return;}
+  spinning=true;$("slot").classList.remove("win");
+  const pool=S.prizes.filter(p=>p.qty>0);let t=0,delay=50,steps=0,total=28+Math.floor(Math.random()*8);
+  const tick=()=>{const p=steps>=total?prize:pool[Math.floor(Math.random()*pool.length)];
+    $("reel").innerHTML=`<span class="rank">${esc(p.rank)}</span>${esc(p.name)}`;tone(500+Math.random()*400,.04,"square",.05);
+    steps++;if(steps>total){finish(prize);return}delay*=1.09;setTimeout(tick,delay);};
+  tick();
+};
+function finish(p){
+  p.left--;S.log.push({rank:p.rank,name:p.name,who:$("winner").value.trim()});save();
+  $("slot").classList.add("win");fanfare();burst(p===S.prizes.find(x=>x.qty>0)?260:140);
+  $("winner").value="";renderStock();updateTotal();spinning=false;
+}
+$("undo").onclick=()=>{const l=S.log[S.log.length-1];if(!l)return;
+  ask(`直前の当選「${l.rank} ${l.name}」を取り消して在庫に戻しますか？`,()=>{S.log.pop();
+    const p=S.prizes.find(x=>x.rank===l.rank&&x.name===l.name);if(p&&p.left<p.qty)p.left++;save();renderStock();updateTotal();});};
+
+// ---------- confetti ----------
+const cv=$("fx"),cx=cv.getContext("2d");let parts=[];
+function size(){cv.width=innerWidth;cv.height=innerHeight}size();addEventListener("resize",size);
+function burst(n=140){const cols=["#f5c542","#e5484d","#3e8ef7","#ffffff","#5ad19a"];
+  for(let i=0;i<n;i++)parts.push({x:innerWidth/2+(Math.random()-.5)*200,y:innerHeight*.35,vx:(Math.random()-.5)*16,vy:-Math.random()*14-4,
+    r:Math.random()*6+4,c:cols[i%cols.length],a:Math.random()*6,life:160});if(parts.length===n)loop();}
+function loop(){cx.clearRect(0,0,cv.width,cv.height);parts.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=.2;p.life--;
+  cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);cx.restore();});
+  parts=parts.filter(p=>p.life>0&&p.y<cv.height+20);if(parts.length)requestAnimationFrame(loop);else cx.clearRect(0,0,cv.width,cv.height);}
+</script>
+</body>
+</html>

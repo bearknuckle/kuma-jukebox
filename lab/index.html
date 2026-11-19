@@ -114,7 +114,7 @@ const GAMES=[
   {
     id:'doubutsu-kabu', name:'せーの株 どうぶつ版', icon:'🦦', color:'#3f8f5a',
     desc:'中身はせーの株そのまま、舞台はどうぶつたちの取引所。カワウソ水産・クマのハチミツ製菓・ウサギのカブ農園の株を、チーター・カメ・ヒツジと「せーの」で売り買い。買いが集まると群れが押し寄せて値上がり。持ち株は切り株、配当は実り、倒産すると伐採されて新芽から再上場。',
-    players:'1人（CPU 3匹）', time:'5〜15分', genre:'株', added:'2026-11-19', version:'0.2', updated:'2026-11-19', isNew:true
+    players:'1人（CPU 3匹）', time:'5〜15分', genre:'株', added:'2026-11-19', version:'0.3', updated:'2026-11-19', isNew:true
   },
   {
     id:'seeno-kabu', name:'せーの株', icon:'🫴', color:'#c8951e',
@@ -129,6 +129,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.3', text:'景気カードをせーの株と同じ6種類にそろえた（カブ農園に出たブーム・不祥事は「カブ鍋ブーム」「カブの大豊作」として表示）'},
   {date:'2026-11-19', id:'uwasa-kabu',       version:'0.6', text:'バランス調整：1回で2株まで売買、最後は一斉に売って値下がり、ニュースの値動きを大きく'},
   {date:'2026-11-19', id:'bonenkai-highlow', version:'0.1', text:'新しく登場（宴会のゲーム・景品スロットつきの忘年会ゲーム）'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.2', text:'ウサギのカブ農園が上場、持ち株は切り株・配当は実り・倒産は伐採と新芽で再上場'},

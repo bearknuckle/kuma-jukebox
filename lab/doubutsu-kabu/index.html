@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>せーの株 どうぶつ版</title>
+<!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="せーの株 どうぶつ版｜試作ゲームラボ">
@@ -116,12 +117,12 @@
     <div class="panel">
       <h2>ルール</h2>
       <ol class="rules">
-        <li>銘柄は <b>🦦カワウソ水産・🐻クマのハチミツ製菓・🐰ウサギのカブ農園</b> の3社（カブ農園は天気しだいで値動きが荒め）。株価は全部 <b>5</b> から。あなた（🐿️リス）は <b>30コイン</b> で始めます。</li>
+        <li>銘柄は <b>🦦カワウソ水産・🐻クマのハチミツ製菓・🐰ウサギのカブ農園</b> の3社。株価は全部 <b>5</b> から。あなた（🐿️リス）は <b>30コイン</b> で始めます。</li>
         <li>ライバルは <b>🐆チーター</b>（情報が入るとすぐ動く）、<b>🐢カメ</b>（割安な株をコツコツ買う）、<b>🐑ヒツジ</b>（みんなが買った株に乗っかる）。</li>
         <li>各社には裏向きの<b>業績カード</b>（−3／−1／+1／+3 のどれか）があり、あなたは<b>1社だけ</b>こっそり見られます。CPUもそれぞれ1社ずつ知っています。</li>
         <li>毎ラウンド、全員が「銘柄」と「買う／売る／見送り」を1つ選び、<b>せーの</b>で公開。</li>
         <li>買いが集まると群れが押し寄せ、売りが重なると逃げ出します。銘柄ごとに <b>買いの数 − 売りの数</b> だけ株価が動き（1〜10。じっくりモードは1〜20）、<b>動いた後の値段</b>で全員の注文が成立します。1注文は1株。</li>
-        <li>期のはじめに<b>景気カード</b>を1枚めくります（好景気・不景気・ブーム・不祥事・大型受注・平穏、カブ農園だけに効く「カブの大豊作」「カブ鍋ブーム」）。</li>
+        <li>期のはじめに<b>景気カード</b>を1枚めくります（好景気・不景気・ブーム・不祥事・大型受注・平穏）。</li>
         <li>買った株は、会社の下に<b>切り株</b>🪵として並びます。会社の木は株価が上がると茂り、下がるとしおれます。</li>
         <li>売り買いの代わりに<b>調べる</b>（2コイン）を選ぶと、ほかの会社の業績も見られます。</li>
         <li>6ラウンド後に業績カードを公開。<b>株価 + 業績</b> が最終株価になり、株を換金してお金が一番多い人の勝ち。</li>
@@ -269,24 +270,25 @@ const EVENTS=[
   {id:'scandal',icon:'💣',name:'不祥事', w:2, one:true, txt:t=>`${L(t)}の株価 −2`},
   {id:'order', icon:'📦',name:'大型受注', w:2, one:true, txt:t=>`${L(t)}の業績 +2（決算で効く・みんなが知っている）`},
   {id:'calm',  icon:'🍵',name:'平穏',     w:2, txt:()=>'何も起きない'},
-  {id:'harvest',icon:'🥬',name:'カブの大豊作',w:1, fix:'C', txt:t=>`${L(t)}の株価 −2（作りすぎて値くずれ）`},
-  {id:'nabe',  icon:'🍲',name:'カブ鍋ブーム',w:1, fix:'C', txt:t=>`${L(t)}の株価 +2（カブが飛ぶように売れる）`},
 ];
 function drawEvent(){
   const tot=EVENTS.reduce((t,e)=>t+e.w,0); let x=Math.random()*tot, ev=EVENTS[0];
   for(const e of EVENTS){if((x-=e.w)<=0){ev=e;break}}
-  const t=ev.fix||(ev.one?NAMES[Math.floor(Math.random()*3)]:null), M=maxP();
+  const t=ev.one?NAMES[Math.floor(Math.random()*3)]:null, M=maxP();
   const before={...S.price};
   if(ev.id==='boom')NAMES.forEach(n=>S.price[n]=clamp(S.price[n]+1,1,M));
   if(ev.id==='slump')NAMES.forEach(n=>S.price[n]=clamp(S.price[n]-1,1,M));
-  if(ev.id==='fad'||ev.id==='nabe')S.price[t]=clamp(S.price[t]+2,1,M);
-  if(ev.id==='scandal'||ev.id==='harvest')S.price[t]=clamp(S.price[t]-2,1,M);
+  if(ev.id==='fad')S.price[t]=clamp(S.price[t]+2,1,M);
+  if(ev.id==='scandal')S.price[t]=clamp(S.price[t]-2,1,M);
   S.bonus={A:0,B:0,C:0};
   if(ev.id==='order'){S.bonus[t]=2;S.earn[t]+=2;}
   S.event={icon:ev.icon,name:ev.name,txt:ev.txt(t),target:t};
+  // 見た目だけ：カブ農園に出たブーム・不祥事は呼び名を変える（効果はせーの株と同じ）
+  if(t==='C'&&ev.id==='fad')S.event={...S.event,icon:'🍲',name:'ブーム（カブ鍋ブーム）'};
+  if(t==='C'&&ev.id==='scandal')S.event={...S.event,icon:'🥬',name:'不祥事（カブの大豊作で値くずれ）'};
   NAMES.forEach(n=>S.prev[n]=S.price[n]-before[n]);
   if(NAMES.some(n=>S.price[n]!==before[n]))NAMES.forEach(n=>S.hist[n].push(S.price[n]));
-  S.log.push(`${ev.icon} 景気カード「${ev.name}」：${S.event.txt}`);
+  S.log.push(`${S.event.icon} 景気カード「${S.event.name}」：${S.event.txt}`);
   S.showEvent=true;
 }
 function eventBanner(){

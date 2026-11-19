@@ -90,12 +90,6 @@ const GAMES=[
     players:'1人（CPU 2球場）', time:'10〜20分', genre:'スポーツ', added:'2026-11-19', version:'0.2', updated:'2026-11-20', isNew:true
   },
   {
-    id:'bonenkai-highlow', name:'ハイ＆ロー サバイバル', icon:'🎉', color:'#c8323a',
-    desc:'会社の忘年会向け。全員起立して、次のトランプが大きいか小さいかをポーズで予想。外れたら着席、残った人数が景品くじの残り以下になったら勝負あり、1人ずつくじ箱から景品くじを引く。トランプ1組と手書きのくじでアプリなしでも遊べる。スクリーンに映せば大人数でも。',
-    players:'何人でも（1台をスクリーンに映して）', time:'15〜30分', genre:'宴会', added:'2026-11-19', version:'0.2', updated:'2026-11-20', isNew:true,
-    note:'景品の登録と引いたくじは、開いたブラウザにだけ保存されます'
-  },
-  {
     id:'pennant-owners', name:'ペナント・オーナーズ', icon:'⚾', color:'#1d5a37',
     desc:'選手を取り合うドラフトから、3試合のシリーズへ。打者は1人ずつサイコロで勝負し、最終回は「直球か変化球か」の読み合い。読み勝って逆転、サヨナラも。',
     players:'1人（CPU 1人）', time:'10分', genre:'スポーツ', added:'2026-11-19', version:'0.3', updated:'2026-11-20', isNew:true
@@ -144,7 +138,6 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
-  {date:'2026-11-20', id:'bonenkai-highlow', version:'0.2', text:'景品スロットを手書きでも作れる「景品くじ箱」に、アプリなしで遊ぶ方法とくじの一覧を追加'},
   {date:'2026-11-20', id:'kanpai',           version:'0.4', text:'CPUを弱めに調整、いちばんやさしい「はじめて」を追加'},
   {date:'2026-11-20', id:'seeno-doubutsu',   version:'0.1', text:'新しく登場（こどものゲーム・同時に出してえさを取りあうどうぶつカードゲーム）'},
   {date:'2026-11-20', id:'uwasa-kabu',       version:'0.8', text:'「かんたん」と「ぜんぶ」の2モードに。はじめての人はウワサと出どころだけで遊べる'},
@@ -158,7 +151,6 @@ const UPDATES=[
   {date:'2026-11-19', id:'pennant-owners',   version:'0.2', text:'シンプル版に作り直し：年俸・イベント・成長をなくし、1ラウンドは「買う→3人で打つ→賞金」だけに'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.3', text:'景気カードをせーの株と同じ6種類にそろえた（カブ農園に出たブーム・不祥事は「カブ鍋ブーム」「カブの大豊作」として表示）'},
   {date:'2026-11-19', id:'uwasa-kabu',       version:'0.6', text:'バランス調整：1回で2株まで売買、最後は一斉に売って値下がり、ニュースの値動きを大きく'},
-  {date:'2026-11-19', id:'bonenkai-highlow', version:'0.1', text:'新しく登場（宴会のゲーム・景品スロットつきの忘年会ゲーム）'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.2', text:'ウサギのカブ農園が上場、持ち株は切り株・配当は実り・倒産は伐採と新芽で再上場'},
   {date:'2026-11-19', id:'pennant-owners',   version:'0.1', text:'新しく登場（スポーツのゲーム・監督と経営の野球カードゲーム）'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.1', text:'新しく登場（せーの株を動物の取引所の見た目で）'},
@@ -199,7 +191,6 @@ const CATS=[
   {id:'株',label:'株のゲーム',icon:'📈'},
   {id:'お酒',label:'お酒のゲーム',icon:'🍶',note:'飲みの席で遊べるパーティー系'},
   {id:'スポーツ',label:'スポーツのゲーム',icon:'⚾'},
-  {id:'宴会',label:'宴会のゲーム',icon:'🎉',note:'忘年会など大人数で'},
   {id:'こども',label:'こどものゲーム',icon:'🧸',note:'小学生向け'},
 ];
 let cur='すべて';

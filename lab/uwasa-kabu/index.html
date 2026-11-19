@@ -158,7 +158,7 @@ button{font-family:inherit;cursor:pointer;border:none}
       <li>📊 <b>売買で値段が動く</b>：買うと株価+1、売ると株価−1。買うときは上がったあとの値段、売るときは下がったあとの値段になる</li>
       <li>🔄 <b>手番は毎ラウンドずれる</b>：後の番なら、ほかの人の動きを見てから決められる</li>
       <li>🏁 <b>最後はみんなで一斉に売る</b>：2株売られるごとに株価−1。たくさん持たれている株ほど安く売れる（売る順番は関係なし）</li>
-      <li>🕵️ <b>情報屋</b>：1コイン払うと、ウワサが本当かどうかを先に教えてもらえる（1ゲーム2回まで。CPUも使う）</li>
+      <li>🕵️ <b>情報屋</b>：ウワサが本当かどうかを先に教えてもらえる（無料・1ゲーム2回まで。CPUも使う）。いつ使うかが勝負</li>
     </ul>
     <p style="font-size:13px;color:var(--sub);margin-top:8px">最後に持ち株をお金に換えて、いちばん多い人の勝ち。</p>
   </div>
@@ -224,7 +224,7 @@ const COMP=[
   {id:'power',name:'電力',emo:'⚡',color:'var(--power)'},
 ];
 const CN=Object.fromEntries(COMP.map(c=>[c.id,c]));
-const ROUNDS=5, START_COINS=10, START_PRICE=5, SPY_COST=1, SPY_USES=2;
+const ROUNDS=5, START_COINS=15, START_PRICE=5, SPY_COST=0, SPY_USES=2;
 // ウワサの出どころ：p = 本当になる確率
 const SOURCES=[
   {id:'paper',name:'新聞',emo:'📰',p:0.9,cls:'s-paper',rely:'ほぼ本当（9割）'},
@@ -400,7 +400,7 @@ function nextTurn(){
   S.phase='cpu';render();
   setTimeout(()=>{
     const p=S.players[i];
-    if(cpuWantsSpy(p)){p.coins-=SPY_COST;p.spy--;p.spyUsed++;p.knows=true;S.log.push(`${p.icon} ${p.name}：🕵️情報屋に聞いた（${SPY_COST}コイン）`)}
+    if(cpuWantsSpy(p)){p.coins-=SPY_COST;p.spy--;p.spyUsed++;p.knows=true;S.log.push(`${p.icon} ${p.name}：🕵️情報屋に聞いた`)}
     const a=cpuMove(p);doAction(p,a.type,a.c,a.n||1);S.turn++;S.phase='wait';render(true);nextTurn();
   },750);
 }
@@ -412,7 +412,7 @@ function useSpy(){
   const el=document.getElementById('spyInfo');
   el.innerHTML=S.card.real?'🕵️ 情報屋「このウワサは<span style="color:#ffb3ad">本当</span>だよ」':'🕵️ 情報屋「このウワサは<span style="color:#a9cbf3">ウソ</span>だよ」';
   el.classList.remove('hidden');
-  S.log.push(`${me.icon} あなた：🕵️情報屋に聞いた（${SPY_COST}コイン）`);
+  S.log.push(`${me.icon} あなた：🕵️情報屋に聞いた`);
   render();
 }
 function setQty(n){S.qty=n;render()}
@@ -484,7 +484,7 @@ function showLesson(){
   const popIds=Object.keys(S.pop);
   if(popIds.some(id=>S.pop[id])) tip+=`<br>📊 売り買いで値段が動いた。<b>買う人が多いと上がり、売る人が多いと下がる</b>（需要と供給）。`;
   if(S.lateBuy) tip+='<br>⏰ ほかの人が先に買って値上がりしたあとに買った。<b>出遅れると高くつく</b>。';
-  if(me.knows) tip+='<br>🕵️ お金を払って確かな情報を手に入れた。<b>情報にも値段がある</b>。';
+  if(me.knows) tip+='<br>🕵️ 確かな情報で判断できた。<b>確かな情報は数が限られた貴重なもの</b>。使いどころを選ぼう。';
   if(S.round===3) tip+='<br>💡 1つの会社に集中すると、当たれば大もうけ、外れれば大ゾン。<b>分けて持つ</b>と安定するよ。';
   const sign=diff>0?'+':'';
   document.getElementById('lesson').innerHTML=`このラウンドのあなたの資産：<b class="${diff>0?'up':diff<0?'down':''}">${sign}${diff}</b><br>${tip}`;
@@ -525,7 +525,7 @@ function finish(){
     <li>情報屋を使った回数：<b>${me.spyUsed}回</b>（CPU：${S.players.slice(1).map(p=>p.icon+p.spyUsed).join(' ')}）</li>
     <li>一斉に売ったときの株価：${COMP.map(c=>{const l=S.liq[c.id];return l.sold?`${c.emo}${l.before}→<b class="down">${l.after}</b>（${l.sold}株・1株平均${Math.round(l.avg*10)/10}）`:`${c.emo}${l.before}（売りなし）`}).join('　')}</li>
   </ul>
-  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「買う人が多いと値段は上がる（出遅れると高い）」「みんなが同時に売ると値段は下がる」「情報にも値段がある」「1社に集中しない」——この6つを覚えておこう。</p>`;
+  <p style="font-size:13px;color:var(--sub);margin-top:8px;line-height:1.7">本物の株も、ニュースやウワサで値段が動きます。「<b>情報の出どころを確かめる</b>」「ウワサは外れることもある」「買う人が多いと値段は上がる（出遅れると高い）」「みんなが同時に売ると値段は下がる」「確かな情報は貴重」「1社に集中しない」——この6つを覚えておこう。</p>`;
   show('end');
 }
 
@@ -561,7 +561,7 @@ function render(animate){
   const sb=document.getElementById('spyBtn');
   sb.classList.toggle('hidden',S.phase!=='act');
   sb.disabled=!(S.phase==='act'&&!me.knows&&me.spy>0&&me.coins>=SPY_COST);
-  sb.textContent=me.knows?'🕵️ 情報屋に聞いた':`🕵️ 情報屋に聞く（${SPY_COST}コイン・残り${me.spy}回）`;
+  sb.textContent=me.knows?'🕵️ 情報屋に聞いた':`🕵️ 情報屋に聞く（残り${me.spy}回）`;
   if(S.phase==='act'){phase.innerHTML=`あなたの番（${S.turn+1}番目）：<b>1回だけ</b> 買う・売る・見送る（2株まで）を選ぼう（所持金 ${me.coins}コイン）`;btn.textContent='見送る';btn.onclick=()=>act('pass')}
   else if(S.phase==='cpu'||S.phase==='wait'){phase.textContent=(S.phase==='wait'||!S.players[S.order[S.turn]])?'…':`${S.players[S.order[S.turn]].icon} ${S.players[S.order[S.turn]].name}が考え中…`;btn.textContent='…';btn.disabled=true;btn.onclick=null}
   else if(S.phase==='reveal'){phase.textContent='みんな決めた！ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}

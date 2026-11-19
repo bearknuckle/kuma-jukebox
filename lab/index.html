@@ -77,7 +77,7 @@ const GAMES=[
   {
     id:'pennant-owners', name:'ペナント・オーナーズ', icon:'⚾', color:'#1d5a37',
     desc:'球団オーナー兼監督になって、選手カードの獲得・打線と先発の編成・給料日のやりくりで6か月のシーズンを戦う、監督・経営型の野球カードゲーム。打者1人にサイコロ1個で試合はサクッと決着。スターを集めると年俸で首が回らなくなる。若手は伸び、ベテランは衰え、エースは連投で疲れる。',
-    players:'1人（CPU 3球団）', time:'15分', genre:'スポーツ', added:'2026-11-19', isNew:true
+    players:'1人（CPU 3球団）', time:'15分', genre:'スポーツ', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
   },
   {
     id:'kanpai', name:'カンパイ！', icon:'🍻', color:'#b8322a',
@@ -108,7 +108,7 @@ const GAMES=[
   {
     id:'doubutsu-kabu', name:'せーの株 どうぶつ版', icon:'🦦', color:'#3f8f5a',
     desc:'中身はせーの株そのまま、舞台はどうぶつたちの取引所。カワウソ水産・クマのハチミツ製菓・フクロウ書房の株を、チーター・カメ・ヒツジと「せーの」で売り買い。買いが集まると群れが押し寄せて値上がりし、売りが重なると逃げ出す。',
-    players:'1人（CPU 3匹）', time:'5〜15分', genre:'株', added:'2026-11-19', isNew:true
+    players:'1人（CPU 3匹）', time:'5〜15分', genre:'株', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
   },
   {
     id:'seeno-kabu', name:'せーの株', icon:'🫴', color:'#c8951e',
@@ -123,6 +123,8 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-19', id:'pennant-owners',   version:'0.1', text:'新しく登場（スポーツのゲーム・監督と経営の野球カードゲーム）'},
+  {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.1', text:'新しく登場（せーの株を動物の取引所の見た目で）'},
   {date:'2026-11-19', id:'kanpai',           version:'0.3', text:'ラウンド制と合計点、カンパイのあと続けて出せる「はしご酒」'},
   {date:'2026-11-19', id:'seeno-kabu',       version:'0.6', text:'2コインで他社の業績をのぞける「調べる」を追加'},
   {date:'2026-11-19', id:'onpu-karuta',      version:'0.5', text:'加線の札を2点に、番号つきのメロディ読み札'},

@@ -7,7 +7,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="カンパイ！｜試作ゲームラボ">
-<meta property="og:description" content="おつまみと味マークが1つでも合うお酒を、誰より早く出して「カンパイ！」。唐揚げにはビール、塩辛には日本酒。早出しで手札を空にしたら勝ち。CPU対戦と、1台を囲んでみんなで遊ぶモードあり。">
+<meta property="og:description" content="おつまみと味マークが1つでも合うお酒を、誰より早く出して「カンパイ！」。唐揚げにはビール、塩辛には日本酒。早出しで手札を空にしたら勝ち。カンパイ後2秒は続けて出せる「はしご酒」で連鎖も。3ラウンドの合計点で総合優勝。CPU対戦と、1台を囲んでみんなで遊ぶモードあり。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/kanpai/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -185,6 +185,31 @@ body.partymode #solo{display:none}
 .card.mid.wild .marks .mk{width:70px}
 .card.mid.big{transform:none}
 
+/* v0.3 */
+.namaTime.chain{background:var(--red);color:#fff}
+.namaTime.chain i{background:var(--amber2)}
+.card.target{box-shadow:0 0 0 4px var(--red),0 0 22px rgba(184,50,42,.85)}
+.kbox{display:flex;flex-direction:column;align-items:center}
+.kanpai .kbox.flip{display:none}
+body.partymode .kanpai{justify-content:space-around}
+body.partymode .kanpai .kbox.flip{display:flex;transform:rotate(180deg)}
+body.partymode .kanpai .k{font-size:min(13vw,84px)}
+.zbadge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.7);opacity:0;pointer-events:none;z-index:4;
+  background:var(--paper);color:var(--ink);font-weight:900;font-size:15px;padding:8px 14px;border-radius:12px;white-space:nowrap;transition:.18s;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.zbadge.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.zbadge.bad{background:var(--red);color:#fff}
+.msgflip{transform:rotate(180deg)}
+.pts{color:var(--amber2);font-weight:900;font-size:13px;margin-left:4px}
+.roundinfo{font-weight:900;font-size:13px;background:rgba(0,0,0,.3);padding:4px 10px;border-radius:10px;color:var(--amber2)}
+.modal.duo{flex-direction:column;gap:10px}
+.modal.duo .sheet{max-height:46vh}
+.sheet.flipcopy{transform:rotate(180deg);display:none}
+.modal.duo .sheet.flipcopy{display:block}
+table.score{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+table.score th,table.score td{padding:5px 4px;border-bottom:1px solid #e3d5b8;text-align:center}
+table.score th{font-size:11.5px;color:#7a6a55}
+table.score td:first-child,table.score th:first-child{text-align:left}
+table.score tr.top td{background:#fff1c9;font-weight:900}
 /* modal */
 .modal{position:fixed;inset:0;background:rgba(20,10,5,.78);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
 .modal[hidden]{display:none}
@@ -219,6 +244,7 @@ body.partymode #solo{display:none}
 <div class="wrap" id="solo">
   <header>
     <h1>🍻 カンパイ！</h1>
+    <span class="roundinfo" id="roundInfo"></span>
     <div class="noren">
       <button class="btn ghost" id="rulesBtn">メニュー</button>
       <button class="btn ghost" id="restartBtn">最初から</button>
@@ -229,6 +255,7 @@ body.partymode #solo{display:none}
 
   <div class="table" id="table">
     <div class="namaTime" id="namaTime">🍻 とりあえずタイム<i></i></div>
+    <div class="namaTime chain" id="chainTime">🏮 はしご酒タイム<i></i></div>
     <div class="slots">
       <div><div class="slot-label">おつまみ</div><div id="snackSlot"></div></div>
       <div class="x">×</div>
@@ -245,7 +272,7 @@ body.partymode #solo{display:none}
 
   <div class="handhead"><h2>あなたの手札</h2><span class="c" id="myCount"></span></div>
   <div class="hand" id="hand"></div>
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ カンパイ！ v0.2</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ カンパイ！ v0.3</div>
 </div>
 
 <!-- ================= PARTY ================= -->
@@ -253,10 +280,13 @@ body.partymode #solo{display:none}
   <div class="prow top" id="rowTop"></div>
   <div class="ptable">
     <div class="namaTime" id="namaTimeP">🍻 とりあえずタイム<i></i></div>
+    <div class="namaTime chain" id="chainTimeP">🏮 はしご酒タイム<i></i></div>
     <div id="pSnack"></div>
     <div class="x">×</div>
     <div id="pDrink"></div>
     <div class="side">
+      <span class="roundinfo" id="pRound"></span>
+      <div class="msg msgflip" id="pMsgTop"></div>
       <div class="msg" id="pMsg"></div>
       <button class="btn red" id="pSumimasen">すいませーん！</button>
       <button class="btn ghost" id="pMenu" style="padding:4px 10px;font-size:12px">メニュー</button>
@@ -265,7 +295,7 @@ body.partymode #solo{display:none}
   <div class="prow" id="rowBottom"></div>
 </div>
 
-<div class="kanpai" id="kanpai"><div class="k">カンパイ！</div><div class="who" id="kWho"></div><div class="why" id="kWhy"></div><div class="tp" id="kTp" hidden>鉄板ペア！</div></div>
+<div class="kanpai" id="kanpai"><div class="kbox flip"></div><div class="kbox"></div></div>
 <div class="toast" id="toast"></div>
 
 <div class="modal" id="startModal">
@@ -278,7 +308,11 @@ body.partymode #solo{display:none}
       <li><b>とりあえず生</b>：どのおつまみにも合う。ただし<b>おつまみが出てから2秒以内</b>（とりあえずタイム）しか出せない</li>
       <li><b>お手つき</b>：合わないカードや、時間切れの生を出すと2枚引く</li>
       <li><b>すいませーん！</b>：出せるカードがないときは、次のおつまみを頼む</li>
+      <li><b>はしご酒</b>：カンパイのあと2秒間は、<b>いま出たお酒</b>と味マークが合うお酒を誰でも続けて出せる（生は不可）</li>
+      <li><b>得点</b>：上がり +3、（3人以上なら）残り手札が一番少ない人 +1、はしご酒を一番多く決めた人 +1。合計点で総合優勝</li>
     </ul>
+    <div class="lbl">ラウンド数</div>
+    <div class="opt" id="optRounds"><button data-v="1">1回</button><button data-v="3" class="on">3回</button><button data-v="5">5回</button></div>
     <div class="lbl">あそびかた</div>
     <div class="opt" id="optMode"><button data-v="solo" class="on">🤖 CPUと対戦</button><button data-v="party">🍻 みんなで1台</button></div>
     <div id="soloOpts">
@@ -298,6 +332,7 @@ body.partymode #solo{display:none}
 </div>
 
 <div class="modal" id="endModal" hidden>
+  <div class="sheet flipcopy" id="endFlip"></div>
   <div class="sheet">
     <h2 id="endTitle">ごちそうさま！</h2>
     <div class="result" id="endBody"></div>
@@ -346,15 +381,17 @@ const LV = {
   hard:{min:950,max:1800,wait:5500,hint:false},
 };
 const NAMA_MS = 2000;
+const CHAIN_MS = 2000;
 const PARTY_WAIT = 15000;
 
-let settings = {mode:'solo', cpu:3, lv:'normal', pn:2};
-let G = null, uid = 0;
+let settings = {mode:'solo', cpu:3, lv:'normal', pn:2, rounds:3};
+let G = null, M = null, uid = 0;
 
 const $ = id => document.getElementById(id);
 const shuffle = a => {for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const rand = (a,b) => a + Math.random()*(b-a);
 const isParty = () => G && G.mode==='party';
+const now = () => performance.now();
 
 function buildDrinks(){
   const d=[];
@@ -367,11 +404,18 @@ function buildSnacks(){
   PAIRS.forEach(p=>{for(let i=0;i<2;i++) s.push({id:uid++,kind:'snack',name:p[3],em:p[4],marks:p[0]})});
   return shuffle(s);
 }
-const namaOpen = () => G && G.open && (performance.now()-G.flipT) < NAMA_MS;
-const matches = (d,s) => d.wild ? namaOpen() : d.marks.some(m=>s.marks.includes(m));
+const phaseOpen = () => G && (G.phase==='snack' || G.phase==='chain');
+const namaOpen = () => G && G.phase==='snack' && (now()-G.flipT) < NAMA_MS;
+const shareMark = (a,b) => a.marks.some(m=>b.marks.includes(m));
+function canPlay(c){
+  if(G.phase==='snack') return c.wild ? namaOpen() : shareMark(c,G.snack);
+  if(G.phase==='chain') return !c.wild && shareMark(c,G.played);
+  return false;
+}
 const teppan = (d,s) => !d.wild && d.marks.every(m=>s.marks.includes(m));
 const shared = (d,s) => d.wild ? [...s.marks] : d.marks.filter(m=>s.marks.includes(m));
 const sortKey = c => c.wild ? 99 : ORDER.indexOf(c.marks[0])*10 + ORDER.indexOf(c.marks[1]);
+function setPhase(ph){ G.phase=ph; G.step++; }
 
 /* ---------- sound / haptics ---------- */
 let AC=null;
@@ -387,11 +431,14 @@ function tone(freqs,dur=.5,type='sine',vol=.18,delay=0){
   });
 }
 const buzz = p => { try{ navigator.vibrate && navigator.vibrate(p) }catch(e){} };
-const sClink = () => {tone([2093,2637],.6,'sine',.15);tone([3136],.4,'sine',.08,.06);buzz(40)};
+const sClink = (up=0) => {const k=Math.pow(1.122,up);tone([2093*k,2637*k],.6,'sine',.15);tone([3136*k],.4,'sine',.08,.06);buzz(40)};
 const sBad = () => {tone([180,150],.3,'square',.06);buzz([60,40,60])};
 const sFlip = () => tone([660],.08,'triangle',.08);
 
-/* ---------- game ---------- */
+/* ---------- match / round ---------- */
+function startMatch(){ M={round:0,total:settings.rounds,scores:null,final:false}; nextRound(); }
+function nextRound(){ M.round++; newGame(); }
+
 function newGame(){
   if(G) clearTimers();
   const mode=settings.mode;
@@ -402,15 +449,21 @@ function newGame(){
   } else {
     players=PARTY_DEFS.slice(0,settings.pn).map(d=>({...d,cpu:false,hand:[]}));
   }
+  if(!M.scores) M.scores=players.map(()=>0);
   document.body.classList.toggle('partymode', mode==='party');
   G={mode,players,drawPile:buildDrinks(),discard:[],snackPile:buildSnacks(),usedSnacks:[],
-     snack:null,played:null,lit:null,open:false,flipId:0,flipT:0,timers:[],discarding:-1,kanpaiCount:players.map(()=>0),round:0,over:false,startT:0,waitMs:0};
+     snack:null,played:null,litSnack:null,litDrink:null,phase:'closed',step:0,flipT:0,timers:[],discarding:-1,
+     kanpaiCount:players.map(()=>0),chainCount:players.map(()=>0),chainLen:0,round:0,over:false,startT:0,waitMs:0};
   for(let r=0;r<6;r++) players.forEach(p=>p.hand.push(G.drawPile.pop()));
   players.forEach(sortHand);
   if(mode==='party') buildPartyZones();
+  const ri = M.total>1 ? `ラウンド ${M.round}/${M.total}` : '';
+  $('roundInfo').textContent=ri; $('pRound').textContent=ri;
+  $('roundInfo').hidden=!ri; $('pRound').hidden=!ri;
+  hideBadge('nama'); hideBadge('chain');
   renderAll();
-  setMsg('おつまみが来ますよ…');
-  later(flipNext,1000);
+  setMsg(M.total>1 ? `ラウンド ${M.round}　おつまみが来ますよ…` : 'おつまみが来ますよ…');
+  later(flipNext,1100);
 }
 function sortHand(p){ p.hand.sort((a,b)=>sortKey(a)-sortKey(b)); }
 function later(fn,ms){ const t=setTimeout(fn,ms); G.timers.push(t); return t; }
@@ -432,18 +485,19 @@ function flipNext(){
   if(G.snack) G.usedSnacks.push(G.snack);
   if(!G.snackPile.length) G.snackPile = shuffle(G.usedSnacks.splice(0));
   G.snack = G.snackPile.pop();
-  G.played = null; G.lit=null; G.open = true; G.flipId++; G.round++; G.discarding=-1;
-  G.flipT = performance.now();
+  G.played=null; G.litSnack=null; G.litDrink=null; G.discarding=-1; G.chainLen=0; G.round++;
+  setPhase('snack'); G.flipT=now();
+  const step=G.step;
   sFlip();
+  hideBadge('chain'); showBadge('nama');
+  later(()=>hideBadge('nama'), NAMA_MS);
   renderTable(true); renderHands(); renderOpps();
   setMsg('合うお酒を出して「カンパイ！」');
-  showNama();
-  const id=G.flipId;
-  later(()=>{ if(G.flipId===id) renderHands(); }, NAMA_MS+30); // 生 time over → refresh hints
+  later(()=>{ if(G.step===step) renderHands(); }, NAMA_MS+30);
 
   if(isParty()){
-    G.waitMs = PARTY_WAIT; G.startT=performance.now();
-    later(()=>{ if(G.open && G.flipId===id) sumimasen('店員さん'); }, PARTY_WAIT);
+    G.waitMs=PARTY_WAIT; G.startT=now();
+    later(()=>{ if(G.step===step) sumimasen('店員さん'); }, PARTY_WAIT);
     return;
   }
   const lv=LV[settings.lv];
@@ -452,76 +506,86 @@ function flipNext(){
     const choice = cpuChoose(p);
     let d = rand(lv.min,lv.max)*p.speed;
     if(choice){
-      if(choice.wild && d > NAMA_MS-150) return;   // 間に合わない
+      if(choice.wild && d > NAMA_MS-150) return;
       if(teppan(choice,G.snack)) d += 250;
-      later(()=>{ if(G.open && G.flipId===id) tryPlay(i,choice); }, d);
+      later(()=>{ if(G.step===step) tryPlay(i,choice); }, d);
     } else if(Math.random()<p.goof && p.hand.length){
       const pool=p.hand.filter(c=>!c.wild);
       if(!pool.length) return;
       const wrong=pool[Math.random()*pool.length|0];
-      later(()=>{ if(G.open && G.flipId===id) tryPlay(i,wrong); }, d*.8);
+      later(()=>{ if(G.step===step) tryPlay(i,wrong); }, d*.8);
     }
   });
-  G.waitMs = lv.wait; G.startT = performance.now(); tickTimer(id);
+  G.waitMs=lv.wait; G.startT=now(); tickTimer(step);
   later(()=>{
-    if(G.open && G.flipId===id){
+    if(G.step===step){
       const cpus=G.players.filter(p=>p.cpu);
-      const caller = cpus[Math.random()*cpus.length|0];
+      const caller=cpus[Math.random()*cpus.length|0];
       bubble(G.players.indexOf(caller),'すいませーん！');
       sumimasen(caller.name);
     }
   }, lv.wait);
 }
-function showNama(){
-  ['namaTime','namaTimeP'].forEach(id=>{
+function showBadge(kind){
+  (kind==='nama'?['namaTime','namaTimeP']:['chainTime','chainTimeP']).forEach(id=>{
     const el=$(id); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   });
-  later(()=>['namaTime','namaTimeP'].forEach(id=>$(id).classList.remove('on')), NAMA_MS);
 }
+function hideBadge(kind){ (kind==='nama'?['namaTime','namaTimeP']:['chainTime','chainTimeP']).forEach(id=>$(id).classList.remove('on')); }
 let rafId=0;
-function tickTimer(id){
+function tickTimer(step){
   cancelAnimationFrame(rafId);
-  const step=()=>{
-    if(!G || G.flipId!==id || !G.open){ $('timerBar').style.width='0%'; return; }
-    const r=Math.max(0,1-(performance.now()-G.startT)/G.waitMs);
+  const tick=()=>{
+    if(!G || G.step!==step){ $('timerBar').style.width='0%'; return; }
+    const r=Math.max(0,1-(now()-G.startT)/G.waitMs);
     $('timerBar').style.width=(r*100)+'%';
-    rafId=requestAnimationFrame(step);
+    rafId=requestAnimationFrame(tick);
   };
-  step();
+  tick();
 }
 function cpuChoose(p){
   const s=G.snack;
-  const ok=p.hand.filter(c=>!c.wild && c.marks.some(m=>s.marks.includes(m)));
+  const ok=p.hand.filter(c=>!c.wild && shareMark(c,s));
   const tp=ok.find(c=>teppan(c,s)); if(tp) return tp;
   if(ok.length) return ok[0];
   return p.hand.find(c=>c.wild) || null;
 }
 
-function tryPlay(pi,card){
-  if(!G.open) return;
+function penalty(pi,card){
   const p=G.players[pi];
-  if(!matches(card,G.snack)){
-    sBad();
-    draw(p,2);
-    const why = card.wild ? 'とりあえずタイム終了！' : '味マークが合いません';
-    if(p.cpu){ renderOpps(); bubble(pi,'お手つき！+2'); }
-    else if(isParty()){ renderZone(pi); zoneFx(pi,'bad'); toast(`${p.av} ${p.name} お手つき！ ${why}（+2枚）`,true); }
-    else { toast(`お手つき！ ${why}。2枚引きます`,true); renderHands(); $('hand').classList.add('shake'); setTimeout(()=>$('hand').classList.remove('shake'),400); }
-    return;
-  }
-  // success
-  G.open=false; clearTimers();
+  sBad();
+  draw(p,2);
+  const why = G.phase==='chain'
+    ? (card.wild ? 'はしご酒に生は出せません' : `${G.played.name}と味マークが合いません`)
+    : (card.wild ? 'とりあえずタイム終了！' : '味マークが合いません');
+  if(p.cpu){ renderOpps(); bubble(pi,'お手つき！+2'); }
+  else if(isParty()){ renderZone(pi); zoneFx(pi,'bad'); zoneBadge(pi,`お手つき！ ${why}（+2枚）`,true); }
+  else { toast(`お手つき！ ${why}。2枚引きます`,true); renderHands(); $('hand').classList.add('shake'); setTimeout(()=>$('hand').classList.remove('shake'),400); }
+}
+
+function tryPlay(pi,card){
+  if(!phaseOpen()) return;
+  const p=G.players[pi];
+  if(!p.hand.includes(card)) return;
+  if(!canPlay(card)){ penalty(pi,card); return; }
+
+  const chain = G.phase==='chain';
+  const prev = chain ? G.played : G.snack;
+  const lit = shared(card,prev);
+  const isTp = !chain && teppan(card,G.snack);
+  setPhase('closed'); clearTimers(); hideBadge('nama'); hideBadge('chain');
   p.hand.splice(p.hand.indexOf(card),1);
   G.played=card; G.discard.push(card);
-  G.lit = shared(card,G.snack);
-  const isTp=teppan(card,G.snack);
+  if(chain){ G.chainLen++; G.chainCount[pi]++; G.litSnack=null; }
+  else { G.chainLen=0; G.litSnack=lit; }
+  G.litDrink=lit;
   G.kanpaiCount[pi]++;
-  sClink();
-  showKanpai(p, card, isTp);
+  sClink(chain?G.chainLen:0);
+  showKanpai(p,card,prev,lit,isTp,chain);
   renderTable(false,true); renderOpps(); renderHands();
-  if(p.cpu) bubble(pi,'カンパイ！');
+  if(p.cpu) bubble(pi, chain?`はしご！×${G.chainLen}`:'カンパイ！');
   if(isParty()) zoneFx(pi,'flash');
-  setMsg(`${p.av} ${p.name}：${G.snack.name} × ${card.name}${isTp?'（鉄板！）':''}`);
+  setMsg(`${p.av} ${p.name}：${prev.name} × ${card.name}${isTp?'（鉄板！）':''}${chain?`　はしご×${G.chainLen}`:''}`);
 
   if(checkWin(p)) return;
   if(isTp && p.hand.length){
@@ -529,14 +593,40 @@ function tryPlay(pi,card){
       const pool=p.hand.filter(c=>!c.wild); const src=pool.length?pool:p.hand;
       const pick=src[Math.random()*src.length|0];
       p.hand.splice(p.hand.indexOf(pick),1); G.discard.push(pick);
-      later(()=>{renderOpps();bubble(pi,`${pick.name}を捨てた`); if(!checkWin(p)) later(flipNext,1100);},700);
+      later(()=>{renderOpps();bubble(pi,`${pick.name}を捨てた`); if(!checkWin(p)) later(openChain,200);},600);
     } else {
-      later(()=>enterDiscard(pi),650);
+      later(()=>enterDiscard(pi),450);
     }
     return;
   }
-  later(flipNext,1700);
+  later(openChain,250);
 }
+
+function openChain(){
+  if(G.over) return;
+  if(!G.played || G.played.wild){ later(flipNext,1300); return; }
+  setPhase('chain'); G.chainT=now();
+  const step=G.step;
+  showBadge('chain');
+  renderTable(); renderHands();
+  setMsg(`🏮 はしご酒！ ${G.played.em}${G.played.name}と味マークが合うお酒を続けて出せる`);
+  later(()=>{
+    if(G.step!==step) return;
+    setPhase('closed'); hideBadge('chain'); renderTable(); renderHands();
+    later(flipNext,700);
+  }, CHAIN_MS);
+  if(isParty()) return;
+  const lv=LV[settings.lv];
+  G.players.forEach((p,i)=>{
+    if(!p.cpu) return;
+    const c=p.hand.find(c=>!c.wild && shareMark(c,G.played));
+    if(!c) return;
+    const d=rand(lv.min,lv.max)*p.speed*.55;
+    if(d > CHAIN_MS-120) return;
+    later(()=>{ if(G.step===step) tryPlay(i,c); }, d);
+  });
+}
+
 function enterDiscard(pi){
   G.discarding=pi; renderHands();
   if(!isParty()){
@@ -546,39 +636,69 @@ function enterDiscard(pi){
   setMsg(isParty() ? `${G.players[pi].av} ${G.players[pi].name} は1枚捨てられます` : '鉄板ペア！ 1枚捨てられます');
 }
 function exitDiscard(){
-  const pi=G.discarding; G.discarding=-1; $('bannerArea').innerHTML=''; renderHands();
-  if(!checkWin(G.players[pi])) later(flipNext,700);
+  const pi=G.discarding; if(pi<0) return;
+  G.discarding=-1; $('bannerArea').innerHTML=''; renderHands();
+  if(!checkWin(G.players[pi])) later(openChain,250);
 }
 function sumimasen(who){
-  if(!G.open) return;
-  G.open=false; clearTimers();
+  if(G.phase!=='snack') return;
+  setPhase('closed'); clearTimers(); hideBadge('nama');
   setMsg(`${who}「すいませーん！」 次のおつまみを頼みます`);
-  renderHands();
+  renderHands(); renderTable();
   later(flipNext,900);
 }
 function checkWin(p){
   if(p.hand.length) return false;
-  G.over=true; G.open=false; clearTimers();
-  later(()=>endGame(p),1400);
+  G.over=true; setPhase('closed'); clearTimers(); hideBadge('chain');
+  later(()=>endRound(p),1400);
   return true;
 }
-function endGame(w){
-  const me = !isParty() && !w.cpu;
-  $('endTitle').textContent = isParty() ? `${w.av} ${w.name} ごちそうさま！` : (me ? 'ごちそうさま！' : `${w.name}の勝ち`);
-  const rows=G.players.map((p,i)=>`<div>${p.av} ${p.name}：残り <b>${p.hand.length}</b> 枚 ／ カンパイ ${G.kanpaiCount[i]} 回${p===w?' 🏆':''}</div>`).join('');
-  const lead = isParty() ? `<p>${w.av} ${w.name} が最初に手札を空にしました！</p>`
-    : (me?'<p>最初に手札がなくなりました。お見事です！</p>':`<p>${w.name}が先に「ごちそうさま！」。もう一杯いきましょう。</p>`);
-  $('endBody').innerHTML = lead + rows + `<p style="margin-top:8px">おつまみ ${G.round} 品</p>`;
-  if(isParty()) $('zone'+G.players.indexOf(w))?.classList.add('winner');
+function endRound(w){
+  const P=G.players, n=P.length, wi=P.indexOf(w);
+  const pts=P.map(()=>0), why=P.map(()=>[]);
+  pts[wi]+=3; why[wi].push('上がり+3');
+  if(n>=3){
+    const others=P.map((_,i)=>i).filter(i=>i!==wi);
+    const minH=Math.min(...others.map(i=>P[i].hand.length));
+    others.forEach(i=>{ if(P[i].hand.length===minH){ pts[i]+=1; why[i].push('2位+1'); } });
+  }
+  const maxC=Math.max(...G.chainCount);
+  if(maxC>0){
+    const tops=P.map((_,i)=>i).filter(i=>G.chainCount[i]===maxC);
+    if(tops.length===1){ pts[tops[0]]+=1; why[tops[0]].push('はしご王+1'); }
+  }
+  P.forEach((_,i)=>M.scores[i]+=pts[i]);
+  M.final = M.round>=M.total;
+  const best=Math.max(...M.scores);
+  const champs=P.filter((_,i)=>M.scores[i]===best);
+  let title, lead;
+  if(M.final && M.total>1){
+    title = champs.length===1 ? `🏆 ${champs[0].av} ${champs[0].name} 総合優勝！` : '🏆 同点優勝！';
+    lead = `全${M.total}ラウンド終了。最終ラウンドは ${w.av} ${w.name} が「ごちそうさま！」`;
+  } else if(M.total>1){
+    title = `ラウンド ${M.round}/${M.total} 終了`;
+    lead = `${w.av} ${w.name} が「ごちそうさま！」`;
+  } else {
+    title = (!isParty() && !w.cpu) ? 'ごちそうさま！' : `${w.av} ${w.name} の勝ち`;
+    lead = (!isParty() && !w.cpu) ? '最初に手札がなくなりました。お見事です！' : `${w.name}が先に「ごちそうさま！」`;
+  }
+  const order=P.map((_,i)=>i).sort((a,b)=>M.scores[b]-M.scores[a]);
+  const rows=order.map(i=>`<tr class="${M.scores[i]===best&&M.total>1?'top':''}"><td>${P[i].av} ${P[i].name}</td><td>${P[i].hand.length}</td><td>${G.chainCount[i]}</td><td>+${pts[i]}${why[i].length?`<br><small>${why[i].join('・')}</small>`:''}</td>${M.total>1?`<td><b>${M.scores[i]}</b></td>`:''}</tr>`).join('');
+  const body=`<p>${lead}</p><table class="score"><tr><th></th><th>残り</th><th>はしご</th><th>得点</th>${M.total>1?'<th>合計</th>':''}</tr>${rows}</table>`;
+  $('endTitle').textContent=title;
+  $('endBody').innerHTML=body;
+  $('endFlip').innerHTML=`<h2>${title}</h2><div class="result">${body}</div>`;
+  $('endModal').classList.toggle('duo', isParty());
+  $('againBtn').textContent = M.final ? (M.total>1?'もう1セット':'もう一杯（もう一回）') : `次のラウンドへ（${M.round+1}/${M.total}）`;
+  if(isParty()) $('zone'+wi)?.classList.add('winner');
   $('endModal').hidden=false;
-  sClink(); setTimeout(sClink,250);
+  sClink(); setTimeout(()=>sClink(2),250); if(M.final) setTimeout(()=>sClink(4),500);
 }
 
 /* ---------- render ---------- */
 function marksHTML(c, lit){
   if(c.wild){
-    const cls = lit ? 'lit' : '';
-    return `<span class="mk ${cls}" style="--c:#999">✨<small>なんでも</small></span>`;
+    return `<span class="mk ${lit?'lit':''}" style="--c:#999">✨<small>なんでも</small></span>`;
   }
   return c.marks.map(m=>{
     const cls = lit ? (lit.includes(m)?'lit':'dim') : '';
@@ -594,10 +714,10 @@ function renderTable(flip,slam){
   const party=isParty(), size = party ? 'mid' : 'big';
   const sEl = party ? $('pSnack') : $('snackSlot');
   const dEl = party ? $('pDrink') : $('drinkSlot');
-  sEl.innerHTML = G.snack ? cardHTML(G.snack, size+' '+(flip?'flipin':''), G.lit) : `<div class="card empty ${party?'mid':''}">準備中</div>`;
-  dEl.innerHTML = G.played ? cardHTML(G.played, (party?'mid ':'')+(slam?'slam':''), G.lit) : `<div class="card empty ${party?'mid':''}">？</div>`;
-  const sb = party ? $('pSumimasen') : $('sumimasenBtn');
-  sb.disabled = !G.open;
+  const chain = G.phase==='chain';
+  sEl.innerHTML = G.snack ? cardHTML(G.snack, size+' '+(flip?'flipin':''), G.litSnack) : `<div class="card empty ${party?'mid':''}">準備中</div>`;
+  dEl.innerHTML = G.played ? cardHTML(G.played, (party?'mid ':'')+(slam?'slam ':'')+(chain?'target':''), G.litDrink) : `<div class="card empty ${party?'mid':''}">？</div>`;
+  (party ? $('pSumimasen') : $('sumimasenBtn')).disabled = G.phase!=='snack';
 }
 function renderOpps(){
   if(isParty()) return;
@@ -605,22 +725,22 @@ function renderOpps(){
     <div class="opp" id="opp${i+1}">
       <div class="top"><span class="av">${p.av}</span><span class="nm">${p.name}</span><span class="cnt">${p.hand.length}</span></div>
       <div class="backs">${'<i></i>'.repeat(Math.min(p.hand.length,10))}</div>
+      ${M.total>1?`<div class="pts" style="margin:4px 0 0">⭐ ${M.scores[i+1]}点</div>`:''}
       <div class="bubble" id="bub${i+1}"></div>
     </div>`).join('');
 }
 function cardExtra(p,c,showHint){
   let ex='';
   if(c.wild && G.snack && !namaOpen()) ex+=' expired';
-  if(showHint && G.open && G.snack && matches(c,G.snack)) ex+=' hint';
+  if(showHint && phaseOpen() && canPlay(c)) ex+=' hint';
   return ex;
 }
 function renderHands(){
   if(isParty()){ G.players.forEach((p,i)=>renderZone(i)); return; }
   const me=G.players[0], h=$('hand');
-  const hint = LV[settings.lv].hint;
   h.className = 'hand' + (G.discarding===0?' discard':'');
-  h.innerHTML = me.hand.map(c=>cardHTML(c, cardExtra(me,c,hint))).join('');
-  $('myCount').textContent = `${me.hand.length} 枚`;
+  h.innerHTML = me.hand.map(c=>cardHTML(c, cardExtra(me,c,LV[settings.lv].hint))).join('');
+  $('myCount').textContent = `${me.hand.length} 枚` + (M.total>1?`　⭐ ${M.scores[0]}点`:'');
   bindCards(h,0);
 }
 function bindCards(container,pi){
@@ -632,9 +752,10 @@ function bindCards(container,pi){
       const c=p.hand.find(x=>x.id==el.dataset.cid); if(!c) return;
       if(G.discarding===pi){
         p.hand.splice(p.hand.indexOf(c),1); G.discard.push(c);
-        toast(`${isParty()?p.av+' ':''}${c.name}を捨てました`); exitDiscard(); return;
+        if(isParty()) zoneBadge(pi,`${c.name}を捨てました`); else toast(`${c.name}を捨てました`);
+        exitDiscard(); return;
       }
-      if(!G.open || G.discarding>=0) return;
+      if(G.discarding>=0) return;
       tryPlay(pi,c);
     });
   });
@@ -649,10 +770,11 @@ function zoneLayout(n){
 function buildPartyZones(){
   const L=zoneLayout(G.players.length);
   const z = i => `<div class="zone" id="zone${i}" style="--pc:${G.players[i].color}">
-      <div class="zhead"><span class="dot"></span>${G.players[i].name}<span class="cnt" id="zc${i}"></span>
+      <div class="zhead"><span class="dot"></span>${G.players[i].name}<span class="pts" id="zs${i}"></span><span class="cnt" id="zc${i}"></span>
         <button class="btn skip" id="zskip${i}" hidden>捨てない</button></div>
       <div class="hand" id="zh${i}"></div>
       <div class="zmsg">🎉 鉄板ペア！ 1枚タップして捨てる</div>
+      <div class="zbadge" id="zb${i}"></div>
     </div>`;
   $('rowTop').innerHTML = L.top.map(z).join('');
   $('rowBottom').innerHTML = L.bottom.map(z).join('');
@@ -663,12 +785,12 @@ function buildPartyZones(){
 function renderZone(i){
   const p=G.players[i], h=$('zh'+i); if(!h) return;
   const r=$('zone'+i).getBoundingClientRect();
-  // mid card ≈ 90x126 incl. gap: use it only when the whole hand fits
   const cols=Math.max(1,Math.floor((r.width-12)/90)), rows=Math.max(1,Math.floor((r.height-40)/126));
   const size = p.hand.length <= cols*rows ? 'mid' : 'mini';
   h.innerHTML = p.hand.map(c=>cardHTML(c, size+' '+cardExtra(p,c,false))).join('');
   h.className='hand'+(G.discarding===i?' discard':'');
   $('zc'+i).textContent = `${p.hand.length}枚`;
+  $('zs'+i).textContent = M.total>1 ? `⭐${M.scores[i]}` : '';
   $('zone'+i).classList.toggle('discarding', G.discarding===i);
   $('zskip'+i).hidden = G.discarding!==i;
   bindCards(h,i);
@@ -677,9 +799,18 @@ function zoneFx(i,cls){
   const z=$('zone'+i); if(!z) return;
   z.classList.remove(cls); void z.offsetWidth; z.classList.add(cls);
 }
+const zbT={};
+function zoneBadge(i,text,bad){
+  const b=$('zb'+i); if(!b) return;
+  b.textContent=text; b.className='zbadge show'+(bad?' bad':'');
+  clearTimeout(zbT[i]); zbT[i]=setTimeout(()=>b.className='zbadge'+(bad?' bad':''),1600);
+}
 
 function renderAll(){ renderOpps(); renderTable(); renderHands(); $('bannerArea').innerHTML=''; }
-function setMsg(t){ (isParty()?$('pMsg'):$('msg')).textContent=t; }
+function setMsg(t){
+  if(isParty()){ $('pMsg').textContent=t; $('pMsgTop').textContent=t; }
+  else $('msg').textContent=t;
+}
 const bubTimers={};
 function bubble(pi,text){
   const b=$('bub'+pi); if(!b) return;
@@ -689,14 +820,15 @@ function bubble(pi,text){
   bubTimers[pi]=setTimeout(()=>{const b2=$('bub'+pi),o2=$('opp'+pi); b2&&b2.classList.remove('show'); o2&&o2.classList.remove('hot');},1300);
 }
 let kT;
-function showKanpai(p,card,isTp){
-  $('kWho').textContent=`${p.av} ${p.name}`;
-  const lit=shared(card,G.snack);
+function showKanpai(p,card,prev,lit,isTp,chain){
   const mk = lit.map(m=>`<span class="mk" style="--c:${MARKS[m].c}">${MARKS[m].e}</span>`).join('');
-  $('kWhy').innerHTML = `${G.snack.em}${G.snack.name} × ${card.em}${card.name}　${card.wild?'<span>とりあえず！</span>':mk+'<span>が一致</span>'}`;
-  $('kTp').hidden=!isTp;
+  const html = `<div class="k">${chain?`はしご！×${G.chainLen}`:'カンパイ！'}</div>
+    <div class="who">${p.av} ${p.name}</div>
+    <div class="why">${prev.em}${prev.name} ${chain?'→':'×'} ${card.em}${card.name}　${card.wild?'<span>とりあえず！</span>':mk+'<span>が一致</span>'}</div>
+    ${isTp?'<div class="tp">鉄板ペア！</div>':''}`;
+  document.querySelectorAll('#kanpai .kbox').forEach(b=>b.innerHTML=html);
   const k=$('kanpai'); k.classList.remove('show'); void k.offsetWidth; k.classList.add('show');
-  clearTimeout(kT); kT=setTimeout(()=>k.classList.remove('show'),1200);
+  clearTimeout(kT); kT=setTimeout(()=>k.classList.remove('show'),1000);
 }
 let tT;
 function toast(t,bad){
@@ -713,16 +845,16 @@ function optGroup(id,key,num,cb){
   });
 }
 optGroup('optMode','mode',false,()=>{ $('soloOpts').hidden = settings.mode!=='solo'; $('partyOpts').hidden = settings.mode!=='party'; });
-optGroup('optCpu','cpu',true); optGroup('optLv','lv',false); optGroup('optPn','pn',true);
+optGroup('optCpu','cpu',true); optGroup('optLv','lv',false); optGroup('optPn','pn',true); optGroup('optRounds','rounds',true);
 function openMenu(){ if(G){G.over=true;clearTimers();} $('endModal').hidden=true; $('startModal').hidden=false; }
-$('startBtn').onclick=()=>{audio(); $('startModal').hidden=true; newGame();};
-$('againBtn').onclick=()=>{audio(); $('endModal').hidden=true; newGame();};
+$('startBtn').onclick=()=>{audio(); $('startModal').hidden=true; startMatch();};
+$('againBtn').onclick=()=>{audio(); $('endModal').hidden=true; if(M.final) startMatch(); else nextRound();};
 $('settingsBtn').onclick=openMenu;
 $('rulesBtn').onclick=openMenu;
 $('pMenu').onclick=openMenu;
-$('restartBtn').onclick=()=>{audio(); $('endModal').hidden=true; $('startModal').hidden=true; newGame();};
-$('sumimasenBtn').onclick=()=>{audio(); if(G && G.open) sumimasen('あなた');};
-$('pSumimasen').addEventListener('pointerdown',e=>{e.preventDefault(); audio(); if(G && G.open) sumimasen('だれか');});
+$('restartBtn').onclick=()=>{audio(); $('endModal').hidden=true; $('startModal').hidden=true; startMatch();};
+$('sumimasenBtn').onclick=()=>{audio(); if(G && G.phase==='snack') sumimasen('あなた');};
+$('pSumimasen').addEventListener('pointerdown',e=>{e.preventDefault(); audio(); if(G && G.phase==='snack') sumimasen('だれか');});
 
 $('snackSlot').innerHTML=`<div class="card empty">準備中</div>`;
 $('drinkSlot').innerHTML=`<div class="card empty">？</div>`;

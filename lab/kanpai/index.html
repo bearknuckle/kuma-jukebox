@@ -273,7 +273,7 @@ table.score tr.top td{background:#fff1c9;font-weight:900}
 
   <div class="handhead"><h2>あなたの手札</h2><span class="c" id="myCount"></span></div>
   <div class="hand" id="hand"></div>
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ カンパイ！ v0.3</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ カンパイ！ v0.4</div>
 </div>
 
 <!-- ================= PARTY ================= -->
@@ -320,7 +320,7 @@ table.score tr.top td{background:#fff1c9;font-weight:900}
       <div class="lbl">対戦相手</div>
       <div class="opt" id="optCpu"><button data-v="1">1人</button><button data-v="2">2人</button><button data-v="3" class="on">3人</button></div>
       <div class="lbl">強さ</div>
-      <div class="opt" id="optLv"><button data-v="easy">やさしい（ヒントあり）</button><button data-v="normal" class="on">ふつう</button><button data-v="hard">つよい</button></div>
+      <div class="opt" id="optLv"><button data-v="beginner">はじめて（ヒントあり）</button><button data-v="easy">やさしい（ヒントあり）</button><button data-v="normal" class="on">ふつう</button><button data-v="hard">つよい</button></div>
     </div>
     <div id="partyOpts" hidden>
       <div class="lbl">人数</div>
@@ -378,9 +378,11 @@ const PARTY_DEFS = [
   {name:'4P',av:'🟣',color:'#a065c9'},
 ];
 const LV = {
-  easy:{min:2600,max:4300,wait:9000,hint:true},
-  normal:{min:1600,max:2900,wait:7000,hint:false},
-  hard:{min:950,max:1800,wait:5500,hint:false},
+  // miss: 合うカードを見落とす確率 / chain: はしご酒の反応の速さ（小さいほど速い） / nama: 生を出しにいく確率
+  beginner:{min:4500,max:7000,wait:12000,hint:true, miss:.55,chain:1.2,nama:0},
+  easy:    {min:3400,max:5600,wait:10000,hint:true, miss:.38,chain:1.0,nama:.15},
+  normal:  {min:2300,max:3900,wait:8000, hint:false,miss:.22,chain:.8, nama:.4},
+  hard:    {min:1400,max:2500,wait:6000, hint:false,miss:.08,chain:.6, nama:.8},
 };
 const NAMA_MS = 2000;
 const CHAIN_MS = 2000;
@@ -506,9 +508,10 @@ function flipNext(){
   G.players.forEach((p,i)=>{
     if(!p.cpu) return;
     const choice = cpuChoose(p);
-    let d = rand(lv.min,lv.max)*p.speed;
+    let d = rand(lv.min,lv.max)*p.speed*crowd();
     if(choice){
-      if(choice.wild && d > NAMA_MS-150) return;
+      if(Math.random()<lv.miss) return;            // 見落とし
+      if(choice.wild && (Math.random()>=lv.nama || d > NAMA_MS-150)) return;
       if(teppan(choice,G.snack)) d += 250;
       later(()=>{ if(G.step===step) tryPlay(i,choice); }, d);
     } else if(Math.random()<p.goof && p.hand.length){
@@ -545,6 +548,8 @@ function tickTimer(step){
   };
   tick();
 }
+// CPUが多いほど「誰かが速い」確率が上がるので、人数に応じて全体を少し遅くする
+function crowd(){ return 1 + .12*(G.players.filter(p=>p.cpu).length-1); }
 function cpuChoose(p){
   const s=G.snack;
   const ok=p.hand.filter(c=>!c.wild && shareMark(c,s));
@@ -622,8 +627,8 @@ function openChain(){
   G.players.forEach((p,i)=>{
     if(!p.cpu) return;
     const c=p.hand.find(c=>!c.wild && shareMark(c,G.played));
-    if(!c) return;
-    const d=rand(lv.min,lv.max)*p.speed*.55;
+    if(!c || Math.random()<lv.miss) return;
+    const d=rand(lv.min,lv.max)*p.speed*lv.chain*crowd();
     if(d > CHAIN_MS-120) return;
     later(()=>{ if(G.step===step) tryPlay(i,c); }, d);
   });

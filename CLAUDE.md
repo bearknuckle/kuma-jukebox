@@ -24,10 +24,15 @@
 - 「← 試作ゲームラボに戻る」（または ⌂）など `href="../"` のリンク
 - カンパイ！の 20歳以上・飲みすぎ注意の一文
 
+## ゲームを更新したとき（必須）
+- `lab/index.html` の `GAMES` で、そのゲームの `version` を 0.1 上げ、`updated` を今日の日付（日本時間, YYYY-MM-DD）にする
+- 同じファイルの `UPDATES` の**先頭**に1件足す：`{date, id, version, text}`（text は遊ぶ人に伝わる短い一文）
+- 表示の調整や不具合修正だけなら、バージョンは上げずに `updated` だけ変えてもよい
+
 ## ゲームを追加するとき
 1. `lab/<ゲームID>/index.html` を作る（IDは英小文字・数字・ハイフン）
 2. 上の「消してはいけないもの」を入れる（既存ゲームからコピーしてタイトルと説明だけ変える）
-3. `lab/index.html` の `GAMES` に1件追加（`genre` は `CATS` の id と同じにする）
+3. `lab/index.html` の `GAMES` に1件追加（`genre` は `CATS` の id と同じ、`version:'0.1'`、`updated` は今日）。`UPDATES` の先頭にも「新しく登場」を1件足す
 4. 新しいカテゴリを作ったら `CATS` に追加し、`python3 tools/make_og.py` で `lab/og.png` を作り直す
 5. コミットメッセージは日本語で「ゲーム名: 変更内容」の形にする
 

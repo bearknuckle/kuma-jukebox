@@ -122,6 +122,10 @@
   .cpumsg{font-size:12.5px;color:var(--ink2);margin:8px 0 0;min-height:1.4em}
   .preview{font-size:13.5px;margin:10px 0 0}
   .preview b{font-size:16px}
+  .levelrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;font-size:13px;color:var(--ink2)}
+  .levelrow button{min-height:36px;padding:4px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font-weight:700;font-size:13px}
+  .levelrow button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .turnbadge{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--ink2);margin-bottom:8px}
   @media (max-width:380px){ .cards{grid-template-columns:repeat(3,1fr);gap:6px} .card .ttl{font-size:12.5px} }
 </style>
 </head>
@@ -142,8 +146,9 @@
     <details class="rules">
       <summary>ルールと得点（タップで開く）</summary>
       <ul>
-        <li><b>ドラフト：</b>全8ラウンド。毎回3枚から1枚取り、すぐに1〜8曲目の空いている枠に置きます。<b>置いた曲は動かせません。</b>8曲目はアンコールです。</li>
-        <li><b>CPU店長：</b>自分の3枚から1枚取って、同じように枠に置きます。CPU店長のセトリは表向きで見えています。</li>
+        <li><b>ドラフト：</b>全8ラウンド。毎回3枚が場に出て、<b>あなたとCPU店長が1枚ずつ取り合います</b>（残りの1枚は捨て札）。先に取る番はラウンドごとに交代します（奇数ラウンドはあなたが先）。</li>
+        <li><b>置き方：</b>取った曲はすぐに1〜8曲目の空いている枠に置きます。<b>置いた曲は動かせません。</b>8曲目はアンコールです。CPU店長のセトリは表向きで見えています。</li>
+        <li><b>CPU店長の強さ：</b>最初の1枚を取る前に「はじめて」「ふつう」から選べます。</li>
         <li><b>リハーサル：</b>8曲そろったら、自分のセトリの2曲を<b>1回だけ</b>入れ替えられます（入れ替えずに開演してもOK）。</li>
       </ul>
       <p class="muted" style="margin:8px 0 2px"><b>得点</b></p>
@@ -168,6 +173,11 @@
       <span class="r" id="round-label">ラウンド 1 / 8</span>
       <span class="muted" id="draft-hint">3枚から1枚選んでください</span>
     </div>
+    <div class="levelrow" id="level-row">CPU店長の強さ：
+      <button type="button" data-level="easy">はじめて</button>
+      <button type="button" data-level="normal">ふつう</button>
+    </div>
+    <span class="turnbadge" id="turn-badge"></span>
     <div class="cards" id="draft-cards"></div>
     <p class="muted" style="margin:14px 0 6px">あなたのセトリ（<span id="placed-count">0</span> / 8曲）</p>
     <div class="slots" id="draft-slots"></div>
@@ -297,7 +307,12 @@ function cpuEstimate(slots){
   var list = slots.map(function(c, i){ return c || { heat:CPU_SHAPE[i], genre:"_" + i, tempo:"_" + i }; });
   return scoreSetlist(list).total;
 }
-function cpuPlace(slots, choices){
+function cpuPlace(slots, choices, level){
+  if (level === "easy" && Math.random() < 0.55){
+    var empt = [];
+    for (var k = 0; k < N; k++) if (!slots[k]) empt.push(k);
+    return { ci: Math.floor(Math.random() * choices.length), slot: empt[Math.floor(Math.random() * empt.length)] };
+  }
   var best = null;
   choices.forEach(function(c, ci){
     for (var i = 0; i < N; i++){
@@ -321,19 +336,31 @@ function bestSwap(list){
 
 /* ============ ゲーム状態 ============ */
 var state;
+var level = "normal";
+try { var sv = localStorage.getItem("setori-level"); if (sv === "easy" || sv === "normal") level = sv; } catch (e) {}
+function setLevel(lv){
+  level = lv;
+  try { localStorage.setItem("setori-level", lv); } catch (e) {}
+  renderDraft();
+}
+Array.prototype.forEach.call(document.querySelectorAll("#level-row button"), function(b){
+  b.addEventListener("click", function(){ setLevel(b.getAttribute("data-level")); });
+});
 function newGame(){
   state = {
-    deck: buildDeck(),      // 48枚 = 8ラウンド × 3枚 × 2人
+    deck: buildDeck(),      // 48枚のうち、8ラウンド × 3枚 = 24枚を使う
     round: 1,
     slots: new Array(N).fill(null),
     cpuSlots: new Array(N).fill(null),
     choices: [],
+    playerFirst: true,
+    cpuLog: [],
     sel: -1,
     swapSel: -1,
     swapped: null,
     cpuSwap: null
   };
-  document.getElementById("cpu-msg").textContent = "";
+  document.getElementById("cpu-msg").innerHTML = "";
   showPhase(1);
   startRound();
 }
@@ -400,15 +427,40 @@ function slotButton(c, i, opts){
 function startRound(){
   state.choices = state.deck.splice(0, 3);
   state.sel = -1;
+  state.playerFirst = (state.round % 2 === 1);
+  if (!state.playerFirst) cpuTurn("先に");
   renderDraft();
+}
+function cpuTurn(when){
+  var mv = cpuPlace(state.cpuSlots, state.choices, level);
+  var cc = state.choices[mv.ci];
+  state.cpuSlots[mv.slot] = cc;
+  state.choices.splice(mv.ci, 1);
+  state.cpuLog.push("R" + state.round + "：CPU店長は" + when + "「" + cc.title + "」（" + cc.genreName + "・熱" + cc.heat + "・" + cc.tempo + "）を取って、" + slotLabel(mv.slot) + "に置いた");
+  var box = document.getElementById("cpu-msg");
+  box.innerHTML = "";
+  state.cpuLog.slice(-2).forEach(function(t){
+    var d = document.createElement("div"); d.textContent = t; box.appendChild(d);
+  });
 }
 function renderDraft(){
   document.getElementById("round-label").textContent = "ラウンド " + state.round + " / " + N;
   var last = emptyCount(state.slots) === 1;
+  var nc = state.choices.length;
   document.getElementById("draft-hint").textContent =
-    state.sel < 0 ? (last ? "最後の1枚を選ぶと、残りの枠に入ります" : "3枚から1枚選んでください")
+    state.sel < 0 ? (last ? "選ぶと、残りの枠に入ります" : nc + "枚から1枚選んでください")
                   : "置く枠を選んでください（あとから動かせません）";
+  var fresh = state.round === 1 && emptyCount(state.slots) === N;
+  var lr = document.getElementById("level-row");
+  lr.classList.toggle("hidden", !fresh);
+  Array.prototype.forEach.call(lr.querySelectorAll("button"), function(b){
+    b.classList.toggle("on", b.getAttribute("data-level") === level);
+  });
+  document.getElementById("turn-badge").textContent = state.playerFirst
+    ? "あなたが先に取る番（残り2枚からCPU店長が取ります）"
+    : "CPU店長が先に取りました（残り2枚から選べます）";
   var box = document.getElementById("draft-cards");
+  box.className = "cards" + (nc === 2 ? " two" : "");
   box.innerHTML = "";
   state.choices.forEach(function(c, i){
     var b = document.createElement("button");
@@ -437,13 +489,10 @@ function renderDraft(){
 }
 function placeCard(ci, slot){
   state.slots[slot] = state.choices[ci];
-  // CPU店長の番：自分の3枚から1枚取って置く
-  var cpuChoices = state.deck.splice(0, 3);
-  var mv = cpuPlace(state.cpuSlots, cpuChoices);
-  var cc = cpuChoices[mv.ci];
-  state.cpuSlots[mv.slot] = cc;
-  document.getElementById("cpu-msg").textContent =
-    "CPU店長は「" + cc.title + "」（" + cc.genreName + "・熱" + cc.heat + "・" + cc.tempo + "）を" + slotLabel(mv.slot) + "に置いた";
+  state.choices.splice(ci, 1);
+  // あなたが先の番なら、残り2枚からCPU店長が取る（最後の1枚は捨て札）
+  if (state.playerFirst) cpuTurn("残りから");
+  state.choices = [];
   if (state.round >= N){
     startRehearsal();
   } else {
@@ -519,7 +568,7 @@ function listHTML(list, sc){
 }
 function showResult(){
   // CPU店長のリハーサル：得点が上がる入れ替えがあれば1回だけ行う
-  var sw = bestSwap(state.cpuSlots);
+  var sw = (level === "easy") ? null : bestSwap(state.cpuSlots); // 「はじめて」ではリハーサルしない
   var note = "";
   if (sw){
     var t = state.cpuSlots[sw.i]; state.cpuSlots[sw.i] = state.cpuSlots[sw.j]; state.cpuSlots[sw.j] = t;

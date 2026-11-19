@@ -123,7 +123,7 @@ const GAMES=[
   {
     id:'setori-shokunin', name:'セトリ職人', icon:'🎤', color:'#e07b39',
     desc:'ライブのセットリストを組むカードゲーム。取った曲はすぐ1〜8曲目の枠に置き、あとからは動かせない。中盤で一度落とす聴かせどころから、アンコールまで上げきってCPU店長と勝負。',
-    players:'1人（CPU 1人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.3', updated:'2026-11-20', isNew:true
+    players:'1人（CPU 1人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.4', updated:'2026-11-20', isNew:true
   },
   {
     id:'doubutsu-kabu', name:'せーの株 どうぶつ版', icon:'🦦', color:'#3f8f5a',
@@ -143,6 +143,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-20', id:'setori-shokunin',  version:'0.4', text:'場の3枚をCPU店長と1枚ずつ取り合う方式に（先に取る番はラウンドごとに交代）。CPU店長の強さを「はじめて」「ふつう」から選べるように'},
   {date:'2026-11-20', id:'draft-kaigi',      version:'0.3', text:'球団ごとの個性カード（スカウト網・資金力・育成力・人気球団）を追加。毎回ちがう作戦に'},
   {date:'2026-11-20', id:'onechord',         version:'0.5', text:'完全終止で上がった瞬間に画面が光る演出と、CPUの速さ「はやい」を追加'},
   {date:'2026-11-20', id:'shinko-shiritori', version:'0.5', text:'有名な進行の完成はチップ2枚に。引いたカードがつながればそのまま出せるように'},

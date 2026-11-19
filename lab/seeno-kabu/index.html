@@ -49,7 +49,10 @@
   .pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
   .pick button{font-weight:800;font-size:17px;padding:12px 4px}
   .pick button.on{color:#fff}
-  .act{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+  .act{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .act button{padding:10px 4px}
+  .act button small{display:block;font-size:10px;font-weight:400;opacity:.8}
+  .act button.on.peek{background:var(--gold);color:#fff;border-color:var(--gold)}
   .act button{font-weight:700}
   .act button.on.buy{background:var(--buy);color:#fff;border-color:var(--buy)}
   .act button.on.sell{background:var(--sell);color:#fff;border-color:var(--sell)}
@@ -96,6 +99,7 @@
         <li>毎ラウンド、全員が「銘柄」と「買う／売る／見送り」を1つ選び、<b>せーの</b>で公開。</li>
         <li>銘柄ごとに <b>買いの数 − 売りの数</b> だけ株価が動き（1〜10。じっくりモードは1〜20）、<b>動いた後の値段</b>で全員の注文が成立します。1注文は1株。</li>
         <li>期のはじめに<b>景気カード</b>を1枚めくります（好景気・不景気・ブーム・不祥事・大型受注・平穏）。</li>
+        <li>売り買いの代わりに<b>調べる</b>（2コイン）を選ぶと、ほかの会社の業績も見られます。</li>
         <li>6ラウンド後に業績カードを公開。<b>株価 + 業績</b> が最終株価になり、株を換金してお金が一番多い人の勝ち。</li>
       </ol>
     </div>
@@ -142,6 +146,7 @@
         <button class="buy" data-a="buy">買う</button>
         <button class="sell" data-a="sell">売る</button>
         <button class="pass" data-a="pass">見送り</button>
+        <button class="peek" data-a="peek">調べる<small>2コイン</small></button>
       </div>
       <div class="hint" id="hint"></div>
       <button class="primary" id="goBtn" disabled>せーの！</button>
@@ -218,7 +223,7 @@ function startPeriod(){
   S.base={...S.price};
   // 誰がどの会社を知っているか（4人で3社→1社は2人が知る）
   const know=shuffle([0,1,2,Math.floor(Math.random()*3)]).map(i=>NAMES[i]);
-  S.players.forEach((p,i)=>p.knows=know[i]);
+  S.players.forEach((p,i)=>{p.knows=know[i];p.extra=[]});
   if(S.periods>1||S.period>1)S.log.push(`── 第${S.period}期スタート（`+NAMES.map(n=>`${n}${S.price[n]}`).join(' ')+`）──`);
   $('title').classList.add('hidden');$('result').classList.add('hidden');$('game').classList.remove('hidden');
   resetOrderUI(); render(); window.scrollTo({top:0});
@@ -258,8 +263,12 @@ const isLastRound=()=>S.round===ROUNDS;
 const maxP=()=>S.maxP||(S.longRules?20:10);
 const isFinal=()=>S.period===S.periods;
 
+const PEEK_COST=2;
+const kn=(p,s)=>p.knows===s||(p.extra||[]).includes(s); // その会社の業績を知っているか
+const knownList=p=>NAMES.filter(s=>kn(p,s));
 function legal(p,stock,act){
   if(act==='pass')return true;
+  if(act==='peek')return p.cash>=PEEK_COST&&!kn(p,stock);
   if(act==='sell')return p.sh[stock]>0;
   // 買い：今の値段を払えれば注文できる（値上がり後に払えなければ不成立）
   return p.cash>=S.price[stock];
@@ -267,13 +276,13 @@ function legal(p,stock,act){
 
 /* ---------- CPU ---------- */
 function cpuOrder(p,idx){
-  const k=p.knows, v=S.earn[k], pr=S.price;
+  const pr=S.price;
   const opts=[];
   const add=(s,a,w)=>{if(w>0&&legal(p,s,a))opts.push({s,a,w})};
   const last=isLastRound()&&isFinal();
   const divChance=isLastRound()&&!isFinal(); // 配当前の駆け込み
   NAMES.forEach(s=>{
-    const known=(s===k);
+    const known=kn(p,s), v=S.earn[s];
     const pub=(S.bonus&&S.bonus[s])||0; // 大型受注はみんな知っている
     const fair=known?S.base[s]+v:S.base[s]+pub; // その人が思う適正価格
     const gap=fair-pr[s];
@@ -299,6 +308,9 @@ function cpuOrder(p,idx){
     if(divChance&&known&&v>0) add(s,'buy',5); // 配当がほしい
     if(divChance&&known&&v===-3&&p.sh[s]) add(s,'sell',6); // 倒産がこわい
   });
+  // 情報を買う：前半に、1期に1回まで
+  if(S.round<=4&&(p.extra||[]).length<1&&p.cash>=PEEK_COST+4)
+    NAMES.forEach(s=>{if(!kn(p,s))add(s,'peek',[1.2,2,0.6][idx]/2)});
   add('A','pass',opts.length?0.6:1);
   const tot=opts.reduce((t,o)=>t+o.w,0); let r=Math.random()*tot;
   for(const o of opts){if((r-=o.w)<=0)return {stock:o.a==='pass'?null:o.s,act:o.a}}
@@ -318,7 +330,7 @@ function render(){
   $('stocks').innerHTML=NAMES.map(n=>{
     const d=S.prev[n];
     const bn=(S.bonus&&S.bonus[n])||0;
-    const memo=me.knows===n?`業績メモ：<b style="color:${S.earn[n]>0?'var(--buy)':'var(--sell)'}">${sgn(S.earn[n])}</b>`:(bn?`業績 ？${sgn(bn)}`:'業績 ？');
+    const memo=kn(me,n)?`業績メモ：<b style="color:${S.earn[n]>0?'var(--buy)':'var(--sell)'}">${sgn(S.earn[n])}</b>`:(bn?`業績 ？${sgn(bn)}`:'業績 ？');
     return `<div class="stock" style="border-color:${COLORS[n]}">
       <div class="nm" style="color:${COLORS[n]}">${n}社</div>
       <div class="pr">${S.price[n]}</div>
@@ -337,12 +349,14 @@ function render(){
   let h='';
   if(!S.act&&!S.pick)h='銘柄を選んでから、買う・売るを選んでください。';
   else if(S.pick&&!S.act){
-    if(!legal(me,S.pick,'buy'))h=`お金が足りないので${S.pick}社は買えません。`;
+    if(kn(me,S.pick)&&me.knows!==S.pick)h=`${S.pick}社の業績は調べてあります。`;
+    else if(!legal(me,S.pick,'buy'))h=`お金が足りないので${S.pick}社は買えません。`;
     else h='動いた後の値段で成立します。みんなと同じ注文だと不利になるかも？';
   }
   else if(S.act==='pass')h='今回は様子を見ます。';
   else if(S.act==='buy')h=`${S.pick}社を1株買います。値上がり後に払えないと不成立になります。`;
   else if(S.act==='sell')h=`${S.pick}社を1株売ります。`;
+  else if(S.act==='peek')h=`${PEEK_COST}コイン払って${S.pick}社の業績を調べます。この回は売り買いできません（ほかの人には「調べもの」とだけ見えます）。`;
   $('hint').textContent=h;
   $('goBtn').disabled=!(S.act==='pass'||(S.act&&S.pick));
   $('players').innerHTML=`<tr><th class="l">名前</th><th>お金</th><th>A</th><th>B</th><th>C</th><th>評価額</th></tr>`+
@@ -367,7 +381,8 @@ function spark(n){
     <div class="range"><span>${lo}</span><span>${hi}</span></div>`;
 }
 const worth=p=>p.cash+NAMES.reduce((t,n)=>t+p.sh[n]*S.price[n],0);
-const actLabel=o=>o.act==='pass'?'<span class="chip" style="background:var(--pass)">見送り</span>':
+const actLabel=(o,i)=>o.act==='pass'?'<span class="chip" style="background:var(--pass)">見送り</span>':
+  o.act==='peek'?(i===0?`<span class="chip" style="background:${COLORS[o.stock]}">${o.stock}社</span> `:'')+'<span class="chip" style="background:var(--gold)">🔍 調べもの</span>':
   `<span class="chip" style="background:${COLORS[o.stock]}">${o.stock}社</span> <span class="chip" style="background:${o.act==='buy'?'var(--buy)':'var(--sell)'}">${o.act==='buy'?'買い':'売り'}</span>`;
 
 function go(){
@@ -381,17 +396,18 @@ function go(){
     const p=S.players[i];
     if(o.act==='buy'){const c=S.price[o.stock]; if(p.cash>=c){p.cash-=c;p.sh[o.stock]++;return `${c}で購入`} return '資金不足で不成立'}
     if(o.act==='sell'){const c=S.price[o.stock]; p.sh[o.stock]--;p.cash+=c;return `${c}で売却`}
+    if(o.act==='peek'){p.cash-=PEEK_COST;(p.extra=p.extra||[]).push(o.stock);return i===0?`業績は <b>${sgn(S.earn[o.stock])}</b>`:''}
     return '';
   });
   // 表示
   $('orderPanel').classList.add('hidden');$('revealPanel').classList.remove('hidden');
-  $('reveal').innerHTML=orders.map((o,i)=>`<div class="rv"><span>${S.players[i].name}</span><span>${actLabel(o)} <small style="color:var(--sub)">${fills[i]}</small></span></div>`).join('');
+  $('reveal').innerHTML=orders.map((o,i)=>`<div class="rv"><span>${S.players[i].name}</span><span>${actLabel(o,i)} <small style="color:var(--sub)">${fills[i]}</small></span></div>`).join('');
   $('moveTxt').textContent='';
   const rows=[...document.querySelectorAll('.rv')];
   rows.forEach((r,i)=>setTimeout(()=>r.classList.add('show'),250*i+100));
   setTimeout(()=>{
     $('moveTxt').innerHTML=NAMES.map(n=>`${n}社 ${before[n]}→<b>${S.price[n]}</b>`).join('　');
-    S.log.push(`R${S.round}：`+orders.map((o,i)=>`${S.players[i].name} ${o.act==='pass'?'見送り':o.stock+(o.act==='buy'?'買':'売')}`).join('、')+` ／ `+NAMES.map(n=>`${n}${S.price[n]}`).join(' '));
+    S.log.push(`R${S.round}：`+orders.map((o,i)=>`${S.players[i].name} ${o.act==='pass'?'見送り':o.act==='peek'?'調べもの':o.stock+(o.act==='buy'?'買':'売')}`).join('、')+` ／ `+NAMES.map(n=>`${n}${S.price[n]}`).join(' '));
     S.round++;
     save('round');
     render();
@@ -435,7 +451,7 @@ function finish(){
   if(final) $('winTxt').innerHTML=(many?`<small style="font-size:13px;color:var(--sub);display:block">${S.period}期を終えて</small>`:'')+(iWin?'あなたの勝ち！':`${ranked[0].p.name}の勝ち`);
   else $('winTxt').textContent=`第${S.period}期を終えての順位`+(ranked[0].p.cpu?'':'（あなたが首位！）');
   $('finalPlayers').innerHTML=`<tr><th class="l">順位</th><th class="l">名前</th><th>知っていた業績</th>${multi?'<th>配当計</th>':''}<th>${final?'最終資産':'評価額'}</th></tr>`+
-    ranked.map((r,i)=>`<tr><td class="l">${i+1}</td><td class="l">${r.p.name}</td><td>${r.p.knows}社 ${sgn(S.earn[r.p.knows])}</td>${multi?`<td>${r.p.div}</td>`:''}<td><b>${r.v}</b></td></tr>`).join('');
+    ranked.map((r,i)=>`<tr><td class="l">${i+1}</td><td class="l">${r.p.name}</td><td>${knownList(r.p).map(s=>`${s}社 ${sgn(S.earn[s])}`).join('<br>')}</td>${multi?`<td>${r.p.div}</td>`:''}<td><b>${r.v}</b></td></tr>`).join('');
   // ふりかえり
   const tips=[];
   const hot=NAMES.reduce((a,n)=>mkt[n]-S.base[n]>mkt[a]-S.base[a]?n:a,'A');
@@ -443,6 +459,8 @@ function finish(){
   const cheap=NAMES.reduce((a,n)=>mkt[n]-S.base[n]<mkt[a]-S.base[a]?n:a,'A');
   if(S.earn[cheap]>0&&cheap!==hot)tips.push(`人気がなかった<b>${cheap}社</b>は業績が${sgn(S.earn[cheap])}。みんなが見落とした株が「割安株」です。`);
   if(multi&&divLines.length)tips.push('業績の良い会社を決算まで持っていると配当がもらえます。売り買いの差額で稼ぐのが「投機」、持ち続けて配当を受け取るのが「投資」に近い考え方です。');
+  const peekers=S.players.filter(p=>(p.extra||[]).length).map(p=>p.name);
+  if(peekers.length)tips.push(`${peekers.join('・')}が情報を買いました。会社を調べるにもお金と時間がかかります。プロの投資家も、情報にお金を払って判断の精度を上げています。`);
   if(broke.length)tips.push('会社が倒産すると株の価値はなくなります。1社に集中せず分けて持つ「分散投資」は、このリスクを減らすための考え方です。');
   if(!tips.length||!final&&tips.length<2)tips.push('みんなが同じ株を買うと、自分も値上がり後の高い値段で買うことになります。これが「需給で株価が動く」ということです。');
   $('lesson').innerHTML='<b>ふりかえり</b><br>'+tips.join('<br>');

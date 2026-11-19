@@ -81,6 +81,11 @@ h1 span{color:var(--T)}
 .result .big{font-size:28px;font-weight:800;margin:8px 0}
 .result .cad{color:var(--D);font-weight:800;font-size:18px}
 .small{font-size:12px;color:var(--dim)}
+.score{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:14px}
+.score th{font-size:11px;color:var(--dim);font-weight:500;padding:2px 4px}
+.score td{padding:5px 4px;border-top:1px solid var(--line)}
+.score td:first-child{text-align:left}
+.score tr.top td{color:#ffd76a}
 #prog{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0 4px}
 #prog .pc{min-width:44px;padding:6px 8px;border-radius:8px;font-weight:800;font-size:14px;color:#fff;opacity:.45;transition:transform .12s,opacity .12s,box-shadow .12s}
 #prog .pc.now{opacity:1;transform:scale(1.18);box-shadow:0 0 0 2px #fff,0 0 16px rgba(255,255,255,.5)}
@@ -118,6 +123,7 @@ h1 span{color:var(--T)}
     <h2>♪ ワンコード</h2>
     <p>コード進行のルールに沿ってカードを出し合い、手札を先になくした人の勝ち。</p>
     <div class="row"><span>CPUの人数</span><div class="seg" id="segCpu"><button class="btn" data-v="1">1</button><button class="btn on" data-v="2">2</button><button class="btn" data-v="3">3</button></div></div>
+    <div class="row"><span>ラウンド<br><span class="small">3回戦は失点の合計で勝負</span></span><div class="seg" id="segRounds"><button class="btn" data-v="1">1回</button><button class="btn on" data-v="3">3回</button></div></div>
     <div class="row"><span>上級ルール<br><span class="small">最後の1枚は C だけ</span></span><div class="seg" id="segAdv"><button class="btn on" data-v="0">オフ</button><button class="btn" data-v="1">オン</button></div></div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn" id="bRules2" style="flex:1">ルールを見る</button>
@@ -168,6 +174,13 @@ h1 span{color:var(--T)}
       <li>最後の1枚は T でないと出せない。T 以外が1枚残ったら引くしかない（特殊カードでは上がれない）</li>
       <li>G か G7 → C で上がると「完全終止」！</li>
     </ul>
+    <h3>得点（3回戦）</h3>
+    <ul>
+      <li>上がれなかった人は、残った手札1枚につき1点の<b>失点</b></li>
+      <li>完全終止で上がったら、ほかの人の失点は<b>2倍</b></li>
+      <li>山札切れで終わったときは、全員が残り手札の枚数だけ失点</li>
+      <li>ラウンドごとに最初の手番を次の人へ交代。3回終わって失点がいちばん少ない人の優勝（同点なら上がった回数が多い人）</li>
+    </ul>
     <h3>上級ルール</h3>
     <ul>
       <li>最後の1枚は <b>C</b> でないと出せない（Am・Em では上がれない）。しっかり「ド」で終わろう</li>
@@ -197,7 +210,7 @@ function makeDeck(){
   return shuffle(d);
 }
 function fn(c){return c&&(c.kind==='chord'||c.kind==='g7')?CH[c.name].f:null;}
-function newGame(nCpu,advanced){
+function newGame(nCpu,advanced,startTurn){
   const players=[{name:'あなた',cpu:false,hand:[]}];
   for(let i=1;i<=nCpu;i++)players.push({name:'CPU'+i,cpu:true,hand:[]});
   S={players,deck:makeDeck(),discard:[],dir:1,turn:0,cur:null,free:false,g7:false,advanced:!!advanced,
@@ -206,7 +219,11 @@ function newGame(nCpu,advanced){
   const i=S.deck.findIndex(c=>c.kind==='chord'&&CH[c.name].f==='T');
   const st=S.deck.splice(i,1)[0];
   S.cur=st;S.discard.push(st);S.history.push(st.name);
-  S.turn=Math.floor(Math.random()*players.length);
+  S.turn=startTurn==null?Math.floor(Math.random()*players.length):startTurn%players.length;
+}
+// そのラウンドの失点（上がった人は0、完全終止なら他の人は2倍、山札切れは全員そのまま）
+function roundPenalty(){
+  return S.players.map(p=>S.stalled?p.hand.length:(p===S.winner?0:p.hand.length*(S.cadence?2:1)));
 }
 function curPlayer(){return S.players[S.turn];}
 function nextIndex(n=1){const N=S.players.length;return((S.turn+S.dir*n)%N+N)%N;}
@@ -340,7 +357,7 @@ hooks.log=m=>{document.getElementById('msg').innerHTML=m;};
 
 // ---------- ui ----------
 const $=id=>document.getElementById(id);
-let cfg={cpu:2,adv:0},cpuTimer=null;
+let cfg={cpu:2,adv:0,rounds:3},cpuTimer=null,M=null;
 const FCLS={T:'fT',S:'fS',D:'fD'};
 const FNAME={T:'トニック',S:'サブドミナント',D:'ドミナント'};
 function cardEl(c,big){
@@ -365,7 +382,7 @@ function render(){
   S.players.slice(1).forEach((p,i)=>{
     const d=document.createElement('div');
     d.className='opp'+(S.turn===i+1&&!S.over?' turn':'');
-    d.innerHTML=`<div class="nm">${p.name}</div><div class="ct">🂠 ${p.hand.length}</div><div class="last">${p.hand.length===1?'ラスト1枚！':''}</div>`;
+    d.innerHTML=`<div class="nm">${p.name}</div><div class="ct">🂠 ${p.hand.length}</div><div class="last">${p.hand.length===1?'ラスト1枚！':''}</div>`+(M&&M.rounds>1?`<div class="small">失点 ${M.scores[i+1]}</div>`:'');
     opps.appendChild(d);
   });
   // pile
@@ -380,7 +397,7 @@ function render(){
   else if(S.g7)need='T か G7 を出すか2枚引く';
   else need={T:'次は S か D',S:'次は D だけ',D:'次は T だけ'}[f]+`（${S.cur.name} の重ねもOK）`;
   const turnName=S.over?'—':curPlayer().name;
-  $('info').innerHTML=`場：<b>${S.free?S.cur.name[0]+'sus4':S.cur.name}</b>（${S.free?'ワイルド':FNAME[f]}）<br>`
+  $('info').innerHTML=(M&&M.rounds>1?`<b>ラウンド ${M.round}/${M.rounds}</b>（あなたの失点 ${M.scores[0]}）<br>`:'')+`場：<b>${S.free?S.cur.name[0]+'sus4':S.cur.name}</b>（${S.free?'ワイルド':FNAME[f]}）<br>`
     +`<span class="badge" style="background:${S.g7?'var(--D)':'#2a2639'}">${need}</span><br>`
     +`手番：<b>${turnName}</b><br>向き：${S.dir===1?'↻ 時計回り':'↺ 逆回り'}<br>山札：${S.deck.length}枚`;
   // history
@@ -438,22 +455,44 @@ function replayProg(prog){
 }
 function showResult(){
   const w=S.winner,you=w===S.players[0];
-  let html=`<h2>${S.stalled?'山札切れで終了':'演奏終了！'}</h2><div class="big">${you?'🎉 あなたの勝ち！':w.name+' の勝ち'}</div>`;
+  const pen=roundPenalty();pen.forEach((v,i)=>M.scores[i]+=v);if(!S.stalled)M.wins[S.players.indexOf(w)]++;
+  const multi=M.rounds>1,final=M.round>=M.rounds;
+  let html=`<h2>${multi?'ラウンド '+M.round+'/'+M.rounds+' ':''}${S.stalled?'山札切れで終了':'演奏終了！'}</h2><div class="big">${you?'🎉 あなたの勝ち！':w.name+' の勝ち'}</div>`;
   if(S.cadence)html+=`<div class="cad">♪ 完全終止で上がり！</div>`;
   const prog=S.history.filter(x=>x!=='⇄'&&x!=='⊘').slice(-PROG_MAX);
   html+=`<p class="small">今回の進行${prog.length<S.history.filter(x=>x!=='⇄'&&x!=='⊘').length?'（最後の'+PROG_MAX+'コード）':''}</p><div id="prog">${prog.map(x=>`<span class="pc ${progCls(x)}">${x}</span>`).join('')}</div>`;
   html+=`<button class="btn" id="rReplay" style="margin-top:4px">▶ もう一度聴く</button>`;
-  html+=`<p class="small">残り手札：${S.players.map(p=>p.name+' '+p.hand.length+'枚').join('／')}</p>`;
-  html+=`<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="rSet" style="flex:1">設定</button><button class="btn primary" id="rAgain" style="flex:2">もう一度</button></div>`;
+  if(multi){
+    // 失点が少ない順。同点なら上がった回数が多い人が上
+    const key=i=>M.scores[i]*100-M.wins[i];
+    const bestK=Math.min(...S.players.map((p,i)=>key(i)));
+    const isTop=i=>final&&key(i)===bestK;
+    html+=`<table class="score"><tr><th></th><th>残り</th><th>今回</th><th>合計</th><th>上がり</th></tr>`+S.players.map((p,i)=>
+      `<tr class="${isTop(i)?'top':''}"><td>${isTop(i)?'🏆 ':''}${p.name}</td><td>${p.hand.length}枚</td><td>${pen[i]?'+'+pen[i]:'0'}</td><td><b>${M.scores[i]}</b></td><td>${M.wins[i]}回</td></tr>`).join('')+`</table>`;
+    if(S.cadence&&!S.stalled)html+=`<p class="small">完全終止なので失点2倍！</p>`;
+    if(final){
+      const champs=S.players.filter((p,i)=>isTop(i));
+      html+=`<div class="big" style="font-size:22px">${champs.length>1?'同点優勝：'+champs.map(p=>p.name).join('・'):champs[0]===S.players[0]?'🏆 あなたの優勝！':'🏆 '+champs[0].name+' の優勝'}</div>`;
+    }
+  }else{
+    html+=`<p class="small">残り手札：${S.players.map(p=>p.name+' '+p.hand.length+'枚').join('／')}</p>`;
+  }
+  const nextLbl=multi&&!final?'次のラウンドへ':'もう一度';
+  html+=`<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="rSet" style="flex:1">設定</button><button class="btn primary" id="rAgain" style="flex:2">${nextLbl}</button></div>`;
   $('resultBody').innerHTML=html;$('ovResult').classList.remove('hide');
   $('rReplay').onclick=()=>{ensureAudio();replayProg(prog);};
   setTimeout(()=>replayProg(prog),500);
-  $('rAgain').onclick=()=>{stopReplay();$('ovResult').classList.add('hide');start();};
+  $('rAgain').onclick=()=>{stopReplay();$('ovResult').classList.add('hide');if(multi&&!final){M.round++;startRound();}else start();};
   $('rSet').onclick=()=>{stopReplay();$('ovResult').classList.add('hide');$('ovStart').classList.remove('hide');};
 }
 function start(){
+  const N=cfg.cpu+1;
+  M={rounds:cfg.rounds,round:1,scores:Array(N).fill(0),wins:Array(N).fill(0),first:Math.floor(Math.random()*N)};
+  startRound();
+}
+function startRound(){
   ensureAudio();clearTimeout(cpuTimer);
-  newGame(cfg.cpu,cfg.adv);
+  newGame(cfg.cpu,cfg.adv,M.first+M.round-1);
   hooks.log(`最初のコードは <b>${S.cur.name}</b>。<b>${curPlayer().name}</b> から`);
   playNotes(CH[S.cur.name].notes);
   after();
@@ -463,9 +502,9 @@ function seg(id,key){
     $(id).querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cfg[key]=+b.dataset.v;
   });
 }
-seg('segCpu','cpu');seg('segAdv','adv');
+seg('segCpu','cpu');seg('segAdv','adv');seg('segRounds','rounds');
 try{const s=JSON.parse(localStorage.getItem('onechord-cfg')||'null');if(s){cfg=Object.assign(cfg,s);
-  ['segCpu','segAdv'].forEach((id,k)=>{const v=k?cfg.adv:cfg.cpu;$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));});}}catch(e){}
+  [['segCpu','cpu'],['segAdv','adv'],['segRounds','rounds']].forEach(([id,k])=>{const v=cfg[k];$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));});}}catch(e){}
 $('bStart').onclick=()=>{try{localStorage.setItem('onechord-cfg',JSON.stringify(cfg));}catch(e){}$('ovStart').classList.add('hide');start();};
 $('bNew').onclick=()=>{clearTimeout(cpuTimer);stopReplay();$('ovStart').classList.remove('hide');};
 $('bRules').onclick=$('bRules2').onclick=()=>$('ovRules').classList.remove('hide');

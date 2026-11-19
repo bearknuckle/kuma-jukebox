@@ -124,11 +124,12 @@ const GAMES=[
   {
     id:'uwasa-kabu', name:'ウワサ株', icon:'📈', color:'#d1453b',
     desc:'ニュースのウワサを見て株を売り買い。裏返して答え合わせ。遊びながら株取引のキホンが身につく。',
-    players:'1人（CPU 3人）', time:'5〜10分', genre:'株', added:'2026-11-18', version:'0.5', updated:'2026-11-19', isNew:true
+    players:'1人（CPU 1〜5人）', time:'5〜10分', genre:'株', added:'2026-11-18', version:'0.6', updated:'2026-11-19', isNew:true
   },
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-19', id:'uwasa-kabu',       version:'0.6', text:'バランス調整：1回で2株まで売買、最後は一斉に売って値下がり、ニュースの値動きを大きく'},
   {date:'2026-11-19', id:'bonenkai-highlow', version:'0.1', text:'新しく登場（宴会のゲーム・景品スロットつきの忘年会ゲーム）'},
   {date:'2026-11-19', id:'doubutsu-kabu',    version:'0.2', text:'ウサギのカブ農園が上場、持ち株は切り株・配当は実り・倒産は伐採と新芽で再上場'},
   {date:'2026-11-19', id:'pennant-owners',   version:'0.1', text:'新しく登場（スポーツのゲーム・監督と経営の野球カードゲーム）'},

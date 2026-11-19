@@ -85,6 +85,7 @@
   summary{cursor:pointer;color:var(--gold);font-weight:bold}
   details ul{padding-left:20px;margin:8px 0}
   .back{text-align:center;margin:14px 0 0;font-size:13px}.back a{color:var(--gold)}
+  .goalbox{font-size:14px;padding:10px 12px}
   .foot{font-size:11px;color:var(--sub);text-align:center;margin-top:16px}
 </style>
 </head>
@@ -106,12 +107,14 @@
         <li>指名されなかった選手は、その巡で見送りになります。</li>
         <li>選手の裏面には隠し能力があります（大化け＋2／普通±0／伸び悩み−1）。</li>
         <li>各球団、1回だけ「スカウト情報」で、場の選手1人の裏面をこっそり見られます。誰を調べたかは全員に知らされます。</li>
-        <li>得点は、★の合計＋隠し能力＋ポジションボーナス（投手・捕手・内野・外野が全部そろえば＋3）です。</li>
+        <li>最初に各球団へ「補強ポイント」カードが1枚ずつ伏せて配られます（自分のものだけ見えます）。達成すると＋3点です。</li>
+        <li>指名が重なって負けた球団は「交渉優先権」を1枚もらいます。指名するときに一緒に出すと、重なってもくじを引かずに獲得できます（優先権を出した球団どうしが重なったら、その球団だけでくじ）。重ならなかったときは使わずに手元に戻ります。</li>
+        <li>得点は、★の合計＋隠し能力＋ポジションボーナス（投手・捕手・内野・外野が全部そろえば＋3）＋補強ポイント（達成で＋3）です。</li>
       </ul>
     </details>
   </div>
   <div class="foot">紙のカードとくじだけで遊べるルールにしています</div>
-  <p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ドラフト会議 v0.1</p>
+  <p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ドラフト会議 v0.2</p>
 </div>
 <script>
 const POSN={P:'投手',C:'捕手',I:'内野',O:'外野'};
@@ -124,6 +127,18 @@ const RAW=[
 ];
 const DECK=RAW.map((d,i)=>({id:i,name:d[0],pos:d[1],star:d[2],hid:d[3]}));
 const C=id=>DECK[id];
+// 補強ポイント（紙のカード8枚。各球団に1枚ずつ伏せて配る）
+const cnt=(t,f)=>t.filter(id=>f(C(id))).length;
+const GOALS=[
+  {id:'P3',name:'投手王国',text:'投手を3人以上',ok:t=>cnt(t,c=>c.pos==='P')>=3,help:c=>c.pos==='P'},
+  {id:'I3',name:'鉄壁の内野',text:'内野を3人以上',ok:t=>cnt(t,c=>c.pos==='I')>=3,help:c=>c.pos==='I'},
+  {id:'O3',name:'外野の大砲',text:'外野を3人以上',ok:t=>cnt(t,c=>c.pos==='O')>=3,help:c=>c.pos==='O'},
+  {id:'C2',name:'正捕手争い',text:'捕手を2人以上',ok:t=>cnt(t,c=>c.pos==='C')>=2,help:c=>c.pos==='C'},
+  {id:'S3',name:'スター軍団',text:'★3を2人以上',ok:t=>cnt(t,c=>c.star===3)>=2,help:c=>c.star===3},
+  {id:'S1',name:'掘り出し名人',text:'★1を3人以上',ok:t=>cnt(t,c=>c.star===1)>=3,help:c=>c.star===1},
+  {id:'G2',name:'育成の名人',text:'大化けを2人以上',ok:t=>cnt(t,c=>c.hid===2)>=2,help:(c,known)=>known&&c.hid===2},
+  {id:'BL',name:'バランス型',text:'★1・★2・★3を1人ずつ以上',ok:t=>[1,2,3].every(n=>cnt(t,c=>c.star===n)>=1),help:(c,known,t)=>cnt(t,x=>x.star===c.star)===0},
+];
 const ROUNDS=5, FIELD=6;
 let S;
 
@@ -134,14 +149,15 @@ function hidCls(h){return h===2?'k2':h===0?'k0':'km';}
 
 function newGame(){
   const sr=shuffle([1,2,3,4,5]);
+  const gl=shuffle(GOALS);
   S={deck:shuffle(DECK.map(c=>c.id)),round:0,field:[],discard:[],
     players:[
-      {name:'あなた',human:true,team:[],scout:false,known:new Set()},
-      {name:'カモメ球団',team:[],scout:false,known:new Set(),scoutRound:sr[0]},
-      {name:'オオカミ球団',team:[],scout:false,known:new Set(),scoutRound:sr[1]},
-      {name:'ハヤブサ球団',team:[],scout:false,known:new Set(),scoutRound:sr[2]},
+      {name:'あなた',human:true,team:[],scout:false,known:new Set(),goal:gl[0],tokens:0},
+      {name:'カモメ球団',team:[],scout:false,known:new Set(),scoutRound:sr[0],goal:gl[1],tokens:0},
+      {name:'オオカミ球団',team:[],scout:false,known:new Set(),scoutRound:sr[1],goal:gl[2],tokens:0},
+      {name:'ハヤブサ球団',team:[],scout:false,known:new Set(),scoutRound:sr[2],goal:gl[3],tokens:0},
     ],
-    needing:[],phase:'',sel:null,scoutMode:false,attempt:1,log:[]};
+    needing:[],phase:'',sel:null,scoutMode:false,usePrio:false,attempt:1,log:[]};
   startRound();
 }
 
@@ -158,7 +174,7 @@ function startRound(){
 }
 
 function toPick(){
-  S.sel=null; S.scoutMode=false;
+  S.sel=null; S.scoutMode=false; S.usePrio=false;
   S.phase=S.needing.includes(0)?'pick':'cpuOnly';
   render();
 }
@@ -175,9 +191,13 @@ function cpuChoose(i){
     if(left<=missing.length) v+=miss?4:-4; else if(miss) v+=0.6;
     v+=Math.random()*1.3;
     if(c.star===3) v-=Math.random()*1.2;
+    if(!p.goal.ok(p.team)&&p.goal.help(c,p.known.has(id),p.team)) v+=1.0;
     if(v>bv){bv=v;best=id;}
   });
-  return best;
+  // 交渉優先権：目玉選手を狙うときに使う
+  const bc=C(best);
+  const prio=p.tokens>0&&(bc.star===3||(p.known.has(best)&&bc.hid===2)||left===1)&&Math.random()<0.75;
+  return {card:best,prio};
 }
 
 function tapCard(id){
@@ -190,12 +210,17 @@ function tapCard(id){
   }
   S.sel=(S.sel===id)?null:id; render();
 }
+function togglePrio(){ if(S.players[0].tokens<1) return; S.usePrio=!S.usePrio; render(); }
 function toggleScout(){ if(S.players[0].scout) return; S.scoutMode=!S.scoutMode; render(); }
 
 function submit(){
   if(S.phase==='pick'&&S.sel==null) return;
-  const noms={};
-  S.needing.forEach(i=>{noms[i]=i===0?S.sel:cpuChoose(i);});
+  const noms={}, prio={};
+  S.needing.forEach(i=>{
+    if(i===0){noms[i]=S.sel;prio[i]=S.usePrio;}
+    else{const r=cpuChoose(i);noms[i]=r.card;prio[i]=r.prio;}
+  });
+  S.prio=prio;
   const by={};
   Object.entries(noms).forEach(([i,c])=>{(by[c]=by[c]||[]).push(+i);});
   S.noms=noms;
@@ -211,8 +236,24 @@ function award(pi,card,how){
 }
 
 function proceed(){
-  S.groups.filter(g=>g.ps.length===1).forEach(g=>award(g.ps[0],g.card,'単独指名'));
-  S.lots=S.groups.filter(g=>g.ps.length>1);
+  S.groups.filter(g=>g.ps.length===1).forEach(g=>{
+    award(g.ps[0],g.card,'単独指名');
+    if(S.prio[g.ps[0]]) S.log.push(`🎟 ${S.players[g.ps[0]].name}の交渉優先権は使わずに戻った`);
+  });
+  S.lots=[];
+  S.groups.filter(g=>g.ps.length>1).forEach(g=>{
+    const users=g.ps.filter(p=>S.prio[p]);
+    users.forEach(p=>S.players[p].tokens--);
+    const out=users.length?g.ps.filter(p=>!S.prio[p]):[];
+    if(users.length===1){
+      award(users[0],g.card,'交渉優先権');
+    }else if(users.length>=2){
+      S.lots.push({card:g.card,ps:users});
+    }else{
+      S.lots.push({card:g.card,ps:g.ps});
+    }
+    out.forEach(p=>{S.players[p].tokens++;S.log.push(`🎟 ${S.players[p].name}は優先権に競り負け、交渉優先権を1枚もらった`);});
+  });
   S.lotIdx=0; nextLot();
 }
 function nextLot(){
@@ -236,7 +277,7 @@ function drawLot(t){
   }
   g.holders=holders; g.done=true; g.winner=holders[g.wt];
   award(g.winner,g.card,'くじで当選');
-  g.ps.filter(p=>p!==g.winner).forEach(p=>S.log.push(`❌ ${S.players[p].name}はくじに外れた`));
+  g.ps.filter(p=>p!==g.winner).forEach(p=>{S.players[p].tokens++;S.log.push(`❌ ${S.players[p].name}はくじに外れ、交渉優先権を1枚もらった`);});
   render();
 }
 function nextAfterLot(){S.lotIdx++;nextLot();}
@@ -259,7 +300,8 @@ function score(p){
   const h=p.team.reduce((a,id)=>a+C(id).hid,0);
   const all=['P','C','I','O'].every(x=>p.team.some(id=>C(id).pos===x));
   const bonus=all?3:0;
-  return {st,h,bonus,total:st+h+bonus};
+  const goal=p.goal.ok(p.team)?3:0;
+  return {st,h,bonus,goal,total:st+h+bonus+goal};
 }
 
 /* ---------- render ---------- */
@@ -287,9 +329,10 @@ function needHTML(p){
 }
 function teamsHTML(reveal){
   return `<div class="panel"><h2>各球団の指名選手</h2><div class="teams">${S.players.map(p=>`
-    <div class="team"><div class="hd"><b>${p.name}</b><span class="need">${p.team.length}/${ROUNDS}人 ${p.scout?'・スカウト済':'・スカウト未使用'}</span></div>
+    <div class="team"><div class="hd"><b>${p.name}</b><span class="need">${p.team.length}/${ROUNDS}人 ${p.scout?'・スカウト済':'・スカウト未使用'}${p.tokens?` ・🎟×${p.tokens}`:''}</span></div>
     <div class="chips">${p.team.map(id=>chipHTML(id,reveal)).join('')||'<span class="need">まだいません</span>'}</div>
-    ${needHTML(p)}</div>`).join('')}</div></div>`;
+    ${needHTML(p)}
+    <div class="need">補強ポイント：${(reveal||p.human)?`${p.goal.name}（${p.goal.text}）${p.goal.ok(p.team)?' <span class="ok">✔達成</span>':''}`:'？（伏せてある）'}</div></div>`).join('')}</div></div>`;
 }
 function logHTML(){
   if(!S.log.length) return '';
@@ -302,9 +345,11 @@ function render(){
   const me=S.players[0];
   let h='';
   if(S.phase==='pick'){
+    h+=`<div class="panel goalbox">🃏 あなたの補強ポイント：<b>${me.goal.name}</b>（${me.goal.text}・達成で＋3）${me.goal.ok(me.team)?' <span style="color:#4caf7a;font-weight:bold">✔達成中</span>':''}</div>`;
     h+=`<div class="panel"><div class="msg">${S.scoutMode?'🔍 裏面を調べたい選手をタップしてください':(S.attempt>1?'くじに外れました。残りの選手から再指名してください。':'指名する選手を1人選んでください。')}</div>
       <div class="grid">${S.field.map(id=>cardHTML(id,{click:true,sel:S.sel===id,scouting:S.scoutMode})).join('')}</div>
       <div class="btns"><button class="primary" onclick="submit()" ${S.sel==null||S.scoutMode?'disabled':''}>この選手を指名する</button>
+      <button class="ghost" onclick="togglePrio()" ${me.tokens<1?'disabled':''} style="${S.usePrio?'background:#f2c14e;color:#1b1b1b':''}">🎟 交渉優先権${me.tokens?`（${me.tokens}枚）`:''}${S.usePrio?'を出す ✔':(me.tokens?'を使う':'なし')}</button>
       <button class="ghost" onclick="toggleScout()" ${me.scout?'disabled':''}>${me.scout?'スカウト情報 使用済み':(S.scoutMode?'スカウトをやめる':'🔍 スカウト情報を使う（1回）')}</button></div></div>`;
   }else if(S.phase==='cpuOnly'){
     h+=`<div class="panel"><div class="msg">あなたはこの巡の選手を獲得済みです。外れた球団が再指名します。</div>
@@ -314,12 +359,12 @@ function render(){
     const dupCount={}; Object.values(S.noms).forEach(c=>dupCount[c]=(dupCount[c]||0)+1);
     h+=`<div class="panel"><h2>${S.attempt>1?'再指名':'指名'}の発表</h2><div class="noms">${Object.entries(S.noms).map(([i,c])=>{
         const cc=C(c);
-        return `<div class="nom"><span>${S.players[i].name}</span><span><span class="pos ${cc.pos}">${POSN[cc.pos]}</span> ${cc.name} <span style="color:#f2c14e">${stars(cc.star)}</span>${dupCount[c]>1?`<span class="dup">重複${dupCount[c]}</span>`:''}</span></div>`;}).join('')}</div>
+        return `<div class="nom"><span>${S.players[i].name}</span><span><span class="pos ${cc.pos}">${POSN[cc.pos]}</span> ${cc.name} <span style="color:#f2c14e">${stars(cc.star)}</span>${S.prio[i]?'<span class="dup" style="color:#f2c14e">🎟優先権</span>':''}${dupCount[c]>1?`<span class="dup">重複${dupCount[c]}</span>`:''}</span></div>`;}).join('')}</div>
       <div class="btns"><button class="primary" onclick="proceed()">交渉権の確定へ</button></div></div>`;
   }else if(S.phase==='lottery'){
     const g=S.lots[S.lotIdx], cc=C(g.card), mineIn=g.ps.includes(0);
     h+=`<div class="panel"><h2>抽選：${cc.name}（${POSN[cc.pos]} ${stars(cc.star)}）</h2>
-      <div class="msg">${g.ps.map(p=>S.players[p].name).join('・')}が競合。当たりは1枚だけです。</div>
+      <div class="msg">${g.ps.map(p=>S.players[p].name).join('・')}が${S.prio[g.ps[0]]?'交渉優先権どうしで':''}競合。当たりは1枚だけです。外れた球団は交渉優先権を1枚もらえます。</div>
       <div class="tickets">${g.ps.map((_,t)=>{
         if(!g.done) return mineIn?`<div class="ticket" onclick="drawLot(${t})">くじ</div>`:`<div class="ticket">くじ</div>`;
         const win=t===g.wt;
@@ -335,8 +380,8 @@ function render(){
     const meWin=rows.filter(r=>r.s.total===top).some(r=>r.i===0);
     h+=`<div class="panel"><h2>結果発表（隠し能力を公開）</h2>
       <div class="big">${meWin?'🏆 あなたの球団が最高評価！':`${rows[0].p.name}が最高評価`}</div>
-      <table><tr><th></th><th>球団</th><th>★</th><th>隠し</th><th>守備</th><th>合計</th></tr>
-      ${rows.map((r,k)=>`<tr class="${r.s.total===top?'rank1':''}"><td>${k+1}</td><td class="l">${r.p.name}</td><td>${r.s.st}</td><td>${r.s.h>0?'+':''}${r.s.h}</td><td>${r.s.bonus?'+3':'0'}</td><td><b>${r.s.total}</b></td></tr>`).join('')}
+      <table><tr><th></th><th>球団</th><th>★</th><th>隠し</th><th>守備</th><th>補強</th><th>合計</th></tr>
+      ${rows.map((r,k)=>`<tr class="${r.s.total===top?'rank1':''}"><td>${k+1}</td><td class="l">${r.p.name}</td><td>${r.s.st}</td><td>${r.s.h>0?'+':''}${r.s.h}</td><td>${r.s.bonus?'+3':'0'}</td><td>${r.s.goal?'+3':'0'}</td><td><b>${r.s.total}</b></td></tr>`).join('')}
       </table><div class="btns"><button class="primary" onclick="newGame()">もう一度</button></div></div>`;
     h+=teamsHTML(true);
     document.getElementById('main').innerHTML=h; return;

@@ -76,8 +76,8 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 const GAMES=[
   {
     id:'draft-kaigi', name:'ドラフト会議', icon:'🎫', color:'#1e3560',
-    desc:'試合はなし、ドラフト会議だけを遊ぶ野球カードゲーム。全員が「せーの」で同時に指名し、重なったらくじ引き。外れたら残りから外れ1位を再指名。選手の裏には大化け・伸び悩みの隠し能力があり、1回だけスカウトで覗ける。5巡で作った球団の評価点で勝負。',
-    players:'1人（CPU 3球団）', time:'5分', genre:'スポーツ', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
+    desc:'試合はなし、ドラフト会議だけを遊ぶ野球カードゲーム。全員が「せーの」で同時に指名し、重なったらくじ引き。外れたら交渉優先権をもらって外れ1位を再指名。選手の裏には大化け・伸び悩みの隠し能力、各球団には秘密の補強ポイント。5巡で作った球団の評価点で勝負。',
+    players:'1人（CPU 3球団）', time:'5分', genre:'スポーツ', added:'2026-11-19', version:'0.2', updated:'2026-11-20', isNew:true
   },
   {
     id:'stadium-keiei', name:'スタジアム経営', icon:'🏟️', color:'#0f3d2e',
@@ -139,6 +139,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-20', id:'draft-kaigi',      version:'0.2', text:'秘密の「補強ポイント」カード（達成で＋3点）と、くじに外れるともらえる「交渉優先権」を追加'},
   {date:'2026-11-20', id:'setori-shokunin',  version:'0.2', text:'取った曲をすぐ枠に置く方式に（あとから動かせず、最後にリハーサルで1回だけ入れ替え）。中盤で一度落とす「聴かせどころ」の採点を追加し、CPU店長もドラフトするように'},
   {date:'2026-11-20', id:'pennant-owners',   version:'0.3', text:'お金をなくしてドラフト＋3試合シリーズに。打者は1人ずつ打ち、最終回は直球・変化球の読み合い、サヨナラもあり'},
   {date:'2026-11-19', id:'draft-kaigi',      version:'0.1', text:'新しく登場（スポーツのゲーム・同時指名とくじ引きの野球ドラフトゲーム）'},

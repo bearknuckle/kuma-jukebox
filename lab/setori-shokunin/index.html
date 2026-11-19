@@ -154,6 +154,8 @@
         <li><b>聴かせどころがバラード +2点：</b>その下げた曲がバラードのとき</li>
         <li><b>流れが切れる −1点：</b>盛り上がりが下がる2回目以降（1回ごと）</li>
         <li><b>つかみ +2点：</b>1曲目の盛り上がりが3以上</li>
+        <li><b>ギアチェンジ +1点：</b>テンポ「遅い」の曲の次に「速い」曲が来たとき（1回ごと）</li>
+        <li><b>単調 −1点：</b>同じテンポが3曲続いたとき。4曲目以降も続けば1曲ごとにさらに −1</li>
         <li><b>アンコール +5点：</b>8曲目の盛り上がりが、セトリ内で単独最高</li>
         <li><b>失速 −2点：</b>盛り上がり5の直後に1が来たとき（1回ごと）</li>
       </ul>
@@ -257,13 +259,20 @@ function buildDeck(){
 
 /* ============ 採点 ============ */
 function scoreSetlist(list){
-  var genrePts = 0, rise = 0, stall = 0, drops = [], i;
+  var genrePts = 0, rise = 0, stall = 0, gear = 0, mono = 0, drops = [], i;
   for (i = 0; i < list.length - 1; i++){
     var a = list[i], b = list[i+1];
     if (a.genre === b.genre) genrePts += 2;
     if (b.heat > a.heat) rise += 1;
     if (b.heat < a.heat) drops.push(i + 1);
     if (a.heat === 5 && b.heat === 1) stall -= 2;
+    if (a.tempo === "遅い" && b.tempo === "速い") gear += 1;
+  }
+  // 単調：同じテンポが3曲以上続くと、3曲目から1曲ごとに −1
+  var run = 1;
+  for (i = 1; i < list.length; i++){
+    run = (list[i].tempo === list[i-1].tempo) ? run + 1 : 1;
+    if (run >= 3) mono -= 1;
   }
   var kiki = 0, kikiBallad = 0, kikiPos = -1;
   if (drops.length === 1 && drops[0] >= KIKI_FROM && drops[0] <= KIKI_TO){
@@ -276,16 +285,16 @@ function scoreSetlist(list){
   var maxHeat = Math.max.apply(null, list.map(function(c){ return c.heat; }));
   var maxCount = list.filter(function(c){ return c.heat === maxHeat; }).length;
   var encore = (list[list.length-1].heat === maxHeat && maxCount === 1) ? 5 : 0;
-  var total = genrePts + rise + kiki + kikiBallad + cut + tsukami + encore + stall;
+  var total = genrePts + rise + kiki + kikiBallad + cut + tsukami + encore + stall + gear + mono;
   return { genre:genrePts, rise:rise, kiki:kiki, kikiBallad:kikiBallad, cut:cut, tsukami:tsukami,
-           encore:encore, stall:stall, total:total, drops:drops, kikiPos:kikiPos };
+           encore:encore, stall:stall, gear:gear, mono:mono, total:total, drops:drops, kikiPos:kikiPos };
 }
 
 /* ============ CPU ============ */
 // 空き枠を「理想の形」の仮の曲で埋めて採点し、一番伸びる置き方を選ぶ
 var CPU_SHAPE = [3,4,4,2,3,4,4,5];
 function cpuEstimate(slots){
-  var list = slots.map(function(c, i){ return c || { heat:CPU_SHAPE[i], genre:"_" + i }; });
+  var list = slots.map(function(c, i){ return c || { heat:CPU_SHAPE[i], genre:"_" + i, tempo:"_" + i }; });
   return scoreSetlist(list).total;
 }
 function cpuPlace(slots, choices){
@@ -356,7 +365,7 @@ function renderCpuBoard(id){
     var d = document.createElement("div");
     d.className = c ? "on" : "";
     d.innerHTML = "<b>" + (i === N - 1 ? "8・アンコール" : (i+1) + "曲目") + "</b>" +
-      (c ? c.genreName + "・熱" + c.heat : "—");
+      (c ? c.genreName + "・熱" + c.heat + "<br>" + c.tempo : "—");
     box.appendChild(d);
   });
 }
@@ -378,7 +387,7 @@ function slotButton(c, i, opts){
   var zone = (i >= KIKI_FROM && i <= KIKI_TO) ? '<span class="zone">聴かせどころ候補</span>' : "";
   if (c){
     b.innerHTML = '<span class="no">' + slotLabel(i) + '</span><span class="sttl">' + c.title + '</span>' +
-      '<span class="smeta">' + c.genreName + "／熱" + c.heat + '</span>';
+      '<span class="smeta">' + c.genreName + "／熱" + c.heat + "／" + c.tempo + '</span>';
   } else {
     b.innerHTML = '<span class="no">' + slotLabel(i) + '</span><span class="empty">' +
       (opts.pickable ? "ここに置く" : "（空き）") + '</span>' + zone;
@@ -434,7 +443,7 @@ function placeCard(ci, slot){
   var cc = cpuChoices[mv.ci];
   state.cpuSlots[mv.slot] = cc;
   document.getElementById("cpu-msg").textContent =
-    "CPU店長は「" + cc.title + "」（" + cc.genreName + "・熱" + cc.heat + "）を" + slotLabel(mv.slot) + "に置いた";
+    "CPU店長は「" + cc.title + "」（" + cc.genreName + "・熱" + cc.heat + "・" + cc.tempo + "）を" + slotLabel(mv.slot) + "に置いた";
   if (state.round >= N){
     startRehearsal();
   } else {
@@ -487,6 +496,8 @@ function renderRehearsal(){
   else if (s.drops.length > 1) parts.push("下がる所が" + s.drops.length + "か所");
   else parts.push("下がる所が4〜6曲目の外");
   if (s.encore) parts.push("アンコール成立");
+  if (s.gear) parts.push("ギアチェンジ" + s.gear + "回");
+  if (s.mono) parts.push("単調 " + s.mono);
   document.getElementById("preview").innerHTML = "今の得点 <b>" + s.total + "点</b>　<span class='muted'>" + parts.join("・") + "</span>";
   renderCpuBoard("cpu-board2");
 }
@@ -534,7 +545,9 @@ function showResult(){
     ["流れが切れる（2回目以降の下降）", ps.cut, cs.cut],
     ["つかみ（1曲目が盛り上がり3以上）", ps.tsukami, cs.tsukami],
     ["アンコール（最後が単独最高）", ps.encore, cs.encore],
-    ["失速（5の直後に1）", ps.stall, cs.stall]
+    ["失速（5の直後に1）", ps.stall, cs.stall],
+    ["ギアチェンジ（遅い→速い）", ps.gear, cs.gear],
+    ["単調（同じテンポが3曲続く）", ps.mono, cs.mono]
   ];
   var html = "";
   rows.forEach(function(r){

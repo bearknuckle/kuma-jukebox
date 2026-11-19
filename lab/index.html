@@ -75,6 +75,11 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 // ゲームを増やすときはここに1件追加する
 const GAMES=[
   {
+    id:'draft-kaigi', name:'ドラフト会議', icon:'🎫', color:'#1e3560',
+    desc:'試合はなし、ドラフト会議だけを遊ぶ野球カードゲーム。全員が「せーの」で同時に指名し、重なったらくじ引き。外れたら残りから外れ1位を再指名。選手の裏には大化け・伸び悩みの隠し能力があり、1回だけスカウトで覗ける。5巡で作った球団の評価点で勝負。',
+    players:'1人（CPU 3球団）', time:'5分', genre:'スポーツ', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
+  },
+  {
     id:'stadium-keiei', name:'スタジアム経営', icon:'🏟️', color:'#0f3d2e',
     desc:'球場のオーナーになって、屋台・ビール売り子・グッズショップなどの施設を建てて稼ぐ経営ゲーム。試合の勝ち負けはサイコロまかせ。毎回のイベント（雨天中止・週末デーゲーム・猛暑日…）で稼ぎどころが変わる。9試合でいちばん稼いだオーナーの勝ち。',
     players:'1人（CPU 2球場）', time:'10〜20分', genre:'スポーツ', added:'2026-11-19', version:'0.1', updated:'2026-11-19', isNew:true
@@ -134,6 +139,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-19', id:'draft-kaigi',      version:'0.1', text:'新しく登場（スポーツのゲーム・同時指名とくじ引きの野球ドラフトゲーム）'},
   {date:'2026-11-19', id:'stadium-keiei',    version:'0.1', text:'新しく登場（スポーツのゲーム・球場の売店とイベントで稼ぐ経営ゲーム）'},
   {date:'2026-11-19', id:'uwasa-kabu',       version:'0.7', text:'情報屋が無料に（1ゲーム2回まで）、最初の所持金を15コインに'},
   {date:'2026-11-19', id:'pennant-owners',   version:'0.2', text:'シンプル版に作り直し：年俸・イベント・成長をなくし、1ラウンドは「買う→3人で打つ→賞金」だけに'},

@@ -57,7 +57,7 @@ h1 span{color:var(--frame)}
   border:1.5px solid var(--paper2);background:var(--card);color:var(--ink);cursor:pointer
 }
 .lvs .sw{flex:none;width:26px;height:34px;border-radius:5px;border:2.5px solid var(--c);display:flex;align-items:center;justify-content:center;color:var(--c);font-size:13px;background:#fffaf0}
-.lvs b{display:block;font-size:14px}
+.lvs b{display:block;font-size:13px;white-space:nowrap}
 .lvs small{display:block;font-size:11px;color:var(--muted);line-height:1.35}
 .lvs button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,#fffaf0);box-shadow:inset 0 0 0 1px var(--c)}
 .lvs button.on .sw{background:var(--c);color:#fff}
@@ -124,6 +124,8 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
 .card.slot{opacity:1;background:transparent;border:2px dashed rgba(120,100,70,.25);box-shadow:none}
 .card.slot::before,.card.slot svg,.card.slot .tag{display:none}
 .card.shake{animation:shake .35s}
+.card.deal{animation:deal .35s ease}
+@keyframes deal{0%{transform:translateY(-14px) scale(.9);opacity:0}100%{transform:none;opacity:1}}
 .card.hint{outline:3px solid var(--gold);outline-offset:2px}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
@@ -159,7 +161,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     </div></div>
   <div class="group"><h2>レベル（札の色）<span>いくつでも選べます</span></h2>
     <div class="lvs" id="levels"></div>
-    <div class="lvnote">おすすめの順番：赤 → 赤＋青 → 緑 → 全部まぜる。紙の札も同じ4色で作れば、遊ぶ色の札だけを場に並べられます。</div>
+    <div class="lvnote">おすすめの順番：白 → 赤 → 赤＋青 → 緑 → 全部まぜる。白は楽譜を読むときの目印になる音だけの入門セットです。紙の札も同じ5色で作れば、遊ぶ色の札だけを場に並べられます。</div>
   </div>
   <div class="group"><h2>あそびかた</h2>
     <div class="seg" data-key="melody">
@@ -174,7 +176,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
       <button data-v="2">ふつう</button>
       <button data-v="3">つよい</button>
     </div></div>
-  <div class="group"><h2>札の数・表記</h2>
+  <div class="group"><h2>場に並べる枚数・表記</h2>
     <div class="seg" data-key="size" style="margin-bottom:6px">
       <button data-v="8">8枚</button>
       <button data-v="12">12枚</button>
@@ -194,6 +196,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     ・「ひとりで」は全部の札を取るまで続けて、お手つきの数を数えます。<br>
     ・<b>メロディ取り</b>：番号つきの<b>メロディ読み札</b>（3音は24枚、4音は20枚）を山から1枚めくって読みます。場の札で作れないメロディ札はとばし、作れる札がなくなったら1枚ずつ読みに切りかえます。読み手が3〜4音を続けて出します。その順番どおりに札を取ると、取った札が並んで小さな楽譜になります。全部そろえた人が、その札を全部もらえます（紙で遊ぶときは、取った札を左から順に並べて全員で答え合わせ）。<br>
     ・まちがえた札と取られた札は<b>復習の山</b>によけておき、次のゲームで必ず場に入れます。<br>
+    ・場に並べるのは8枚か12枚。残りは<b>山札</b>にして、札を取ったら1枚補充します。山札がなくなったら、場の札を取りきって終わりです。<br>
     ・勝ち負けは取り札の<b>点数</b>で決めます。赤・緑の札は1点、加線の青・紫の札は<b>2点</b>（札の右下に「2点」）。お手つきで返すのは1点の札からです。<br>
     ・札の枠の色と右上のマーク（●■▲◆）がレベルです。色が見分けにくくても、マークで区別できます。
   </details>
@@ -249,11 +252,13 @@ const CLEF={
 const span=(a,b)=>Array.from({length:b-a+1},(_,i)=>a+i);
 // 札の色＝レベル。紙の札でもこの4色・4マークで分ける
 const LEVELS=[
+  {id:'white', name:'白', mark:'○', color:'#8f877b', items:[['treble',-2],['treble',2],['treble',5],['treble',12],['bass',-4],['bass',3],['bass',6],['bass',12]], desc:'目印の音（真ん中のド・ソ・ファなど）', pts:1},
   {id:'red',   name:'赤', mark:'●', color:'#b8322a', clef:'treble', ps:span(-1,9),          desc:'ト音記号・五線の中', pts:1},
   {id:'blue',  name:'青', mark:'■', color:'#2f5fa8', clef:'treble', ps:[-4,-3,-2,10,11,12], desc:'ト音記号・加線', pts:2},
   {id:'green', name:'緑', mark:'▲', color:'#3d8a5a', clef:'bass',   ps:span(-1,9),          desc:'ヘ音記号・五線の中', pts:1},
   {id:'purple',name:'紫', mark:'◆', color:'#7a4a9a', clef:'bass',   ps:[-4,-3,-2,10,11,12], desc:'ヘ音記号・加線', pts:2}
 ];
+LEVELS.forEach(l=>{ if(!l.items) l.items=l.ps.map(p=>[l.clef,p]); });
 const LV=Object.fromEntries(LEVELS.map(l=>[l.id,l]));
 const val=c=>(LV[c.lv]&&LV[c.lv].pts)||1;
 // メロディ読み札（ド=0 … シ=6）。紙では番号つきの読み札にして、山から1枚ずつ読む
@@ -262,9 +267,9 @@ const MELODIES={
   4:['0123','3210','4321','1234','2345','5432','3456','6543','0124','4210','0213','2435','5601','1065','4560','0654','2106','6012','3245','0243']
 };
 
-const S={mode:'name',melody:'1',levels:['red'],cpu:'2',size:'12',names:'doremi'};
+const S={mode:'name',melody:'1',levels:['white'],cpu:'2',size:'12',names:'doremi'};
 try{Object.assign(S,JSON.parse(localStorage.getItem('onpuKarutaSettings')||'{}'))}catch(e){}
-if(!Array.isArray(S.levels)||!S.levels.filter(id=>LV[id]).length) S.levels=['red'];
+if(!Array.isArray(S.levels)||!S.levels.filter(id=>LV[id]).length) S.levels=['white'];
 S.levels=S.levels.filter(id=>LV[id]);
 function saveS(){try{localStorage.setItem('onpuKarutaSettings',JSON.stringify(S))}catch(e){}}
 
@@ -346,7 +351,7 @@ function syncSeg(){
     const b=document.createElement('button');
     b.style.setProperty('--c',l.color);
     b.className=S.levels.includes(l.id)?'on':'';
-    b.innerHTML=`<span class="sw">${l.mark}</span><span><b>${l.name}の札（${l.ps.length}枚${l.pts>1?'・2点':''}）</b><small>${l.desc}</small></span>`;
+    b.innerHTML=`<span class="sw">${l.mark}</span><span><b>${l.name}の札（${l.items.length}枚${l.pts>1?'・2点':''}）</b><small>${l.desc}</small></span>`;
     b.onclick=()=>{
       const on=S.levels.includes(l.id);
       if(on&&S.levels.length===1) return;
@@ -356,8 +361,8 @@ function syncSeg(){
     box.appendChild(b);
   });
   const pv=$('preview'); pv.innerHTML='';
-  S.levels.forEach(id=>{const l=LV[id], p=l.ps[Math.floor(l.ps.length/2)];
-    pv.appendChild(cardEl({clef:l.clef,p,d:CLEF[l.clef].base+p,lv:id}));});
+  S.levels.forEach(id=>{const l=LV[id], [cl,p]=l.items[Math.floor(l.items.length/2)];
+    pv.appendChild(cardEl({clef:cl,p,d:CLEF[cl].base+p,lv:id}));});
 }
 document.querySelectorAll('.seg').forEach(seg=>seg.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
@@ -371,7 +376,7 @@ function show(id){['setup','game','result'].forEach(s=>$(s).classList.toggle('hi
 
 function buildPool(){
   const pool=[];
-  S.levels.forEach(id=>{const l=LV[id]; l.ps.forEach(p=>pool.push({clef:l.clef,p,d:CLEF[l.clef].base+p,lv:id}));});
+  S.levels.forEach(id=>{LV[id].items.forEach(([cl,p])=>pool.push({clef:cl,p,d:CLEF[cl].base+p,lv:id}));});
   return pool;
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -382,24 +387,28 @@ function startGame(){
   audio();
   const isRev=c=>REVIEW.some(r=>r.clef===c.clef&&r.p===c.p);
   const pool=shuffle(buildPool()).sort((a,b)=>isRev(b)-isRev(a));
-  const n=Math.min(+S.size,pool.length);
-  const cards=shuffle(pool.slice(0,n)).map((c,i)=>({...c,id:i,taken:null}));
-  G={cards,hand:{you:[],cpu:[]},mdeck:shuffle((MELODIES[+S.melody]||[]).map((m,i)=>({no:i+1,names:m.split('').map(Number)}))),mno:0,miss:0,weak:[],state:'idle',seq:[],pos:0,picked:[],lock:false,cpuTimer:null,solo:S.cpu==='solo',L:+S.melody||1};
+  // 復習の山の札は最初の場に入れ、残りは山札にして、取られたら補充する
+  const cards=pool.map((c,i)=>({...c,id:i,taken:null,onBoard:false}));
+  const n=Math.min(+S.size,cards.length);
+  const first=shuffle(cards.slice(0,n));
+  G={cards,pile:cards.slice(n),hand:{you:[],cpu:[]},mdeck:shuffle((MELODIES[+S.melody]||[]).map((m,i)=>({no:i+1,names:m.split('').map(Number)}))),mno:0,miss:0,weak:[],state:'idle',seq:[],pos:0,picked:[],lock:false,cpuTimer:null,solo:S.cpu==='solo',L:+S.melody||1};
   $('cpuBox').classList.toggle('hidden',G.solo);
   const board=$('board'); board.innerHTML='';
-  cards.forEach(c=>{
-    c.el=cardEl(c);
-    c.el.addEventListener('pointerdown',ev=>{ev.preventDefault();tap(c)});
-    board.appendChild(c.el);
-  });
+  first.forEach(c=>board.appendChild(boardEl(c)));
   $('line').innerHTML=''; $('line').classList.toggle('hidden',G.L===1);
   updateBar(); show('game');
   $('call').innerHTML='<small>よーい…</small>'; setMsg('');
   setTimeout(nextRound,900);
 }
+function boardEl(c){
+  c.onBoard=true; c.el=cardEl(c);
+  c.el.addEventListener('pointerdown',ev=>{ev.preventDefault();tap(c)});
+  return c.el;
+}
 function updateBar(){
   $('sYou').textContent=pts('you'); $('sCpu').textContent=pts('cpu');
-  $('left').textContent=`のこり ${G.cards.filter(c=>!c.taken).length} 枚`;
+  const nb=G.cards.filter(c=>c.onBoard&&!c.taken).length;
+  $('left').textContent=G.pile.length?`場 ${nb}枚・山札 ${G.pile.length}枚`:`のこり ${nb} 枚`;
 }
 const pts=who=>G.hand[who].reduce((a,c)=>a+val(c),0);
 function setMsg(t,cls=''){const m=$('msg');m.textContent=t;m.className='msg '+cls}
@@ -441,7 +450,7 @@ function renderLine(cards,ok){
   }
 }
 function nextRound(){
-  const left=G.cards.filter(c=>!c.taken);
+  const left=G.cards.filter(c=>c.onBoard&&!c.taken);
   if(!left.length) return finish();
   let note='';
   G.mno=0;
@@ -483,7 +492,7 @@ function tap(c){
     G.miss++; const h=G.hand.you, back=h.length>0; if(back){ h.sort((a,b)=>val(b)-val(a)); h.pop(); } sfx(false);
     if(navigator.vibrate) try{navigator.vibrate(80)}catch(e){}
     c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');
-    const correct=G.cards.filter(x=>!x.taken&&!x.held&&matches(x,want));
+    const correct=G.cards.filter(x=>x.onBoard&&!x.taken&&!x.held&&matches(x,want));
     pushWeak(correct[0]||want);
     const where=G.seq.length>1?`${G.pos+1}音目は「${S.mode==='sound'?'？':nameOf(want)}」。`:'';
     const pen=back?'取り札を1枚返します。':'';
@@ -516,7 +525,14 @@ function takeRound(who,cards){
   if(L>1) renderLine(cards,true);
   updateBar();
   const wait=L>1?1600:800;
-  setTimeout(()=>{ cards.forEach(c=>c.el.classList.add('gone')); setTimeout(()=>cards.forEach(c=>{c.el.classList.remove('gone','taken-you','taken-cpu');c.el.classList.add('slot')}),300); },wait);
+  setTimeout(()=>{ cards.forEach(c=>c.el.classList.add('gone')); setTimeout(()=>{
+    cards.forEach(c=>{
+      c.onBoard=false;
+      if(G.pile.length){ const nc=G.pile.shift(); const el=boardEl(nc); el.classList.add('deal'); c.el.replaceWith(el); }
+      else { c.el.classList.remove('gone','taken-you','taken-cpu'); c.el.classList.add('slot'); }
+    });
+    updateBar();
+  },300); },wait);
   setTimeout(nextRound,wait+600);
 }
 function finish(){

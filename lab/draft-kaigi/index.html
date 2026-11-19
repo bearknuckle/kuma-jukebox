@@ -107,14 +107,15 @@
         <li>指名されなかった選手は、その巡で見送りになります。</li>
         <li>選手の裏面には隠し能力があります（大化け＋2／普通±0／伸び悩み−1）。</li>
         <li>各球団、1回だけ「スカウト情報」で、場の選手1人の裏面をこっそり見られます。誰を調べたかは全員に知らされます。</li>
+        <li>最初に各球団へ「球団の個性」カードが1枚ずつ表向きで配られます：🔭スカウト網（スカウト情報を3回）／💰資金力（交渉優先権1枚から始まる）／🌱育成力（大化けが＋3点）／📣人気球団（★3を2人以上そろえたら＋2点）。</li>
         <li>最初に各球団へ「補強ポイント」カードが1枚ずつ伏せて配られます（自分のものだけ見えます）。達成すると＋3点です。</li>
         <li>指名が重なって負けた球団は「交渉優先権」を1枚もらいます。指名するときに一緒に出すと、重なってもくじを引かずに獲得できます（優先権を出した球団どうしが重なったら、その球団だけでくじ）。重ならなかったときは使わずに手元に戻ります。</li>
-        <li>得点は、★の合計＋隠し能力＋ポジションボーナス（投手・捕手・内野・外野が全部そろえば＋3）＋補強ポイント（達成で＋3）です。</li>
+        <li>得点は、★の合計＋隠し能力＋ポジションボーナス（投手・捕手・内野・外野が全部そろえば＋3）＋補強ポイント（達成で＋3）＋個性の点です。</li>
       </ul>
     </details>
   </div>
   <div class="foot">紙のカードとくじだけで遊べるルールにしています</div>
-  <p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ドラフト会議 v0.2</p>
+  <p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ ドラフト会議 v0.3</p>
 </div>
 <script>
 const POSN={P:'投手',C:'捕手',I:'内野',O:'外野'};
@@ -139,6 +140,13 @@ const GOALS=[
   {id:'G2',name:'育成の名人',text:'大化けを2人以上',ok:t=>cnt(t,c=>c.hid===2)>=2,help:(c,known)=>known&&c.hid===2},
   {id:'BL',name:'バランス型',text:'★1・★2・★3を1人ずつ以上',ok:t=>[1,2,3].every(n=>cnt(t,c=>c.star===n)>=1),help:(c,known,t)=>cnt(t,x=>x.star===c.star)===0},
 ];
+// 球団の個性（紙のカード4枚。各球団に1枚ずつ表向きで配る）
+const TRAITS=[
+  {id:'scout',name:'スカウト網',icon:'🔭',text:'スカウト情報を3回使える'},
+  {id:'money',name:'資金力',icon:'💰',text:'交渉優先権を1枚持って始まる'},
+  {id:'ikusei',name:'育成力',icon:'🌱',text:'大化けの選手が＋3点になる（ふつうは＋2）'},
+  {id:'ninki',name:'人気球団',icon:'📣',text:'★3の選手を2人以上そろえたら＋2点'},
+];
 const ROUNDS=5, FIELD=6;
 let S;
 
@@ -158,15 +166,22 @@ function newGame(){
       {name:'ハヤブサ球団',team:[],scout:false,known:new Set(),scoutRound:sr[2],goal:gl[3],tokens:0},
     ],
     needing:[],phase:'',sel:null,scoutMode:false,usePrio:false,attempt:1,log:[]};
+  const tr=shuffle(TRAITS), sr2=shuffle([1,2,3,4,5]);
+  S.players.forEach((p,i)=>{
+    p.trait=tr[i];
+    p.scoutLeft=p.trait.id==='scout'?3:1;
+    if(p.trait.id==='money') p.tokens=1;
+    if(!p.human) p.scoutRounds=p.trait.id==='scout'?[p.scoutRound,...sr2.filter(r=>r!==p.scoutRound).slice(0,2)]:[p.scoutRound];
+  });
   startRound();
 }
 
 function startRound(){
   S.round++; S.field=S.deck.splice(0,FIELD); S.needing=[0,1,2,3]; S.attempt=1; S.log=[];
   S.players.forEach(p=>{
-    if(!p.human&&!p.scout&&p.scoutRound===S.round){
+    if(!p.human&&p.scoutLeft>0&&p.scoutRounds.includes(S.round)){
       const cand=shuffle(S.field.filter(id=>!p.known.has(id))).sort((a,b)=>C(b).star-C(a).star)[0];
-      p.known.add(cand); p.scout=true;
+      p.known.add(cand); p.scoutLeft--; p.scout=p.scoutLeft<=0;
       S.log.push(`🔍 ${p.name}が「${C(cand).name}」をスカウト調査した`);
     }
   });
@@ -192,6 +207,7 @@ function cpuChoose(i){
     v+=Math.random()*1.3;
     if(c.star===3) v-=Math.random()*1.2;
     if(!p.goal.ok(p.team)&&p.goal.help(c,p.known.has(id),p.team)) v+=1.0;
+    if(p.trait.id==='ikusei'&&p.known.has(id)&&c.hid===2) v+=1.0;
     if(v>bv){bv=v;best=id;}
   });
   // 交渉優先権：目玉選手を狙うときに使う
@@ -204,7 +220,7 @@ function tapCard(id){
   if(S.phase!=='pick') return;
   const me=S.players[0];
   if(S.scoutMode){
-    me.known.add(id); me.scout=true; S.scoutMode=false;
+    me.known.add(id); me.scoutLeft--; me.scout=me.scoutLeft<=0; S.scoutMode=false;
     S.log.push(`🔍 あなたが「${C(id).name}」をスカウト調査した`);
     render(); return;
   }
@@ -301,7 +317,8 @@ function score(p){
   const all=['P','C','I','O'].every(x=>p.team.some(id=>C(id).pos===x));
   const bonus=all?3:0;
   const goal=p.goal.ok(p.team)?3:0;
-  return {st,h,bonus,goal,total:st+h+bonus+goal};
+  const trait=p.trait.id==='ikusei'?cnt(p.team,c=>c.hid===2):p.trait.id==='ninki'?(cnt(p.team,c=>c.star===3)>=2?2:0):0;
+  return {st,h,bonus,goal,trait,total:st+h+bonus+goal+trait};
 }
 
 /* ---------- render ---------- */
@@ -329,9 +346,10 @@ function needHTML(p){
 }
 function teamsHTML(reveal){
   return `<div class="panel"><h2>各球団の指名選手</h2><div class="teams">${S.players.map(p=>`
-    <div class="team"><div class="hd"><b>${p.name}</b><span class="need">${p.team.length}/${ROUNDS}人 ${p.scout?'・スカウト済':'・スカウト未使用'}${p.tokens?` ・🎟×${p.tokens}`:''}</span></div>
+    <div class="team"><div class="hd"><b>${p.name}</b><span class="need">${p.team.length}/${ROUNDS}人 ${p.scoutLeft>0?`・スカウト残り${p.scoutLeft}`:'・スカウト済'}${p.tokens?` ・🎟×${p.tokens}`:''}</span></div>
     <div class="chips">${p.team.map(id=>chipHTML(id,reveal)).join('')||'<span class="need">まだいません</span>'}</div>
     ${needHTML(p)}
+    <div class="need">個性：${p.trait.icon}${p.trait.name}（${p.trait.text}）</div>
     <div class="need">補強ポイント：${(reveal||p.human)?`${p.goal.name}（${p.goal.text}）${p.goal.ok(p.team)?' <span class="ok">✔達成</span>':''}`:'？（伏せてある）'}</div></div>`).join('')}</div></div>`;
 }
 function logHTML(){
@@ -345,12 +363,12 @@ function render(){
   const me=S.players[0];
   let h='';
   if(S.phase==='pick'){
-    h+=`<div class="panel goalbox">🃏 あなたの補強ポイント：<b>${me.goal.name}</b>（${me.goal.text}・達成で＋3）${me.goal.ok(me.team)?' <span style="color:#4caf7a;font-weight:bold">✔達成中</span>':''}</div>`;
+    h+=`<div class="panel goalbox">${me.trait.icon} あなたの球団の個性：<b>${me.trait.name}</b>（${me.trait.text}）<br>🃏 あなたの補強ポイント：<b>${me.goal.name}</b>（${me.goal.text}・達成で＋3）${me.goal.ok(me.team)?' <span style="color:#4caf7a;font-weight:bold">✔達成中</span>':''}</div>`;
     h+=`<div class="panel"><div class="msg">${S.scoutMode?'🔍 裏面を調べたい選手をタップしてください':(S.attempt>1?'くじに外れました。残りの選手から再指名してください。':'指名する選手を1人選んでください。')}</div>
       <div class="grid">${S.field.map(id=>cardHTML(id,{click:true,sel:S.sel===id,scouting:S.scoutMode})).join('')}</div>
       <div class="btns"><button class="primary" onclick="submit()" ${S.sel==null||S.scoutMode?'disabled':''}>この選手を指名する</button>
       <button class="ghost" onclick="togglePrio()" ${me.tokens<1?'disabled':''} style="${S.usePrio?'background:#f2c14e;color:#1b1b1b':''}">🎟 交渉優先権${me.tokens?`（${me.tokens}枚）`:''}${S.usePrio?'を出す ✔':(me.tokens?'を使う':'なし')}</button>
-      <button class="ghost" onclick="toggleScout()" ${me.scout?'disabled':''}>${me.scout?'スカウト情報 使用済み':(S.scoutMode?'スカウトをやめる':'🔍 スカウト情報を使う（1回）')}</button></div></div>`;
+      <button class="ghost" onclick="toggleScout()" ${me.scout?'disabled':''}>${me.scout?'スカウト情報 使用済み':(S.scoutMode?'スカウトをやめる':`🔍 スカウト情報を使う（残り${me.scoutLeft}回）`)}</button></div></div>`;
   }else if(S.phase==='cpuOnly'){
     h+=`<div class="panel"><div class="msg">あなたはこの巡の選手を獲得済みです。外れた球団が再指名します。</div>
       <div class="grid">${S.field.map(id=>cardHTML(id,{})).join('')}</div>
@@ -380,8 +398,8 @@ function render(){
     const meWin=rows.filter(r=>r.s.total===top).some(r=>r.i===0);
     h+=`<div class="panel"><h2>結果発表（隠し能力を公開）</h2>
       <div class="big">${meWin?'🏆 あなたの球団が最高評価！':`${rows[0].p.name}が最高評価`}</div>
-      <table><tr><th></th><th>球団</th><th>★</th><th>隠し</th><th>守備</th><th>補強</th><th>合計</th></tr>
-      ${rows.map((r,k)=>`<tr class="${r.s.total===top?'rank1':''}"><td>${k+1}</td><td class="l">${r.p.name}</td><td>${r.s.st}</td><td>${r.s.h>0?'+':''}${r.s.h}</td><td>${r.s.bonus?'+3':'0'}</td><td>${r.s.goal?'+3':'0'}</td><td><b>${r.s.total}</b></td></tr>`).join('')}
+      <table><tr><th></th><th>球団</th><th>★</th><th>隠し</th><th>守備</th><th>補強</th><th>個性</th><th>合計</th></tr>
+      ${rows.map((r,k)=>`<tr class="${r.s.total===top?'rank1':''}"><td>${k+1}</td><td class="l">${r.p.name}</td><td>${r.s.st}</td><td>${r.s.h>0?'+':''}${r.s.h}</td><td>${r.s.bonus?'+3':'0'}</td><td>${r.s.goal?'+3':'0'}</td><td>${r.s.trait?'+'+r.s.trait:'0'}</td><td><b>${r.s.total}</b></td></tr>`).join('')}
       </table><div class="btns"><button class="primary" onclick="newGame()">もう一度</button></div></div>`;
     h+=teamsHTML(true);
     document.getElementById('main').innerHTML=h; return;

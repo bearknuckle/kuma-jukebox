@@ -54,6 +54,10 @@
   .fcard .v{font-size:18px;font-weight:bold}
   .fcard.mud{border-color:#7a5a3a;background:#f1e4d4}
   .fcard.mud .v{color:var(--bad)}
+  .nextbox{display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--sub);margin-left:6px;padding-left:12px;border-left:2px dashed var(--line)}
+  .fcard.next{width:56px;height:70px;border-width:2px;opacity:.85}
+  .fcard.next .e{font-size:24px}
+  .fcard.next .v{font-size:13px}
   .roundinfo{text-align:center;font-size:13px;color:var(--sub);margin-bottom:6px}
   .hint{text-align:center;font-size:14px;margin-top:8px;min-height:20px}
 
@@ -92,14 +96,15 @@
 <body>
 <div class="wrap">
   <h1>せーの！最強どうぶつ</h1>
-  <span class="tag">v0.1</span>
+  <span class="tag">v0.2</span>
 
   <!-- タイトル -->
   <section id="title">
     <div class="panel rules">
       <div><b>みんなで同時にどうぶつを出して、えさを取りあうゲーム！</b></div>
       <ul>
-        <li>えさが1枚めくられる。全員どうぶつを1枚えらんで「せーの！」で出す</li>
+        <li>えさが1枚めくられる。<b>次の回のえさも見えている</b>ので、強いどうぶつをいつ使うか考えよう</li>
+        <li>全員どうぶつを1枚えらんで「せーの！」で出す</li>
         <li><b>一番強い</b>どうぶつがえさをゲット</li>
         <li>🟤どろだんご（−2点）は<b>一番弱い</b>どうぶつが引き取る</li>
         <li>出したどうぶつはもう使えない。9回やって合計点が高い人の勝ち</li>
@@ -207,6 +212,11 @@ function start(){
   nextRound();
 }
 
+function nextFood(){
+  // 次の回にめくられるえさ（最後の回はなし）
+  const r = G.round+1;
+  return (r<=ROUNDS && G.deck.length) ? G.deck[G.deck.length-1] : null;
+}
 function potValue(){return G.pot.reduce((t,f)=>t+f.v,0);}
 
 function nextRound(){
@@ -227,7 +237,8 @@ function render(){
   $("roundInfo").textContent=`${G.round} / ${ROUNDS} 回目`;
   const shown = (G.phase==="reveal" && G.lastPot) ? G.lastPot : G.pot;
   $("food").innerHTML=shown.map(f=>`
-    <div class="fcard ${f.v<0?"mud":""}"><div class="e">${f.e}</div><div>${f.n}</div><div class="v">${f.v>0?"+":""}${f.v}</div></div>`).join("");
+    <div class="fcard ${f.v<0?"mud":""}"><div class="e">${f.e}</div><div>${f.n}</div><div class="v">${f.v>0?"+":""}${f.v}</div></div>`).join("")
+    + (nextFood() ? `<div class="nextbox">つぎのえさ<div class="fcard next ${nextFood().v<0?"mud":""}"><div class="e">${nextFood().e}</div><div class="v">${nextFood().v>0?"+":""}${nextFood().v}</div></div></div>` : "");
   const pv=shown.reduce((t,f)=>t+f.v,0);
   $("foodHint").innerHTML = shown.length>1
     ? `もちこし！まとめて <b>${pv>0?"+":""}${pv}点</b>　${pv>0?"一番強い":"一番弱い"}どうぶつが取る`
@@ -362,7 +373,10 @@ function cpuChoose(p,idx){
     }
     gain/=TRIALS;
     // 強いカードほど後で使える価値が高い（ネズミは対ゾウ用に少しだけ価値あり）
-    const keep = s===1 ? 0.6 : (s/9)*avgFood*PERSONA[idx%PERSONA.length];
+    // 次のえさが大きいほど、強いカードを温存したくなる
+    const nf=nextFood(); const nextV = nf ? Math.max(nf.v,0) : 0;
+    const future = nf ? (avgFood*0.5 + nextV*0.5) : avgFood;
+    const keep = s===1 ? 0.6 : (s/9)*future*PERSONA[idx%PERSONA.length];
     const score = gain - keep + (Math.random()-0.5)*NOISE; // ゆらぎで読まれにくく
     if(score>bestScore){bestScore=score;best=s;}
   });

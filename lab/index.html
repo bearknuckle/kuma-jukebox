@@ -118,7 +118,7 @@ const GAMES=[
   {
     id:'onechord', name:'ワンコード', icon:'🎵', color:'#4f8cff',
     desc:'コード進行のルールに沿ってカードを出し合う。出すたびにコードが鳴る、音楽系カードゲーム。',
-    players:'1人（CPU 1〜3人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.4', updated:'2026-11-19', isNew:true
+    players:'1人（CPU 1〜3人）', time:'5〜15分', genre:'音楽', added:'2026-11-18', version:'0.5', updated:'2026-11-20', isNew:true
   },
   {
     id:'setori-shokunin', name:'セトリ職人', icon:'🎤', color:'#e07b39',
@@ -143,6 +143,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-20', id:'onechord',         version:'0.5', text:'完全終止で上がった瞬間に画面が光る演出と、CPUの速さ「はやい」を追加'},
   {date:'2026-11-20', id:'shinko-shiritori', version:'0.5', text:'有名な進行の完成はチップ2枚に。引いたカードがつながればそのまま出せるように'},
   {date:'2026-11-20', id:'pennant-owners',   version:'0.4', text:'ルールを5行に：投手は1人で数字がそのままヒットの目安に、得意球と疲労をなくし、読み合いは当たれば＋2だけ'},
   {date:'2026-11-20', id:'okawari',          version:'0.2', text:'次の3枚が見える「献立表」と、にがてカードがトレーのどの種類のかわりにもなる「にがてを食べたらえらい」を追加'},

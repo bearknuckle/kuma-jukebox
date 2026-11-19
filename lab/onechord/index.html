@@ -81,6 +81,13 @@ h1 span{color:var(--T)}
 .result{text-align:center}
 .result .big{font-size:28px;font-weight:800;margin:8px 0}
 .result .cad{color:var(--D);font-weight:800;font-size:18px}
+#cadFx{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;opacity:0}
+#cadFx.on{animation:cadBg 1.8s ease-out forwards}
+#cadFx .t1{font-size:44px;font-weight:900;color:#fff;letter-spacing:.06em;text-shadow:0 0 24px var(--D),0 0 48px var(--D)}
+#cadFx .t2{margin-top:6px;font-size:18px;font-weight:800;color:#ffd76a}
+#cadFx.on .t1{animation:cadPop 1.8s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes cadBg{0%{opacity:0;background:rgba(255,255,255,.85)}8%{opacity:1;background:rgba(255,140,60,.55)}70%{opacity:1;background:rgba(20,16,30,.55)}100%{opacity:0;background:rgba(20,16,30,0)}}
+@keyframes cadPop{0%{transform:scale(.3)}25%{transform:scale(1.15)}40%{transform:scale(1)}100%{transform:scale(1.05)}}
 .small{font-size:12px;color:var(--dim)}
 .score{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:14px}
 .score th{font-size:11px;color:var(--dim);font-weight:500;padding:2px 4px}
@@ -124,6 +131,7 @@ h1 span{color:var(--T)}
     <h2>♪ ワンコード</h2>
     <p>コード進行のルールに沿ってカードを出し合い、手札を先になくした人の勝ち。</p>
     <div class="row"><span>CPUの人数</span><div class="seg" id="segCpu"><button class="btn" data-v="1">1</button><button class="btn on" data-v="2">2</button><button class="btn" data-v="3">3</button></div></div>
+    <div class="row"><span>CPUの速さ</span><div class="seg" id="segSpeed"><button class="btn on" data-v="0">ふつう</button><button class="btn" data-v="1">はやい</button></div></div>
     <div class="row"><span>ラウンド<br><span class="small">3回戦は失点の合計で勝負</span></span><div class="seg" id="segRounds"><button class="btn" data-v="1">1回</button><button class="btn on" data-v="3">3回</button></div></div>
     <div class="row"><span>上級ルール<br><span class="small">最後の1枚は C だけ</span></span><div class="seg" id="segAdv"><button class="btn on" data-v="0">オフ</button><button class="btn" data-v="1">オン</button></div></div>
     <div style="display:flex;gap:8px;margin-top:16px">
@@ -190,6 +198,7 @@ h1 span{color:var(--T)}
   </div>
 </div>
 
+<div id="cadFx"><div class="t1">完全終止！</div><div class="t2" id="cadFx2"></div></div>
 <div class="overlay hide" id="ovResult">
   <div class="sheet result" id="resultBody"></div>
 </div>
@@ -349,16 +358,25 @@ function blip(f1,f2){
   }catch(e){}
 }
 hooks.sound=c=>{
+  if(S.cadence&&c.name==='C'&&curPlayer().hand.length===0){cadenceFx(curPlayer());return;}
   if(c.kind==='chord'||c.kind==='g7')playNotes(CH[c.name].notes);
   else if(c.kind==='sus4'){const r=ROOT[S.cur.name[0]];playNotes([r-12,r,r+5,r+7]);}
   else if(c.kind==='rev')blip(400,900);
   else blip(700,200);
 };
+// 完全終止で上がった瞬間の演出
+function cadenceFx(p){
+  playNotes(CH.C.notes.concat([72]),2.6);
+  setTimeout(()=>playNotes([79,84],1.8),180);
+  const fx=document.getElementById('cadFx');
+  document.getElementById('cadFx2').textContent=(p.cpu?p.name+' が':'あなたが')+'上がり！'+(M&&M.rounds>1?'　ほかの人の失点2倍':'');
+  fx.classList.remove('on');void fx.offsetWidth;fx.classList.add('on');
+}
 hooks.log=m=>{document.getElementById('msg').innerHTML=m;};
 
 // ---------- ui ----------
 const $=id=>document.getElementById(id);
-let cfg={cpu:2,adv:0,rounds:3},cpuTimer=null,M=null;
+let cfg={cpu:2,adv:0,rounds:3,speed:0},cpuTimer=null,M=null;
 const FCLS={T:'fT',S:'fS',D:'fD'};
 const FNAME={T:'トニック',S:'サブドミナント',D:'ドミナント'};
 function cardEl(c,big){
@@ -422,10 +440,10 @@ function render(){
 }
 function after(){
   render();
-  if(S.over){setTimeout(showResult,700);return;}
+  if(S.over){setTimeout(showResult,S.cadence?2000:700);return;}
   if(curPlayer().cpu){
     clearTimeout(cpuTimer);
-    cpuTimer=setTimeout(()=>{cpuStep();after();},950);
+    cpuTimer=setTimeout(()=>{cpuStep();after();},cfg.speed?380:950);
   }
 }
 // ---------- 進行の再生 ----------
@@ -503,9 +521,9 @@ function seg(id,key){
     $(id).querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cfg[key]=+b.dataset.v;
   });
 }
-seg('segCpu','cpu');seg('segAdv','adv');seg('segRounds','rounds');
+seg('segCpu','cpu');seg('segAdv','adv');seg('segRounds','rounds');seg('segSpeed','speed');
 try{const s=JSON.parse(localStorage.getItem('onechord-cfg')||'null');if(s){cfg=Object.assign(cfg,s);
-  [['segCpu','cpu'],['segAdv','adv'],['segRounds','rounds']].forEach(([id,k])=>{const v=cfg[k];$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));});}}catch(e){}
+  [['segCpu','cpu'],['segAdv','adv'],['segRounds','rounds'],['segSpeed','speed']].forEach(([id,k])=>{const v=cfg[k];$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));});}}catch(e){}
 $('bStart').onclick=()=>{try{localStorage.setItem('onechord-cfg',JSON.stringify(cfg));}catch(e){}$('ovStart').classList.add('hide');start();};
 $('bNew').onclick=()=>{clearTimeout(cpuTimer);stopReplay();$('ovStart').classList.remove('hide');};
 $('bRules').onclick=$('bRules2').onclick=()=>$('ovRules').classList.remove('hide');

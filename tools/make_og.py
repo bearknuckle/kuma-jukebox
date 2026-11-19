@@ -59,14 +59,16 @@ def main():
         f'<path transform="translate(530 300) scale({s1:.5f})" fill="#f2eff8" d="{c1}"/>',
         f'<path transform="translate(532 375) scale({s2:.5f})" fill="#b9b2cc" d="{c2}"/>',
     ]
-    x, sc = 530, 0.022
+    x, y, sc = 530, 420, 0.022
     for i, label in enumerate(categories()):
         w, c = text_path(bold, label)
         cw = w * sc + 40
-        if x + cw > 1150:
-            break
-        parts.append(f'<rect x="{x}" y="420" rx="22" width="{cw:.0f}" height="44" fill="#2a2639"/>')
-        parts.append(f'<path transform="translate({x + 20:.1f} 451) scale({sc})" '
+        if x + cw > 1150:  # 入りきらなければ次の行へ（2行まで）
+            if y > 420:
+                break
+            x, y = 530, y + 58
+        parts.append(f'<rect x="{x}" y="{y}" rx="22" width="{cw:.0f}" height="44" fill="#2a2639"/>')
+        parts.append(f'<path transform="translate({x + 20:.1f} {y + 31}) scale({sc})" '
                      f'fill="{CHIP_COLORS[i % len(CHIP_COLORS)]}" d="{c}"/>')
         x += cw + 14
     parts.append("</svg>")

@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="BPMリレー｜試作ゲームラボ">
-<meta property="og:description" content="DJになって曲をつなぐカードゲーム。ジャンルが同じか、BPMが近い曲なら出せる。キーまで合えば「ハーモニックミックス」でもう1枚。手札を先に出し切ったら勝ち。">
+<meta property="og:description" content="DJになって曲をつなぐカードゲーム。BPMが近い曲なら出せる（同じジャンルなら±20、ちがうジャンルなら±10）。キーまで合えば「ハーモニックミックス」でもう1枚。フロアのお題を達成しながら、手札を先に出し切ったら勝ち。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/bpm-relay/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -76,6 +76,10 @@ select{padding:5px 8px;border-radius:8px;border:1px solid var(--line);background
 table{border-collapse:collapse;font-size:13px;width:100%}
 td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}
 .hidden{display:none}
+.floors{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.fc{border:1px dashed #6b5a9e;border-radius:10px;padding:6px 7px;font-size:11px;color:var(--muted);line-height:1.4;background:#15121f}
+.fc b{display:block;color:var(--ink);font-size:12px}
+.fc.near{border-style:solid;border-color:var(--ok)}
 .eq{display:flex;gap:3px;align-items:flex-end;height:18px}
 .eq i{display:block;width:4px;background:var(--accent);border-radius:2px;height:4px;transition:height .1s}
 </style>
@@ -95,13 +99,14 @@ td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}
 
   <div id="setup" class="panel setup">
     <h2>曲をつないで、先に手札を出し切ったDJの勝ち</h2>
-    <p>場の曲と<b>ジャンルが同じ</b>か、<b>BPMが近い</b>曲なら出せます。<b>キーまで合えば</b>「ハーモニックミックス」でもう1枚出せます。</p>
-    <p>3ラウンド遊んで、残った手札の減点が一番少ない人の優勝です。</p>
+    <p>場の曲とBPMが近い曲なら出せます。<b>同じジャンルなら±20</b>、<b>ちがうジャンルなら±10</b>まで。ちがうジャンルにつなぐと「ジャンル越え」でチップがもらえます（2枚で−1点）。<b>キーまで合えば</b>「ハーモニックミックス」でもう1枚。</p>
+    <p>場の<b>お題カード</b>（ビルドアップ・ジャンルツアーなど）を最初に達成した人は、そのカードを取って−2点（1ラウンド3枚まで）。</p>
+    <p>3ラウンドの合計点（手札の減点−チップ÷2−お題）が一番少ない人の優勝です。</p>
     <div class="row">対戦相手
       <select id="ncpu"><option value="1">1人</option><option value="2" selected>2人</option><option value="3">3人</option></select>
     </div>
     <div class="row">BPMのつなぎ幅
-      <select id="width"><option value="10" selected>±10（ふつう）</option><option value="5">±5（むずかしい）</option></select>
+      <select id="width"><option value="10" selected>同じジャンル±20／ちがうジャンル±10（ふつう）</option><option value="5">同じジャンル±10／ちがうジャンル±5（むずかしい）</option></select>
     </div>
     <div class="row"><label><input type="checkbox" id="floor"> フロアテンション（BPM140以上の曲が出たら「上げろ！」コール。一番遅い人が1枚引く）</label></div>
     <button class="btn primary" id="startBtn">スタート（音が出ます）</button>
@@ -114,6 +119,7 @@ td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}
         <div id="top"></div>
         <div class="state" id="state"></div>
       </div>
+      <div class="floors" id="floors"></div>
       <div class="prompt" id="prompt"></div>
       <div class="actions" id="actions"></div>
     </div>
@@ -129,13 +135,17 @@ td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}
 <div class="modal" id="rules">
   <div class="panel">
     <h2 style="font-size:16px;margin-top:0">ルール</h2>
-    <p><b>カード（72枚）</b><br>曲カード60枚：ジャンル4種（ハウス・ヒップホップ・テクノ・ポップ）×15枚。それぞれに BPM（90〜150）とキー（1〜12）が書いてあります。キーは時計の文字盤のように並んでいて、12の隣は1です。<br>特殊カード12枚：スクラッチ・ピッチフェーダー・ブレイク・リクエストが3枚ずつ。</p>
+    <p><b>カード（72枚＋お題8枚）</b><br>曲カード60枚：ジャンル4種（ハウス・ヒップホップ・テクノ・ポップ）×15枚。それぞれに BPM（90〜150）とキー（1〜12）が書いてあります。キーは時計の文字盤のように並んでいて、12の隣は1です。<br>特殊カード12枚：スクラッチ・ピッチフェーダー・ブレイク・リクエストが3枚ずつ。</p>
     <p>1. 全員に7枚ずつ配り、山札から曲カードを1枚めくって最初の曲にします。</p>
-    <p>2. 自分の番には、場の曲に<b>つながる</b>カードを1枚出します。<b>ジャンルが同じ</b>か、<b>BPMの差が10以内</b>（むずかしいモードは5以内）ならつながります。</p>
+    <p>2. 自分の番には、場の曲に<b>つながる</b>カードを1枚出します。出した曲は少しずらして重ね、直近の曲が見えるようにしておきます。<br>・<b>同じジャンル</b>なら、BPMの差が<b>20以内</b>でつながる<br>・<b>ちがうジャンル</b>なら、BPMの差が<b>10以内</b>でつながる（むずかしいモードは半分の10／5）</p>
+    <p>2b. <b>ジャンル越え：</b>ちがうジャンルの曲につないだら、チップを1枚もらえます（2枚で−1点）。</p>
     <p>3. <b>ハーモニックミックス：</b>出した曲のキーが場の曲と<b>同じか隣</b>なら、続けてもう1枚、曲カードを出せます（2枚目も同じ条件でつなぐ。3枚目はなし）。</p>
     <p>4. 出せるカードがないときや、出したくないときは山札から1枚引きます。引いたカードがつながるなら、そのまま出してかまいません。山札がなくなったら、捨て札を切って山札にします。</p>
     <p>5. 残り1枚になったら「<b>ラストチューン！</b>」と言います。言わずに番を終えて、ほかの人に指摘されたら2枚引きます。</p>
-    <p>6. 誰かが手札を出し切ったらラウンド終了。残った手札は、曲カード1枚＝1点、特殊カード1枚＝3点の減点です。3ラウンドの合計が一番少ない人の優勝です。</p>
+    <p>6. <b>フロアのお題：</b>ラウンドのはじめにお題カードを3枚表にして並べます。曲を出してお題を最初に達成した人は、そのカードを取ります（1枚＝−2点）。補充はしないので、1ラウンドに取れるのは3枚までです。お題はカードに書かれたBPMで判定します（ピッチフェーダーで変えたBPMは数えません）。</p>
+    <p>7. 誰かが手札を出し切ったらラウンド終了。「残った手札の減点（曲1枚＝1点、特殊カード1枚＝3点）−チップ÷2（切り捨て）−お題×2」がそのラウンドの点数です。3ラウンドの合計が一番少ない人の優勝です。</p>
+    <h3 style="font-size:14px">お題カード（8枚）</h3>
+    <table id="floorTable"></table>
     <h3 style="font-size:14px">特殊カード（どの曲の上にも出せる）</h3>
     <table>
       <tr><td>💿 スクラッチ</td><td>次にかけるジャンルを指定する。次の人は、そのジャンルの曲（か特殊カード）を出す。BPMは問わない</td></tr>
@@ -162,7 +172,18 @@ const SP={
   brk:{n:'ブレイク',i:'⏸️'},
   req:{n:'リクエスト',i:'📨'}
 };
-const ROUNDS=3,HAND=7,CALL_BPM=140;
+const ROUNDS=3,HAND=7,CALL_BPM=140,FLOOR_PTS=2,FLOOR_OPEN=3;
+// フロアのお題カード（曲カードに書かれたBPMで判定。h=このラウンドにかかった曲の並び、新しい曲が最後）
+const FLOORS=[
+  {id:'up',i:'📈',n:'ビルドアップ',d:'直近3曲のBPMが低い順に上がっている',ok:(h)=>h.length>=3&&h.at(-3).bpm<h.at(-2).bpm&&h.at(-2).bpm<h.at(-1).bpm},
+  {id:'down',i:'📉',n:'クールダウン',d:'直近3曲のBPMが高い順に下がっている',ok:(h)=>h.length>=3&&h.at(-3).bpm>h.at(-2).bpm&&h.at(-2).bpm>h.at(-1).bpm},
+  {id:'tour',i:'🌍',n:'ジャンルツアー',d:'直近4曲が全部ちがうジャンル',ok:(h)=>h.length>=4&&new Set(h.slice(-4).map(c=>c.g)).size===4},
+  {id:'long',i:'🔁',n:'ロングミックス',d:'直近3曲が同じジャンル',ok:(h)=>h.length>=3&&h.slice(-3).every(c=>c.g===h.at(-1).g)},
+  {id:'match',i:'🎯',n:'ビートマッチ',d:'前の曲とBPMがぴったり同じ',ok:(h)=>h.length>=2&&h.at(-2).bpm===h.at(-1).bpm},
+  {id:'key',i:'🔑',n:'キーぴったり',d:'前の曲とキーが同じ',ok:(h)=>h.length>=2&&h.at(-2).key===h.at(-1).key},
+  {id:'peak',i:'🔥',n:'ピークタイム',d:'BPM145以上の曲を出した',ok:(h)=>h.at(-1).bpm>=145},
+  {id:'double',i:'✨',n:'ダブルミックス',d:'ハーモニックミックスで2枚目を出した',ok:(h,x)=>x.second},
+];
 const CPU_NAMES=['DJ うさぎ','DJ ねこ','DJ たぬき'];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -206,23 +227,28 @@ function log(h){S.log.unshift(h);if(S.log.length>10)S.log.pop()}
 function keyAdj(a,b){const d=Math.abs(a-b);return d===0||d===1||d===11}
 function canPlay(c,top){
   if(c.t==='sp')return c.s==='pitch'?top.bpm!==null:true;
-  if(c.g===top.g)return true;
-  return top.bpm!==null&&Math.abs(c.bpm-top.bpm)<=S.W;
+  if(top.bpm===null)return c.g===top.g;
+  const d=Math.abs(c.bpm-top.bpm);
+  return c.g===top.g?d<=S.W*2:d<=S.W;
 }
+function isCross(c,top){return c.t==='song'&&top.bpm!==null&&c.g!==top.g&&canPlay(c,top)}
 function isHarm(c,top){return c.t==='song'&&canPlay(c,top)&&keyAdj(c.key,top.key)}
 function sortHand(p){p.hand.sort((a,b)=>(a.t==='sp')-(b.t==='sp')||(a.t==='sp'?a.s.localeCompare(b.s):a.g-b.g||a.bpm-b.bpm))}
 function refill(){if(S.deck.length||!S.discard.length)return;S.deck=shuffle(S.discard);S.discard=[];log('🔁 山札がなくなったので、捨て札を切って山札に')}
 function drawTo(pi,n){const P=S.players[pi];let got=0;for(let k=0;k<n;k++){refill();if(!S.deck.length)break;P.hand.push(S.deck.pop());got++}if(P.hand.length>1)P.declared=false;sortHand(P);return got}
 function penalty(p){return p.hand.reduce((s,c)=>s+(c.t==='sp'?3:1),0)}
+function chipPts(p){return Math.floor(p.chips/2)}
+function roundPts(p){return penalty(p)-chipPts(p)-FLOOR_PTS*p.floors.length}
 function total(p){return p.scores.reduce((a,b)=>a+b,0)}
+function sgn(n){return n>0?'+'+n:String(n)}
 function cdesc(c){return c.t==='sp'?`${SP[c.s].i}${SP[c.s].n}`:`${GEN[c.g].n} ${c.bpm}（キー${c.key}）`}
 
 function startGame(){
   initAudio();
   const n=+document.getElementById('ncpu').value;
   S.W=+document.getElementById('width').value;S.floor=document.getElementById('floor').checked;
-  S.players=[{name:'あなた',hand:[],human:true,scores:[],declared:false}];
-  for(let i=0;i<n;i++)S.players.push({name:CPU_NAMES[i],hand:[],human:false,scores:[],declared:false});
+  S.players=[{name:'あなた',hand:[],human:true,scores:[],declared:false,chips:0,floors:[]}];
+  for(let i=0;i<n;i++)S.players.push({name:CPU_NAMES[i],hand:[],human:false,scores:[],declared:false,chips:0,floors:[]});
   S.round=1;S.log=[];
   document.getElementById('setup').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
@@ -230,10 +256,11 @@ function startGame(){
 }
 function startRound(){
   S.deck=shuffle(buildDeck());S.discard=[];S.chained=false;S.skip=false;S.passes=0;S.sel=null;S.choose=null;
-  S.players.forEach(p=>{p.hand=[];p.declared=false});
+  S.players.forEach(p=>{p.hand=[];p.declared=false;p.chips=0;p.floors=[]});
+  S.floorDeck=shuffle([...FLOORS]);S.floorOpen=S.floorDeck.splice(0,FLOOR_OPEN);
   S.players.forEach((p,i)=>drawTo(i,HAND));
   const fi=S.deck.map(c=>c.t).lastIndexOf('song');const c=S.deck.splice(fi,1)[0];
-  S.topCard=c;S.top={g:c.g,bpm:c.bpm,key:c.key};
+  S.topCard=c;S.top={g:c.g,bpm:c.bpm,key:c.key};S.hist=[c];
   S.cur=(S.round-1)%S.players.length;
   log(`<b>ラウンド ${S.round}/${ROUNDS}</b> 開始。最初の曲は ${cdesc(c)}`);
   beat(c.bpm,c.key);
@@ -246,10 +273,17 @@ async function doPlay(pi,card,choice){
   if(S.topCard)S.discard.push(S.topCard);S.topCard=card;S.passes=0;
   let harm=false,bpmEvent=false;
   if(card.t==='song'){
-    harm=isHarm(card,top);
-    const why=card.g===top.g?'ジャンルが同じ':`BPM差${Math.abs(card.bpm-top.bpm)}`;
-    S.top={g:card.g,bpm:card.bpm,key:card.key};beat(card.bpm,card.key);bpmEvent=true;
+    harm=isHarm(card,top);const cross=isCross(card,top);const second=S.chained;
+    const why=top.bpm===null?'指定ジャンル':(card.g===top.g?`同じジャンル・BPM差${Math.abs(card.bpm-top.bpm)}`:`ジャンル越え・BPM差${Math.abs(card.bpm-top.bpm)}`);
+    S.top={g:card.g,bpm:card.bpm,key:card.key};S.hist.push(card);beat(card.bpm,card.key);bpmEvent=true;
     log(`${P.name}：${cdesc(card)}（${why}${harm?'・キーも合う':''}）`);
+    if(cross){P.chips++;log(`🪙 ジャンル越え：${P.name}がチップ1枚`)}
+    const got=S.floorOpen.filter(f=>f.ok(S.hist,{second}));
+    for(const f of got){
+      S.floorOpen.splice(S.floorOpen.indexOf(f),1);P.floors.push(f);
+      log(`🎉 <b>${f.i}${f.n}</b> 達成！ ${P.name}がお題カードを獲得（−${FLOOR_PTS}点）`);
+    }
+    if(got.length)flash(`🎉 ${got.map(f=>f.n).join('・')}！<br><span style="font-size:15px">${P.name} −${FLOOR_PTS*got.length}点</span>`);
   }else if(card.s==='scratch'){
     S.top={g:choice,bpm:null,key:top.key};scratchSfx();
     log(`${P.name}：💿 スクラッチ！ 次は <b>${GEN[choice].n}</b> をどうぞ`);
@@ -355,7 +389,8 @@ function cpuChoose(pi,songsOnly){
   if(songs.length){
     let best=null,bs=-1e9;
     for(const c of songs){const same=P.hand.filter(x=>x.t==='song'&&x.g===c.g).length;
-      let s=(isHarm(c,top)&&!songsOnly&&!S.chained?4:0)+same*.4+Math.random()*1.2;
+      const h=[...S.hist,c];const fl=S.floorOpen.filter(f=>f.ok(h,{second:S.chained})).length;
+      let s=(isHarm(c,top)&&!songsOnly&&!S.chained?3:0)+(isCross(c,top)?1:0)+fl*3+same*.4+Math.random()*1.2;
       if(s>bs){bs=s;best=c}}
     return{card:best};
   }
@@ -405,14 +440,14 @@ drawTo=function(pi,n){const before=new Set(S.players[pi].hand.map(c=>c.id));cons
 // ---------- round end ----------
 function roundEnd(wi){
   S.phase='roundover';
-  S.players.forEach(p=>p.scores.push(penalty(p)));
+  S.players.forEach(p=>p.scores.push(roundPts(p)));
   if(wi!==null){flash(S.players[wi].human?'🏆 出し切った！':`${S.players[wi].name}が出し切った`);beat(128,S.top.key||1)}
-  log(`<b>ラウンド${S.round} 終了${wi!==null?`（${S.players[wi].name}が手札を出し切り）`:''}</b><br>`+S.players.map(p=>`${p.name}：−${p.scores[p.scores.length-1]}点（合計 −${total(p)}）`).join('／'));
+  log(`<b>ラウンド${S.round} 終了${wi!==null?`（${S.players[wi].name}が手札を出し切り）`:''}</b><br>`+S.players.map(p=>`${p.name}：手札${penalty(p)}−🪙${chipPts(p)}（${p.chips}枚）−お題${FLOOR_PTS*p.floors.length}＝<b>${sgn(p.scores.at(-1))}点</b>（合計 ${sgn(total(p))}）`).join('<br>'));
   if(S.round>=ROUNDS){
     S.phase='over';
     const rank=[...S.players].sort((a,b)=>total(a)-total(b));
     const tie=rank[1]&&total(rank[1])===total(rank[0]);
-    log(`<b>🏁 最終結果</b><br>${rank.map((p,i)=>`${i+1}位 ${p.name}（−${total(p)}点）`).join('<br>')}`);
+    log(`<b>🏁 最終結果</b><br>${rank.map((p,i)=>`${i+1}位 ${p.name}（${sgn(total(p))}点）`).join('<br>')}`);
     render(tie?'同点で優勝が並びました！':(rank[0].human?'🏆 あなたが優勝！ フロアは大盛り上がり':`${rank[0].name}の優勝です`));
     return;
   }
@@ -426,15 +461,19 @@ function cardHTML(c,cls='',attrs=''){
 }
 function render(promptText){
   const hint=document.getElementById('hint').checked;
-  document.getElementById('opps').innerHTML=S.players.slice(1).map((p,i)=>`<div class="opp ${S.cur===i+1&&S.phase!=='roundover'&&S.phase!=='over'?'cur':''}"><div>${p.name}</div><div class="cnt">${p.hand.length}<span style="font-size:12px;font-weight:400"> 枚</span>${p.hand.length===1&&p.declared?' 🎤':''}</div><div style="font-size:12px;color:var(--muted)">合計 −${total(p)}</div></div>`).join('');
+  document.getElementById('opps').innerHTML=S.players.slice(1).map((p,i)=>`<div class="opp ${S.cur===i+1&&S.phase!=='roundover'&&S.phase!=='over'?'cur':''}"><div>${p.name}</div><div class="cnt">${p.hand.length}<span style="font-size:12px;font-weight:400"> 枚</span>${p.hand.length===1&&p.declared?' 🎤':''}</div><div style="font-size:12px;color:var(--muted)">🪙${p.chips}・🎉${p.floors.length}・合計${sgn(total(p))}</div></div>`).join('');
   const t=S.top;
   document.getElementById('top').innerHTML=S.topCard?cardHTML(S.topCard,'big'):'';
   const W=S.W;
   document.getElementById('state').innerHTML=`<div>いまかかっている曲</div><b style="color:${GEN[t.g].c}">${GEN[t.g].n}</b>${t.bpm!==null?` ／ <b>BPM ${t.bpm}</b>`:''} ／ キー${t.key}
-    <div class="chips">${t.bpm===null?`<span class="chip">💿 次は ${GEN[t.g].n} だけ</span>`:`<span class="chip">${GEN[t.g].n}なら何でも</span><span class="chip">BPM ${t.bpm-W}〜${t.bpm+W}</span>`}<span class="chip">✨ キー ${[(t.key+10)%12+1,t.key,t.key%12+1].join('・')}</span></div>
+    <div class="chips">${t.bpm===null?`<span class="chip">💿 次は ${GEN[t.g].n} だけ</span>`:`<span class="chip" style="border-color:${GEN[t.g].c}">${GEN[t.g].n}：BPM ${t.bpm-W*2}〜${t.bpm+W*2}</span><span class="chip">他ジャンル：${t.bpm-W}〜${t.bpm+W} 🪙</span>`}<span class="chip">✨ キー ${[(t.key+10)%12+1,t.key,t.key%12+1].join('・')}</span></div>
     <div style="margin-top:6px">ラウンド ${S.round}/${ROUNDS}・山札 ${S.deck.length}枚</div>`;
   const me=S.players[0];
-  document.getElementById('me').textContent=`あなた：手札${me.hand.length}枚（残すと −${penalty(me)}点）・合計 −${total(me)}点${me.hand.length===1&&me.declared?'・🎤宣言済み':''}`;
+  const myTurn=['human','human2','drawn'].includes(S.phase);
+  document.getElementById('floors').innerHTML=(S.floorOpen||[]).map(f=>{
+    const near=myTurn&&me.hand.some(c=>c.t==='song'&&canPlay(c,t)&&f.ok([...S.hist,c],{second:S.phase==='human2'}));
+    return `<div class="fc ${hint&&near?'near':''}"><b>${f.i} ${f.n}</b>${f.d}<br>−${FLOOR_PTS}点</div>`}).join('');
+  document.getElementById('me').textContent=`あなた：手札${me.hand.length}枚（減点${penalty(me)}）・🪙${me.chips}・🎉お題${me.floors.length}枚 → このラウンド${sgn(roundPts(me))}点・合計${sgn(total(me))}点${me.hand.length===1&&me.declared?'・🎤宣言済み':''}`;
   const myPhase=['human','human2','drawn'].includes(S.phase);
   document.getElementById('hand').innerHTML=me.hand.map((c,i)=>{
     let cls='';
@@ -511,7 +550,8 @@ document.getElementById('startBtn').onclick=startGame;
 document.getElementById('rulesBtn').onclick=()=>document.getElementById('rules').classList.add('show');
 document.getElementById('closeRules').onclick=()=>document.getElementById('rules').classList.remove('show');
 document.getElementById('rules').onclick=e=>{if(e.target.id==='rules')e.currentTarget.classList.remove('show')};
-document.getElementById('legend').innerHTML=GEN.map(g=>`<span><b style="background:${g.c}"></b>${g.n}</span>`).join('')+'<span>点線＝出せる／光る線＝キーも合う（もう1枚）</span>';
+document.getElementById('floorTable').innerHTML=FLOORS.map(f=>`<tr><td>${f.i} ${f.n}</td><td>${f.d}</td></tr>`).join('');
+document.getElementById('legend').innerHTML=GEN.map(g=>`<span><b style="background:${g.c}"></b>${g.n}</span>`).join('')+'<span>点線＝出せる／光る線＝キーも合う（もう1枚）／緑のお題＝手札で達成できる</span>';
 </script>
 </body>
 </html>

@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="ボドゲ市の争奪戦｜試作ゲームラボ">
-<meta property="og:description" content="ボドゲの即売会で新作を取り合う。全員いっせいに行くブースを選び、在庫より人が多ければ行列。買えなかった人は整理券をもらって次で先頭に。6つの時間帯で、新作の⭐とジャンルコンプを集めよう。">
+<meta property="og:description" content="ボドゲの即売会で新作を取り合う。全員いっせいに行くブースを選び、在庫より人が多ければ行列。買えなかった人は整理券をもらって次で先頭に。ひみつのお目当てと初回特典を狙いながら、6つの時間帯で新作を集めよう。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/bodoge-ichi/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -75,6 +75,11 @@ summary{cursor:pointer;font-weight:bold}
 .rank{font-size:20px;font-weight:bold;text-align:center;margin:6px 0 10px}
 .back-link{display:block;text-align:center;font-size:13px;color:var(--mute);margin-top:12px}
 .sale{color:var(--accent);font-weight:bold}
+.goals{display:flex;flex-direction:column;gap:5px}
+.goal{font-size:13px;background:#fff6d6;border-radius:8px;padding:5px 9px}
+.goal.ok{background:#dff3e5}
+.booth .first{font-size:10px;color:#b07a00;font-weight:bold}
+.fin-sub{font-size:11px;color:var(--mute)}
 .price s{opacity:.5;margin-right:2px}
 </style>
 </head>
@@ -100,6 +105,7 @@ summary{cursor:pointer;font-weight:bold}
       <div class="rest" id="rest">☕ <b>休憩所で一息</b>：今回は何も買わず、整理券を1枚もらう</div>
       <div class="btns" id="btns"></div>
     </div>
+    <div class="panel"><h2>🎯 あなたのお目当て（ひみつ・達成で各+3点）</h2><div class="goals" id="goals"></div></div>
     <div class="panel"><h2>あなたが買ったゲーム</h2><div class="mine" id="mine"></div></div>
   </div>
 
@@ -109,15 +115,17 @@ summary{cursor:pointer;font-weight:bold}
     <details>
       <summary>ルール</summary>
       <p><b>目的：</b>6つの時間帯（10時〜15時）で新作ボドゲを買い、得点を一番多くしよう。</p>
-      <p><b>準備：</b>全員💴12と整理券1枚を持つ。ブースが5つ並び、それぞれ新作が1タイトル置かれる。新作には ⭐（点数）・💴（値段）・在庫数・ジャンルがある。</p>
+      <p><b>準備：</b>全員💴12と整理券1枚、お目当てカード2枚（ほかの人には見せない）を持つ。ブースが5つ並び、それぞれ新作が1タイトル置かれる。新作には ⭐（点数）・💴（値段）・在庫数・ジャンルがある。</p>
       <p><b>1つの時間帯の流れ</b></p>
       <p>① <b>行き先を決める：</b>全員いっせいに、行くブースを1つ選ぶ（または休憩所）。整理券を持っていれば「使う」と決めてもよい。</p>
       <p>② <b>公開して並ぶ：</b>同じブースに来た人は、整理券を使った人が先、その中・それ以外はそれぞれ「先頭プレイヤー」から時計回りの順に並ぶ。</p>
       <p>③ <b>買う：</b>前から順に在庫がある分だけ買える（お金を払う）。在庫より人が多ければ行列で、後ろの人は買えない。</p>
+      <p>・<b>初回特典：</b>そのタイトルを一番最初に買った人は⭐+1（特典カードをもらう）。在庫が足りていても、列の先頭に意味がある。</p>
       <p>④ <b>買えなかった人：</b>整理券を1枚もらう。休憩所に行った人も1枚もらう。使った整理券は捨てる。整理券は最大3枚まで。</p>
       <p>⑤ <b>補充：</b>売り切れたブースには新しい新作が並ぶ。先頭プレイヤーは左どなりに移る。</p>
       <p><b>閉場前セール：</b>最後の15時は、全部のブースが💴1値下げ。</p>
-      <p><b>得点：</b>買ったゲームの⭐の合計 ＋ ジャンルコンプ（ちがうジャンル2種:+1／3種:+3／4種:+6）＋ 残ったお金2につき1点。</p>
+      <p><b>お目当て：</b>終了時に条件を満たしていれば1枚につき+3点。条件は「重ゲーで⭐4以上を1つ」「🔥話題作を1つ」「10時に1つ買う」など。</p>
+      <p><b>得点：</b>買ったゲームの⭐の合計 ＋ 初回特典 ＋ お目当て ＋ ジャンルコンプ（ちがうジャンル2種:+1／3種:+3／4種:+6）＋ 残ったお金2につき1点。</p>
       <p>ジャンルは🧠重ゲー・🎉パーティー・⚔️2人用・🤝協力の4つ。<b>🔥話題作</b>は在庫1つだけ。みんなが狙うので、整理券の使いどころ。</p>
     </details>
   </div>
@@ -157,23 +165,36 @@ const CARDS=[
   ['ちいさな探偵','coop',2,2,3],['こびとの鍛冶屋','duo',1,1,3]
 ];
 const CPU_NAMES=['ミドリ','タロウ','サクラ'];
+// お目当てカード（買ったゲームの一覧 gs で判定）
+const GOALS=[
+  ...['heavy','party','duo','coop'].map(k=>({t:GEN[k].i+GEN[k].n+'で⭐4以上を1つ',f:gs=>gs.some(g=>g.genre===k&&g.pts>=4)})),
+  {t:'🔥話題作（在庫1つ）を1つ',f:gs=>gs.some(g=>g.orig===1)},
+  {t:'小箱（在庫3つ）を2つ',f:gs=>gs.filter(g=>g.orig===3).length>=2},
+  {t:'同じジャンルを3つ',f:gs=>GK.some(k=>gs.filter(g=>g.genre===k).length>=3)},
+  {t:'10時に1つ買う',f:gs=>gs.some(g=>g.r===0)},
+  {t:'15時（セール）に1つ買う',f:gs=>gs.some(g=>g.r===ROUNDS-1)},
+  {t:'初回特典を2つ',f:gs=>gs.filter(g=>g.first).length>=2}
+];
 let S=null;
 const $=id=>document.getElementById(id);
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a}
 function priceOf(card){return S.round===ROUNDS-1?Math.max(0,card.price-1):card.price}
 function genreCount(p){const s=new Set(p.games.map(g=>g.genre));return s.size}
+function goalsMet(p){return p.goals.map(gi=>GOALS[gi].f(p.games))}
 function score(p){
-  const stars=p.games.reduce((a,g)=>a+g.pts,0), set=SET_BONUS[genreCount(p)], money=Math.floor(p.money/2);
-  return {stars,set,money,total:stars+set+money};
+  const stars=p.games.reduce((a,g)=>a+g.pts,0), first=p.games.filter(g=>g.first).length,
+        set=SET_BONUS[genreCount(p)], goal=goalsMet(p).filter(x=>x).length*3, money=Math.floor(p.money/2);
+  return {stars,first,set,goal,money,total:stars+first+set+goal+money};
 }
 function log(t){const l=$('log');l.innerHTML='<div>'+t+'</div>'+l.innerHTML}
 
 function start(){
   const n=+$('cpuN').value;
-  const deck=shuffle(CARDS.map(c=>({name:c[0],genre:c[1],pts:c[2],price:c[3],stock:c[4]})));
+  const deck=shuffle(CARDS.map(c=>({name:c[0],genre:c[1],pts:c[2],price:c[3],stock:c[4],orig:c[4]})));
   const players=[{name:'あなた',human:true}].concat(CPU_NAMES.slice(0,n).map(nm=>({name:nm})));
-  players.forEach(p=>{p.money=START_MONEY;p.tickets=1;p.games=[]});
+  const gdeck=shuffle(GOALS.map((_,i)=>i));
+  players.forEach(p=>{p.money=START_MONEY;p.tickets=1;p.games=[];p.goals=[gdeck.pop(),gdeck.pop()]});
   S={round:0,players,deck,booths:[],leader:Math.floor(Math.random()*players.length),phase:'choose',choice:null,useTk:false,result:null};
   for(let i=0;i<BOOTHS;i++)S.booths.push(S.deck.pop()||null);
   $('setup').hidden=true;$('final').hidden=true;$('game').hidden=false;$('log').innerHTML='';
@@ -192,7 +213,10 @@ function cpuChoose(p){
     const has=p.games.some(g=>g.genre===b.genre);
     const gain=has?0:SET_BONUS[gc+1]-SET_BONUS[gc];
     const price=priceOf(b);
-    let v=b.pts+gain-price*0.5;
+    const met=goalsMet(p).filter(x=>x).length;
+    const after={...p,games:p.games.concat([{genre:b.genre,pts:b.pts,orig:b.orig,r:S.round,first:b.stock===b.orig}])};
+    const goalGain=(goalsMet(after).filter(x=>x).length-met)*3;
+    let v=b.pts+gain+goalGain+(b.stock===b.orig?0.6:0)-price*0.5;
     // 行列の見込み：在庫が少なく人気ほど取れない可能性
     const heat=b.pts/b.stock;
     const crowd=Math.min(1,heat*others/12);
@@ -227,15 +251,16 @@ function resolve(){
       const p=S.players[i];
       if(picks[i].useTk)p.tickets--;
       if(b.stock>0&&p.money>=price){
-        b.stock--;p.money-=price;p.games.push({name:b.name,genre:b.genre,pts:b.pts});
-        out.push({i,got:true,tk:picks[i].useTk});
+        const first=b.stock===b.orig;
+        b.stock--;p.money-=price;p.games.push({name:b.name,genre:b.genre,pts:b.pts,orig:b.orig,r:S.round,first});
+        out.push({i,got:true,tk:picks[i].useTk,first});
       }else{
         p.tickets=Math.min(MAX_TK,p.tickets+1);out.push({i,got:false,tk:picks[i].useTk});
       }
     });
     res.booth.push(out);
     if(vis.length){
-      const got=out.filter(o=>o.got).map(o=>S.players[o.i].name+(o.tk?'（整理券）':'')),
+      const got=out.filter(o=>o.got).map(o=>S.players[o.i].name+(o.tk?'（整理券）':'')+(o.first?'🎁':'')),
             miss=out.filter(o=>!o.got).map(o=>S.players[o.i].name);
       log('「'+b.name+'」'+(got.length?got.join('・')+' が購入':'')+(miss.length?(got.length?'。':'')+miss.join('・')+' は行列で買えず整理券+1':''));
     }
@@ -259,9 +284,13 @@ function finish(){
   const rows=S.players.map(p=>({p,s:score(p)})).sort((a,b)=>b.s.total-a.s.total||b.p.money-a.p.money);
   const myRank=rows.findIndex(r=>r.p.human)+1;
   let h='<div class="rank">'+(myRank===1?'🏆 あなたの優勝！':'あなたは '+myRank+' 位')+'</div>';
-  h+='<table><tr><th>プレイヤー</th><th>⭐</th><th>コンプ</th><th>お金</th><th>合計</th></tr>';
-  rows.forEach(r=>{h+='<tr><td>'+r.p.name+'<br><span style="font-size:11px;color:var(--mute)">'+r.p.games.map(g=>GEN[g.genre].i+g.name).join(' ')+'</span></td><td>'+r.s.stars+'</td><td>+'+r.s.set+'</td><td>+'+r.s.money+'</td><td><b>'+r.s.total+'</b></td></tr>'});
-  h+='</table><div class="btns"><button id="again">もう一度</button></div>';
+  h+='<table><tr><th>プレイヤー</th><th>⭐</th><th>🎯</th><th>コンプ</th><th>💴</th><th>合計</th></tr>';
+  rows.forEach(r=>{const gm=goalsMet(r.p);
+    h+='<tr><td>'+r.p.name+'<div class="fin-sub">'+r.p.games.map(g=>GEN[g.genre].i+g.name+(g.first?'🎁':'')).join(' ')+'</div>'+
+      '<div class="fin-sub">🎯'+r.p.goals.map((gi,k)=>(gm[k]?'✅':'❌')+GOALS[gi].t).join('／')+'</div></td>'+
+      '<td>'+r.s.stars+(r.s.first?'<div class="fin-sub">🎁+'+r.s.first+'</div>':'')+'</td><td>+'+r.s.goal+'</td><td>+'+r.s.set+'</td><td>+'+r.s.money+'</td><td><b>'+r.s.total+'</b></td></tr>'});
+  h+='</table><div class="fin-sub" style="margin-top:4px">⭐＝新作の⭐（🎁は初回特典の+1）、🎯＝お目当て、💴＝残ったお金2につき1点</div>';
+  h+='<div class="btns"><button id="again">もう一度</button></div>';
   $('final').innerHTML=h;$('final').hidden=false;
   $('again').onclick=()=>{$('final').hidden=true;$('setup').hidden=false;window.scrollTo(0,0)};
   log('閉場！ 結果発表');
@@ -274,7 +303,7 @@ function render(){
     const cnt={};GK.forEach(k=>cnt[k]=0);p.games.forEach(g=>cnt[g.genre]++);
     const st=p.games.reduce((a,g)=>a+g.pts,0);
     return '<div class="pl'+(p.human?' me':'')+'"><div class="nm">'+(i===S.leader?'🚩':'')+p.name+'</div>'+
-      '<div class="row"><span>💴'+p.money+'</span><span>🎫'+p.tickets+'</span><span>⭐'+st+'</span></div>'+
+      '<div class="row"><span>💴'+p.money+'</span><span>🎫'+p.tickets+'</span><span>⭐'+(st+p.games.filter(g=>g.first).length)+'</span></div>'+
       '<div class="gicons">'+GK.map(k=>'<span class="gi'+(cnt[k]?'':' zero')+'" style="--c:'+GEN[k].c+'">'+GEN[k].i+cnt[k]+'</span>').join('')+'</div></div>';
   }).join('');
   const me=S.players[0];
@@ -292,7 +321,8 @@ function render(){
       '<div class="ti">'+b.name+'</div>'+
       '<div class="meta"><span>⭐'+b.pts+'</span><span class="price">'+(sale?'<s>💴'+b.price+'</s><span class="sale">💴'+pr+'</span>':'💴'+pr)+'</span></div>'+
       '<div class="stock">'+(soldNow?'売り切れ':'在庫 '+b.stock)+'</div>'+
-      (out&&out.length?'<div class="who">'+out.map(o=>'<span class="'+(o.got?'got':'miss')+'">'+(o.tk?'🎫':'')+S.players[o.i].name+(o.got?'✓':'✗')+'</span>').join('')+'</div>':'')+
+      (b.stock===b.orig&&S.phase==='choose'?'<div class="first">🎁初回特典あり</div>':'')+
+      (out&&out.length?'<div class="who">'+out.map(o=>'<span class="'+(o.got?'got':'miss')+'">'+(o.tk?'🎫':'')+S.players[o.i].name+(o.got?(o.first?'🎁':'✓'):'✗')+'</span>').join('')+'</div>':'')+
       '</div>';
   }).join('');
   const rest=$('rest');
@@ -310,7 +340,7 @@ function render(){
     const mine=S.result.booth.flatMap((o,bi)=>o.filter(x=>x.i===0).map(x=>({x,bi})));
     let t;
     if(S.result.rest.includes(0))t='休憩所で一息。整理券を1枚もらいました。';
-    else if(mine.length&&mine[0].x.got)t='「'+S.booths[mine[0].bi].name+'」を買えました！';
+    else if(mine.length&&mine[0].x.got)t='「'+S.booths[mine[0].bi].name+'」を買えました！'+(mine[0].x.first?' 🎁初回特典で⭐+1':'');
     else t='行列で買えませんでした…。整理券を1枚もらいました。';
     $('msg').innerHTML=t;
     btns.innerHTML='<button id="next">'+(S.round===ROUNDS-1?'閉場して結果へ':'次の時間帯へ')+'</button>';
@@ -320,7 +350,9 @@ function render(){
     if(S.phase!=='choose')return;const i=+el.dataset.i;if(!affordable(me,S.booths[i]))return;S.choice=i;render();
   });
   rest.onclick=()=>{if(S.phase!=='choose')return;S.choice=-1;S.useTk=false;render()};
-  $('mine').innerHTML=me.games.length?me.games.map(g=>'<span class="g" style="--c:'+GEN[g.genre].c+'">'+GEN[g.genre].i+g.name+' ⭐'+g.pts+'</span>').join(''):'<span style="font-size:12px;color:var(--mute)">まだありません</span>';
+  const gm=goalsMet(me);
+  $('goals').innerHTML=me.goals.map((gi,k)=>'<div class="goal'+(gm[k]?' ok':'')+'">'+(gm[k]?'✅ ':'🎯 ')+GOALS[gi].t+'</div>').join('');
+  $('mine').innerHTML=me.games.length?me.games.map(g=>'<span class="g" style="--c:'+GEN[g.genre].c+'">'+GEN[g.genre].i+g.name+' ⭐'+g.pts+(g.first?'🎁+1':'')+'</span>').join(''):'<span style="font-size:12px;color:var(--mute)">まだありません</span>';
 }
 
 $('start').onclick=start;

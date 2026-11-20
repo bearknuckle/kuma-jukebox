@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ボドゲ市の争奪戦</title>
+<!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="試作ゲームラボ">
+<meta property="og:title" content="ボドゲ市の争奪戦｜試作ゲームラボ">
+<meta property="og:description" content="ボドゲの即売会で新作を取り合う。全員いっせいに行くブースを選び、在庫より人が多ければ行列。買えなかった人は整理券をもらって次で先頭に。6つの時間帯で、新作の⭐とジャンルコンプを集めよう。">
+<meta property="og:url" content="https://game-lab-oj9t.onrender.com/bodoge-ichi/">
+<meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+:root{--bg:#f4efe6;--panel:#fff;--ink:#2b2420;--mute:#857a70;--line:#e4dccf;--accent:#d2452f;
+  --heavy:#5b4bd6;--party:#e8743b;--duo:#2f8f6b;--coop:#2a7fc8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:14px 12px 40px}
+h1{font-size:21px;margin:0}
+.sub{font-size:12px;color:var(--mute);margin-bottom:10px}
+h2{font-size:14px;margin:0 0 6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.clock{display:flex;gap:4px;margin-bottom:10px}
+.clock span{flex:1;text-align:center;font-size:11px;padding:4px 0;border-radius:8px;background:#e9e1d4;color:var(--mute)}
+.clock span.now{background:var(--accent);color:#fff;font-weight:bold}
+.clock span.done{background:#d8cfc1;color:#fff}
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-bottom:10px}
+.pl{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 9px;font-size:12px}
+.pl.me{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.pl .nm{font-weight:bold;font-size:13px}
+.pl .row{display:flex;gap:8px;flex-wrap:wrap}
+.gicons{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.gi{font-size:11px;border-radius:6px;padding:0 5px;color:#fff;background:var(--c)}
+.gi.zero{opacity:.25}
+.msg{font-size:14px;margin-bottom:8px}
+.booths{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.booth{position:relative;border-radius:12px;border:3px solid transparent;background:#faf7f1;padding:8px;cursor:pointer;min-height:150px;display:flex;flex-direction:column}
+.booth .lbl{font-size:11px;color:var(--mute)}
+.booth .gt{display:inline-block;font-size:11px;color:#fff;background:var(--c);border-radius:6px;padding:0 6px;margin:3px 0;align-self:flex-start}
+.booth .ti{font-weight:bold;font-size:14px;line-height:1.3;flex:1}
+.booth .meta{display:flex;justify-content:space-between;font-size:13px;margin-top:4px}
+.booth .stock{font-size:11px;color:var(--mute)}
+.booth .hot{position:absolute;top:6px;right:6px;font-size:10px;background:#ffd84d;border-radius:6px;padding:0 5px}
+.booth.sel{border-color:var(--accent);background:#fff2ee}
+.booth.cant{opacity:.45;cursor:not-allowed}
+.booth.empty{opacity:.4;cursor:default}
+.booth .who{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;font-size:11px}
+.who span{border-radius:6px;padding:0 5px;background:#eee}
+.who span.got{background:#3fae6a;color:#fff}
+.who span.miss{background:#bbb;color:#fff}
+.rest{margin-top:8px;border-radius:12px;border:3px solid transparent;background:#eef3f7;padding:8px;cursor:pointer;font-size:13px}
+.rest.sel{border-color:var(--accent)}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+button{font:inherit;font-size:14px;border:none;border-radius:10px;padding:10px 16px;background:var(--accent);color:#fff;cursor:pointer;font-weight:bold}
+button.sec{background:#e7dccb;color:var(--ink);font-weight:normal}
+button:disabled{opacity:.4;cursor:not-allowed}
+label.tk{font-size:13px;display:flex;align-items:center;gap:4px;background:#fff6d6;border-radius:10px;padding:8px 10px}
+label.tk.off{opacity:.45}
+select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:#fff}
+.mine{display:flex;gap:6px;flex-wrap:wrap}
+.mine .g{font-size:12px;border-left:5px solid var(--c);background:#faf7f1;border-radius:6px;padding:3px 7px}
+details{font-size:13px;line-height:1.65}
+summary{cursor:pointer;font-weight:bold}
+.log{font-size:12px;color:var(--mute);max-height:140px;overflow:auto;line-height:1.55}
+.final table{width:100%;border-collapse:collapse;font-size:13px}
+.final th{white-space:nowrap}
+.final th,.final td{padding:5px 3px;border-bottom:1px solid #eee;text-align:right}
+.final th:first-child,.final td:first-child{text-align:left}
+.rank{font-size:20px;font-weight:bold;text-align:center;margin:6px 0 10px}
+.back-link{display:block;text-align:center;font-size:13px;color:var(--mute);margin-top:12px}
+.sale{color:var(--accent);font-weight:bold}
+.price s{opacity:.5;margin-right:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎪 ボドゲ市の争奪戦</h1>
+  <div class="sub">即売会で新作ボドゲを取り合う同時選択ゲーム</div>
+
+  <div id="setup" class="panel">
+    <p style="margin-top:0;font-size:14px">ボドゲの即売会がはじまる。開場から閉場まで6つの時間帯で、ほしい新作を手に入れよう。</p>
+    <div class="btns">
+      <label style="font-size:14px">CPUの人数 <select id="cpuN"><option>1</option><option>2</option><option selected>3</option></select></label>
+      <button id="start">開場する</button>
+    </div>
+  </div>
+
+  <div id="game" hidden>
+    <div class="clock" id="clock"></div>
+    <div class="players" id="players"></div>
+    <div class="panel">
+      <div class="msg" id="msg"></div>
+      <div class="booths" id="booths"></div>
+      <div class="rest" id="rest">☕ <b>休憩所で一息</b>：今回は何も買わず、整理券を1枚もらう</div>
+      <div class="btns" id="btns"></div>
+    </div>
+    <div class="panel"><h2>あなたが買ったゲーム</h2><div class="mine" id="mine"></div></div>
+  </div>
+
+  <div id="final" class="panel final" hidden></div>
+
+  <div class="panel">
+    <details>
+      <summary>ルール</summary>
+      <p><b>目的：</b>6つの時間帯（10時〜15時）で新作ボドゲを買い、得点を一番多くしよう。</p>
+      <p><b>準備：</b>全員💴12と整理券1枚を持つ。ブースが5つ並び、それぞれ新作が1タイトル置かれる。新作には ⭐（点数）・💴（値段）・在庫数・ジャンルがある。</p>
+      <p><b>1つの時間帯の流れ</b></p>
+      <p>① <b>行き先を決める：</b>全員いっせいに、行くブースを1つ選ぶ（または休憩所）。整理券を持っていれば「使う」と決めてもよい。</p>
+      <p>② <b>公開して並ぶ：</b>同じブースに来た人は、整理券を使った人が先、その中・それ以外はそれぞれ「先頭プレイヤー」から時計回りの順に並ぶ。</p>
+      <p>③ <b>買う：</b>前から順に在庫がある分だけ買える（お金を払う）。在庫より人が多ければ行列で、後ろの人は買えない。</p>
+      <p>④ <b>買えなかった人：</b>整理券を1枚もらう。休憩所に行った人も1枚もらう。使った整理券は捨てる。整理券は最大3枚まで。</p>
+      <p>⑤ <b>補充：</b>売り切れたブースには新しい新作が並ぶ。先頭プレイヤーは左どなりに移る。</p>
+      <p><b>閉場前セール：</b>最後の15時は、全部のブースが💴1値下げ。</p>
+      <p><b>得点：</b>買ったゲームの⭐の合計 ＋ ジャンルコンプ（ちがうジャンル2種:+1／3種:+3／4種:+6）＋ 残ったお金2につき1点。</p>
+      <p>ジャンルは🧠重ゲー・🎉パーティー・⚔️2人用・🤝協力の4つ。<b>🔥話題作</b>は在庫1つだけ。みんなが狙うので、整理券の使いどころ。</p>
+    </details>
+  </div>
+
+  <div class="panel"><h2>記録</h2><div class="log" id="log"></div>
+    <div class="btns"><button class="sec" id="restart">はじめから</button></div>
+  </div>
+  <a class="back-link" href="../">← 試作ゲームラボに戻る</a>
+</div>
+
+<script>
+const ROUNDS=6, BOOTHS=5, START_MONEY=12, MAX_TK=3;
+const TIMES=['10時','11時','12時','13時','14時','15時'];
+const GEN={
+  heavy:{n:'重ゲー',i:'🧠',c:'var(--heavy)'},
+  party:{n:'パーティー',i:'🎉',c:'var(--party)'},
+  duo:{n:'2人用',i:'⚔️',c:'var(--duo)'},
+  coop:{n:'協力',i:'🤝',c:'var(--coop)'}
+};
+const GK=Object.keys(GEN);
+const SET_BONUS=[0,0,1,3,6];
+// [名前, ジャンル, ⭐, 💴, 在庫]
+const CARDS=[
+  // 話題作（在庫1）
+  ['星屑の交易路','heavy',6,5,1],['蒸気機関の街','heavy',5,4,1],
+  ['秘密結社ゆるふわ','party',5,4,1],['ことばの怪盗','party',6,5,1],
+  ['月下の決闘','duo',5,4,1],['深海郵便局','coop',6,5,1],['灯台守の夜','coop',5,4,1],
+  // 中堅（在庫2）
+  ['薬草師の弟子','heavy',4,3,2],['鉄道王の遺言','heavy',3,3,2],['砂漠の隊商','heavy',4,3,2],
+  ['ねこ鍋大作戦','party',3,2,2],['せーので指差し','party',4,3,2],['ウソつき八百屋','party',3,3,2],
+  ['盤上の囲碁将棋会','duo',4,3,2],['ふたりの庭師','duo',3,2,2],['古城の綱引き','duo',4,3,2],
+  ['おばけ屋敷の鍵','coop',4,3,2],['月面ラーメン屋','coop',3,2,2],['山小屋サバイバル','coop',4,3,2],
+  // 同人小箱（在庫3）
+  ['きのこ図鑑','heavy',2,2,3],['小さな王国','heavy',2,1,3],['十二支リレー','party',2,1,3],
+  ['だじゃれ横丁','party',1,1,3],['豆腐の陣','duo',2,1,3],['ふたり占い','duo',2,2,3],
+  ['迷子のペンギン','coop',2,1,3],['ひみつの夜行列車','coop',1,1,3],['おえかき伝言','party',2,2,3],
+  ['ちいさな探偵','coop',2,2,3],['こびとの鍛冶屋','duo',1,1,3]
+];
+const CPU_NAMES=['ミドリ','タロウ','サクラ'];
+let S=null;
+const $=id=>document.getElementById(id);
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a}
+function priceOf(card){return S.round===ROUNDS-1?Math.max(0,card.price-1):card.price}
+function genreCount(p){const s=new Set(p.games.map(g=>g.genre));return s.size}
+function score(p){
+  const stars=p.games.reduce((a,g)=>a+g.pts,0), set=SET_BONUS[genreCount(p)], money=Math.floor(p.money/2);
+  return {stars,set,money,total:stars+set+money};
+}
+function log(t){const l=$('log');l.innerHTML='<div>'+t+'</div>'+l.innerHTML}
+
+function start(){
+  const n=+$('cpuN').value;
+  const deck=shuffle(CARDS.map(c=>({name:c[0],genre:c[1],pts:c[2],price:c[3],stock:c[4]})));
+  const players=[{name:'あなた',human:true}].concat(CPU_NAMES.slice(0,n).map(nm=>({name:nm})));
+  players.forEach(p=>{p.money=START_MONEY;p.tickets=1;p.games=[]});
+  S={round:0,players,deck,booths:[],leader:Math.floor(Math.random()*players.length),phase:'choose',choice:null,useTk:false,result:null};
+  for(let i=0;i<BOOTHS;i++)S.booths.push(S.deck.pop()||null);
+  $('setup').hidden=true;$('final').hidden=true;$('game').hidden=false;$('log').innerHTML='';
+  log('開場！ 先頭プレイヤーは '+players[S.leader].name);
+  render();
+}
+
+function affordable(p,b){return b&&b.stock>0&&p.money>=priceOf(b)}
+
+function cpuChoose(p){
+  const others=S.players.length-1;
+  let best={v:1.0+(p.tickets===0?0.8:0)+(p.tickets>=MAX_TK?-1:0)+Math.random()*0.8,b:-1};
+  const gc=genreCount(p);
+  S.booths.forEach((b,i)=>{
+    if(!affordable(p,b))return;
+    const has=p.games.some(g=>g.genre===b.genre);
+    const gain=has?0:SET_BONUS[gc+1]-SET_BONUS[gc];
+    const price=priceOf(b);
+    let v=b.pts+gain-price*0.5;
+    // 行列の見込み：在庫が少なく人気ほど取れない可能性
+    const heat=b.pts/b.stock;
+    const crowd=Math.min(1,heat*others/12);
+    v*= (1-crowd*(p.tickets>0?0.25:0.55));
+    v+=Math.random()*1.6;
+    if(v>best.v)best={v,b:i};
+  });
+  let useTk=false;
+  if(best.b>=0&&p.tickets>0){
+    const b=S.booths[best.b];
+    if(b.stock===1&&b.pts>=4)useTk=true;
+    else if(p.tickets>=2&&b.stock<=2&&Math.random()<0.5)useTk=true;
+    else if(S.round===ROUNDS-1)useTk=true;
+  }
+  return {b:best.b,useTk};
+}
+
+function resolve(){
+  const me=S.players[0];
+  const picks=S.players.map((p,i)=>i===0?{b:S.choice,useTk:S.useTk&&S.choice>=0&&me.tickets>0}:cpuChoose(p));
+  const n=S.players.length;
+  const seat=i=>(i-S.leader+n)%n;
+  const res={booth:[],rest:[]};
+  log('<b>'+TIMES[S.round]+'</b>');
+  S.booths.forEach((b,bi)=>{
+    const vis=[];picks.forEach((pk,i)=>{if(pk.b===bi)vis.push(i)});
+    vis.sort((a,c)=>(picks[c].useTk-picks[a].useTk)||(seat(a)-seat(c)));
+    const out=[];
+    if(!b){res.booth.push(out);return}
+    const price=priceOf(b);
+    vis.forEach(i=>{
+      const p=S.players[i];
+      if(picks[i].useTk)p.tickets--;
+      if(b.stock>0&&p.money>=price){
+        b.stock--;p.money-=price;p.games.push({name:b.name,genre:b.genre,pts:b.pts});
+        out.push({i,got:true,tk:picks[i].useTk});
+      }else{
+        p.tickets=Math.min(MAX_TK,p.tickets+1);out.push({i,got:false,tk:picks[i].useTk});
+      }
+    });
+    res.booth.push(out);
+    if(vis.length){
+      const got=out.filter(o=>o.got).map(o=>S.players[o.i].name+(o.tk?'（整理券）':'')),
+            miss=out.filter(o=>!o.got).map(o=>S.players[o.i].name);
+      log('「'+b.name+'」'+(got.length?got.join('・')+' が購入':'')+(miss.length?(got.length?'。':'')+miss.join('・')+' は行列で買えず整理券+1':''));
+    }
+  });
+  picks.forEach((pk,i)=>{if(pk.b<0){const p=S.players[i];p.tickets=Math.min(MAX_TK,p.tickets+1);res.rest.push(i)}});
+  if(res.rest.length)log('休憩所：'+res.rest.map(i=>S.players[i].name).join('・')+'（整理券+1）');
+  S.result=res;S.phase='result';
+  render();
+}
+
+function nextRound(){
+  S.booths=S.booths.map(b=>(b&&b.stock>0)?b:(S.deck.pop()||null));
+  S.round++;S.leader=(S.leader+1)%S.players.length;S.choice=null;S.useTk=false;S.result=null;S.phase='choose';
+  if(S.round>=ROUNDS){finish();return}
+  if(S.round===ROUNDS-1)log('閉場前セール！ 全ブース💴1値下げ');
+  render();
+}
+
+function finish(){
+  $('game').hidden=true;
+  const rows=S.players.map(p=>({p,s:score(p)})).sort((a,b)=>b.s.total-a.s.total||b.p.money-a.p.money);
+  const myRank=rows.findIndex(r=>r.p.human)+1;
+  let h='<div class="rank">'+(myRank===1?'🏆 あなたの優勝！':'あなたは '+myRank+' 位')+'</div>';
+  h+='<table><tr><th>プレイヤー</th><th>⭐</th><th>コンプ</th><th>お金</th><th>合計</th></tr>';
+  rows.forEach(r=>{h+='<tr><td>'+r.p.name+'<br><span style="font-size:11px;color:var(--mute)">'+r.p.games.map(g=>GEN[g.genre].i+g.name).join(' ')+'</span></td><td>'+r.s.stars+'</td><td>+'+r.s.set+'</td><td>+'+r.s.money+'</td><td><b>'+r.s.total+'</b></td></tr>'});
+  h+='</table><div class="btns"><button id="again">もう一度</button></div>';
+  $('final').innerHTML=h;$('final').hidden=false;
+  $('again').onclick=()=>{$('final').hidden=true;$('setup').hidden=false;window.scrollTo(0,0)};
+  log('閉場！ 結果発表');
+  window.scrollTo(0,0);
+}
+
+function render(){
+  $('clock').innerHTML=TIMES.map((t,i)=>'<span class="'+(i===S.round?'now':i<S.round?'done':'')+'">'+t+'</span>').join('');
+  $('players').innerHTML=S.players.map((p,i)=>{
+    const cnt={};GK.forEach(k=>cnt[k]=0);p.games.forEach(g=>cnt[g.genre]++);
+    const st=p.games.reduce((a,g)=>a+g.pts,0);
+    return '<div class="pl'+(p.human?' me':'')+'"><div class="nm">'+(i===S.leader?'🚩':'')+p.name+'</div>'+
+      '<div class="row"><span>💴'+p.money+'</span><span>🎫'+p.tickets+'</span><span>⭐'+st+'</span></div>'+
+      '<div class="gicons">'+GK.map(k=>'<span class="gi'+(cnt[k]?'':' zero')+'" style="--c:'+GEN[k].c+'">'+GEN[k].i+cnt[k]+'</span>').join('')+'</div></div>';
+  }).join('');
+  const me=S.players[0];
+  const sale=S.round===ROUNDS-1;
+  $('booths').innerHTML=S.booths.map((b,i)=>{
+    const L='ブース'+'ABCDE'[i];
+    if(!b)return '<div class="booth empty"><div class="lbl">'+L+'</div><div class="ti">（空き）</div></div>';
+    const out=S.result?S.result.booth[i]:null;
+    const soldNow=b.stock===0;
+    const can=S.phase==='choose'&&affordable(me,b);
+    const cls=['booth'];if(S.choice===i)cls.push('sel');if(S.phase==='choose'&&!can)cls.push('cant');
+    const pr=priceOf(b);
+    return '<div class="'+cls.join(' ')+'" data-i="'+i+'">'+(b.stock===1&&b.pts>=5&&!soldNow?'<span class="hot">🔥話題作</span>':'')+
+      '<div class="lbl">'+L+'</div><span class="gt" style="--c:'+GEN[b.genre].c+'">'+GEN[b.genre].i+GEN[b.genre].n+'</span>'+
+      '<div class="ti">'+b.name+'</div>'+
+      '<div class="meta"><span>⭐'+b.pts+'</span><span class="price">'+(sale?'<s>💴'+b.price+'</s><span class="sale">💴'+pr+'</span>':'💴'+pr)+'</span></div>'+
+      '<div class="stock">'+(soldNow?'売り切れ':'在庫 '+b.stock)+'</div>'+
+      (out&&out.length?'<div class="who">'+out.map(o=>'<span class="'+(o.got?'got':'miss')+'">'+(o.tk?'🎫':'')+S.players[o.i].name+(o.got?'✓':'✗')+'</span>').join('')+'</div>':'')+
+      '</div>';
+  }).join('');
+  const rest=$('rest');
+  rest.className='rest'+(S.choice===-1?' sel':'');
+  rest.style.display=S.phase==='choose'||(S.result&&S.result.rest.length)?'':'none';
+  rest.innerHTML='☕ <b>休憩所で一息</b>：今回は何も買わず、整理券を1枚もらう'+(S.result&&S.result.rest.length?'<div class="who">'+S.result.rest.map(i=>'<span>'+S.players[i].name+'</span>').join('')+'</div>':'');
+  const btns=$('btns');
+  if(S.phase==='choose'){
+    $('msg').innerHTML=(sale?'<span class="sale">閉場前セール中！</span> ':'')+'<b>'+TIMES[S.round]+'</b>：行くブースを選んでください。';
+    btns.innerHTML='<label class="tk'+(me.tickets?'':' off')+'"><input type="checkbox" id="tk" '+(S.useTk?'checked':'')+(me.tickets&&S.choice!==-1?'':' disabled')+'> 🎫整理券を使って先頭に並ぶ（残り'+me.tickets+'）</label>'+
+      '<button id="go" '+(S.choice===null?'disabled':'')+'>みんなで公開</button>';
+    $('tk').onchange=e=>{S.useTk=e.target.checked};
+    $('go').onclick=resolve;
+  }else{
+    const mine=S.result.booth.flatMap((o,bi)=>o.filter(x=>x.i===0).map(x=>({x,bi})));
+    let t;
+    if(S.result.rest.includes(0))t='休憩所で一息。整理券を1枚もらいました。';
+    else if(mine.length&&mine[0].x.got)t='「'+S.booths[mine[0].bi].name+'」を買えました！';
+    else t='行列で買えませんでした…。整理券を1枚もらいました。';
+    $('msg').innerHTML=t;
+    btns.innerHTML='<button id="next">'+(S.round===ROUNDS-1?'閉場して結果へ':'次の時間帯へ')+'</button>';
+    $('next').onclick=nextRound;
+  }
+  document.querySelectorAll('.booth[data-i]').forEach(el=>el.onclick=()=>{
+    if(S.phase!=='choose')return;const i=+el.dataset.i;if(!affordable(me,S.booths[i]))return;S.choice=i;render();
+  });
+  rest.onclick=()=>{if(S.phase!=='choose')return;S.choice=-1;S.useTk=false;render()};
+  $('mine').innerHTML=me.games.length?me.games.map(g=>'<span class="g" style="--c:'+GEN[g.genre].c+'">'+GEN[g.genre].i+g.name+' ⭐'+g.pts+'</span>').join(''):'<span style="font-size:12px;color:var(--mute)">まだありません</span>';
+}
+
+$('start').onclick=start;
+$('restart').onclick=()=>{$('game').hidden=true;$('final').hidden=true;$('setup').hidden=false;$('log').innerHTML='';window.scrollTo(0,0)};
+</script>
+</body>
+</html>

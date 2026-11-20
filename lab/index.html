@@ -75,6 +75,11 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 // ゲームを増やすときはここに1件追加する
 const GAMES=[
   {
+    id:'bodoge-ichi', name:'ボドゲ市の争奪戦', icon:'🎪', color:'#d2452f',
+    desc:'ボドゲの即売会で新作を取り合う。全員いっせいに行くブースを選び、在庫より人が多ければ行列で買えない人が出る。買えなかった人は整理券をもらって、次は先頭に並べる。在庫1つの🔥話題作をめぐる読み合いと、4ジャンルそろえるコンプボーナス。15時は閉場前セール。6つの時間帯で勝負。',
+    players:'1人（CPU 1〜3人）', time:'5〜10分', genre:'ボドゲ', added:'2026-11-20', version:'0.1', updated:'2026-11-20', isNew:true
+  },
+  {
     id:'bpm-relay', name:'BPMリレー', icon:'🎧', color:'#7a2cff',
     desc:'DJになって曲をつなぐカードゲーム。場の曲とジャンルが同じか、BPMが近い曲なら出せる。キーまで合えば「ハーモニックミックス」でもう1枚。スクラッチやピッチフェーダーで流れを変えて、手札を先に出し切ったら勝ち。3ラウンドの減点勝負。',
     players:'1人（CPU 1〜3人）', time:'10分', genre:'音楽', added:'2026-11-20', version:'0.1', updated:'2026-11-20', isNew:true
@@ -158,6 +163,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-20', id:'bodoge-ichi',      version:'0.1', text:'新しく登場（ボドゲのゲーム・即売会で新作を取り合う同時選択ゲーム）'},
   {date:'2026-11-20', id:'tana-puzzle',      version:'0.2', text:'目線の高さの「おすすめ棚」から貸すと星+1。売れ残った入荷ゲームは毎日1ずつ値下がり（タダでも売れ残ったら入れ替わる）'},
   {date:'2026-11-20', id:'hit-chart',        version:'0.2', text:'取ったジャンルカードを表向きに（かぶりを読み合える）。初めて出すジャンルの曲はファン＋1'},
   {date:'2026-11-20', id:'bpm-relay',        version:'0.1', text:'新しく登場（音楽のゲーム・BPMとキーで曲をつなぐDJカードゲーム）'},

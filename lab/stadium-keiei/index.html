@@ -53,6 +53,11 @@ button.sub{background:#5b6b63;box-shadow:0 3px 0 #38443e}
 .card.sale{border-color:var(--gold)}
 .chips{font-size:11px;color:#b07d00}
 .match{margin-top:8px;font-size:13px;line-height:1.7}
+.combo{font-size:11px;margin-top:4px;line-height:1.6}
+.combo .ok{color:var(--win);font-weight:bold}
+.combo .half{color:var(--muted)}
+.demolish{margin-top:10px;border:2px dashed var(--lose);border-radius:12px;padding:10px;font-size:13px}
+.demolish button{padding:7px 10px;font-size:13px;margin:4px 4px 0 0}
 .card .n{font-weight:bold;font-size:14px}
 .card .d{font-size:12px;color:#555;flex:1}
 .card button{padding:7px;font-size:13px}
@@ -78,7 +83,7 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
 </head>
 <body>
 <div class="wrap">
-<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ スタジアム経営 v0.2</p>
+<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ スタジアム経営 v0.3</p>
 <header>
   <h1>⚾ スタジアム経営</h1>
   <p>球場の売店とイベントで、9試合でいちばん稼いだオーナーの勝ち</p>
@@ -95,7 +100,9 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
     <li>試合は<b>ほかの球場との直接対決</b>。対戦する2人がサイコロを振り、<b>目が大きいほうの勝ち</b>。勝ったほうは負けた球場から<b>ファンを1人奪います</b>（同じ目なら引き分け）。対戦相手は毎回入れかわり、あまった1人はビジター球団と戦って<b>4以上で勝ち</b>（負けたらファン−1）。ファンは最低1人。</li>
     <li>売れ残った施設には、毎回<b>値引きチップが1枚</b>乗ります（1枚につき1コイン安くなる・最低1コイン）。安くなるのを待つか、先に買うか。</li>
     <li>収入＝<b>チケット代（ファンの数）</b>＋施設の収入。</li>
-    <li>9回（9試合）を終えて、<b>コインがいちばん多い人の勝ち</b>。同点ならファンが多い人の勝ち。</li>
+    <li>球場の区画は<b>5つ</b>。6つ目を建てるときは、先に1つ<b>取り壊します</b>（お金は戻りません）。</li>
+    <li>決まった施設がそろうと<b>セットボーナス</b>（例：焼きそば屋台＋ビール売り子で「グルメ球場」+8）。最後にコインに足します。</li>
+    <li>9回（9試合）を終えて、<b>コイン＋セットボーナスの合計がいちばん多い人の勝ち</b>。同点ならファンが多い人の勝ち。</li>
   </ul>
   <p class="muted">アナログ版で使うもの：施設カード18枚（9種類×2枚）、イベントカード10枚、サイコロ、コイン、値引きチップ、ファン数のトラック。</p>
   <div class="row"><button id="startBtn">CPU2人と試合開始</button></div>
@@ -120,6 +127,7 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
       <button id="playBtn" class="hide">⚾ プレイボール！</button>
       <button id="nextBtn" class="hide">次の回へ ▶</button>
     </div>
+    <div id="demolish"></div>
     <p class="muted" id="hint"></p>
   </div>
   <div class="panel">
@@ -160,6 +168,19 @@ const EVENTS = [
   {k:"payday",e:"💴",n:"給料日",d:"屋台とビール売り子の収入 +1。"}
 ];
 const ROUNDS = 9;
+const SLOTS = 5;
+const COMBOS = [
+  {n:"グルメ球場",need:["yakisoba","beer"],pts:8},
+  {n:"ファンサービス球場",need:["goods","mascot"],pts:8},
+  {n:"熱狂の外野席",need:["ouen","ouen"],pts:6},
+  {n:"満員御礼",need:["seats","fanclub"],pts:6},
+  {n:"ナイター名物",need:["hanabi","vision"],pts:6}
+];
+function comboHave(fac,c){const pool=fac.slice();let got=0;c.need.forEach(k=>{const j=pool.indexOf(k);if(j>=0){pool.splice(j,1);got++}});return got}
+function comboPts(fac){return COMBOS.reduce((s,c)=>s+(comboHave(fac,c)===c.need.length?c.pts:0),0)}
+// CPUの見込み：完成したセットは満点、作りかけは少しだけ
+function comboPot(fac){return COMBOS.reduce((s,c)=>{const g=comboHave(fac,c);return s+(g===c.need.length?c.pts:g?c.pts*0.3:0)},0)}
+function total(p){return p.coins+comboPts(p.fac)}
 let S;
 
 const $ = id=>document.getElementById(id);
@@ -208,13 +229,18 @@ function advance(){
   }
   S.phase="play";render();
 }
-function buy(p,idx){
+function buy(p,idx,rm){
   const m=S.market[idx],k=m.k,f=FAC[k],pr=price(m);
   if(p.coins<pr)return false;
   if(k==="ouen"&&cnt(p,"ouen")>=2)return false;
+  const full=p.fac.length>=SLOTS;
+  if(full&&(rm===undefined||rm<0||rm>=p.fac.length))return false;
+  const gone=full?p.fac.splice(rm,1)[0]:null;
   p.coins-=pr;p.fac.push(k);S.market.splice(idx,1);refill();
+  p.fans=Math.min(cap(p),p.fans);
+  if(gone)log(`<div>${p.icon} ${p.name}：${FAC[gone].e}${FAC[gone].n}を取り壊した</div>`);
   if(k==="mascot")p.fans=Math.min(cap(p),p.fans+2);
-  p.last=`${f.e}${f.n}を建設`;
+  p.last=`${f.e}${f.n}を建設`+(gone?`（${FAC[gone].e}取り壊し）`:"");
   log(`<div>${p.icon} ${p.name}：${f.e}<b>${f.n}</b>を建設（−${pr}${m.disc?"・値引き"+m.disc:""}）</div>`);
   return true;
 }
@@ -232,7 +258,7 @@ function value(p,k){
     case"yakisoba":v=2*games;break;
     case"beer":v=(2+2*w)*games;break;
     case"goods":v=(5*w+(1-w))*games;break;
-    case"ouen":v=cnt(p,"ouen")>=2?-99:(1/6)*games*(2+2*cnt(p,"beer")+4*cnt(p,"goods")+(p.fans<cap(p)?2:0));break;
+    case"ouen":v=(1/6)*games*(2+2*cnt(p,"beer")+4*cnt(p,"goods")+(p.fans<cap(p)?2:0));break;
     case"fanclub":v=left+(1-w)*games*0.8;break;
     case"mascot":v=games+Math.min(2,cap(p)-p.fans)*left*0.7;break;
     case"seats":v=games+(p.fans>=cap(p)-1?left*0.8:left*0.2);break;
@@ -242,17 +268,34 @@ function value(p,k){
   return v;
 }
 function cpuAct(p){
-  let best=-1,bv=0.5;
-  S.market.forEach((m,i)=>{const pr=price(m);if(p.coins>=pr){
-    // 値下がり待ち：まだ時間があり、割安でなければ見送ることも
-    let v=value(p,m.k)-pr;if(pr>1&&ROUNDS-S.round>4&&v<FAC[m.k].c*0.6)v-=1.5;
-    if(v>bv){bv=v;best=i}}});
-  if(best>=0&&buy(p,best))return;
+  let best=null,bv=0.5;
+  const pot0=comboPot(p.fac);
+  S.market.forEach((m,i)=>{
+    const pr=price(m);if(p.coins<pr)return;
+    if(m.k==="ouen"&&cnt(p,"ouen")>=2)return;
+    const tryIt=(rm)=>{
+      const nf=p.fac.slice();let lost=0;
+      if(rm>=0){lost=value(p,nf[rm]);nf.splice(rm,1)}
+      nf.push(m.k);
+      let v=value(p,m.k)-lost-pr+comboPot(nf)-pot0;
+      // 値下がり待ち：まだ時間があり、割安でなければ見送ることも
+      if(pr>1&&ROUNDS-S.round>4&&v<FAC[m.k].c*0.6)v-=1.5;
+      if(v>bv){bv=v;best={i,rm}}
+    };
+    if(p.fac.length<SLOTS)tryIt(-1);else p.fac.forEach((_,j)=>tryIt(j));
+  });
+  if(best&&buy(p,best.i,best.rm))return;
   const left=ROUNDS-S.round;
   if(left>=3&&p.fans<cap(p)&&advertise(p))return;
   p.last="パス";log(`<div>${p.icon} ${p.name}：パス</div>`);
 }
-function humanDone(){S.turnIdx++;advance()}
+function humanBuy(i){
+  const me=S.players[0];
+  if(me.fac.length<SLOTS){if(buy(me,i))humanDone();return}
+  S.pending=i;render();
+}
+function humanDemolish(j){const i=S.pending;S.pending=null;if(buy(S.players[0],i,j))humanDone();else render()}
+function humanDone(){S.pending=null;S.turnIdx++;advance()}
 
 function playGame(){
   const e=ev().k;
@@ -317,12 +360,12 @@ function nextRound(){
   startRound();
 }
 function finish(){
-  const r=S.players.slice().sort((a,b)=>b.coins-a.coins||b.fans-a.fans);
+  const r=S.players.slice().sort((a,b)=>total(b)-total(a)||b.fans-a.fans);
   const youWin=!r[0].cpu;
   $("end").innerHTML=`<h2 style="justify-content:center">試合終了！</h2>
   <div class="big">${youWin?"🏆 あなたが球界一のオーナー！":"😢 "+r[0].name+" の勝ち"}</div>
-  <table><tr><th>順位</th><th>オーナー</th><th>コイン</th><th>ファン</th><th>施設</th></tr>
-  ${r.map((p,i)=>`<tr><td>${i+1}</td><td>${p.icon} ${p.name}</td><td class="coin">${p.coins}</td><td>${p.fans}</td><td>${p.fac.map(k=>FAC[k].e).join("")||"-"}</td></tr>`).join("")}</table>
+  <table><tr><th>順位</th><th>オーナー</th><th>コイン</th><th>セット</th><th>合計</th><th>施設</th></tr>
+  ${r.map((p,i)=>`<tr><td>${i+1}</td><td>${p.icon} ${p.name}</td><td>${p.coins}</td><td>+${comboPts(p.fac)}</td><td class="coin">${total(p)}</td><td>${p.fac.map(k=>FAC[k].e).join("")||"-"}<div class="combo">${COMBOS.filter(c=>comboHave(p.fac,c)===c.need.length).map(c=>"★"+c.n).join(" ")}</div></td></tr>`).join("")}</table>
   <div class="row" style="justify-content:center;margin-top:12px"><button onclick="newGame()">もう一度あそぶ</button><button class="sub" onclick="location.reload()">ルールを見る</button></div>`;
   $("end").classList.remove("hide");
   S.phase="end";render();
@@ -337,7 +380,8 @@ function render(){
   $("board").innerHTML=S.players.map((p,i)=>`<div class="team ${i===cur?"turn":""}">
     <div class="nm">${p.icon} ${p.name}</div>
     <div class="st"><span class="coin">🪙 ${p.coins}</span>　👥 ファン ${p.fans}/${cap(p)}<br><span class="muted">${p.last||"&nbsp;"}</span></div>
-    <div class="fac">${p.fac.map(k=>`<span title="${FAC[k].n}">${FAC[k].e}</span>`).join("")||'<span class="muted">施設なし</span>'}</div></div>`).join("");
+    <div class="fac">${p.fac.map(k=>`<span title="${FAC[k].n}">${FAC[k].e}</span>`).join("")||'<span class="muted">施設なし</span>'}<span class="muted" style="font-size:11px;align-self:center">　${p.fac.length}/${SLOTS}区画</span></div>
+    <div class="combo">${comboLine(p)}</div></div>`).join("");
   if(S.phase!=="end"){
     const e=ev();
     $("evTitle").textContent=`${S.round+1}回のイベント`;
@@ -351,7 +395,10 @@ function render(){
     const ok=myTurn&&me.coins>=pr&&!(k==="ouen"&&cnt(me,"ouen")>=2);
     return `<div class="card ${m.disc?"sale":""}"><div class="top"><span class="em">${f.e}</span><span class="cost">${m.disc?`<s>${f.c}</s>`:""}🪙${pr}</span></div>${m.disc?`<div class="chips">🏷️ 値引きチップ×${m.disc}</div>`:""}
     <div class="n">${f.n}</div><div class="d">${f.d}</div>
-    <button ${ok?"":"disabled"} onclick="if(buy(S.players[0],${i}))humanDone()">建てる</button></div>`}).join("")||'<p class="muted">山札が尽きました</p>';
+    <button ${ok?"":"disabled"} onclick="humanBuy(${i})">${me.fac.length>=SLOTS?"取り壊して建てる":"建てる"}</button></div>`}).join("")||'<p class="muted">山札が尽きました</p>';
+  if(myTurn&&S.pending!=null&&S.market[S.pending]){const f=FAC[S.market[S.pending].k];
+    $("demolish").innerHTML=`<div class="demolish">区画がいっぱいです。${f.e}<b>${f.n}</b>を建てるために、取り壊す施設を選んでください。<br>${me.fac.map((k,j)=>`<button class="sub" onclick="humanDemolish(${j})">${FAC[k].e}${FAC[k].n}</button>`).join("")}<button onclick="S.pending=null;render()">やめる</button></div>`;}
+  else $("demolish").innerHTML="";
   $("adBtn").disabled=!(myTurn&&me.coins>=2&&me.fans<cap(me));
   $("passBtn").disabled=!myTurn;
   $("adBtn").classList.toggle("hide",S.phase!=="buy");
@@ -362,9 +409,16 @@ function render(){
   $("phaseTag").textContent={buy:"建設タイム",play:"試合前",after:"試合後",end:"終了"}[S.phase];
   $("hint").textContent=S.phase==="buy"?"施設を1枚建てるか、広告を出すか、パスしてください。":S.phase==="play"?"全員の行動が終わりました。試合を始めましょう！":S.phase==="after"?`残り${ROUNDS-S.round-1}試合。`:"";
 }
+function comboLine(p){
+  const on=COMBOS.filter(c=>comboHave(p.fac,c)===c.need.length).map(c=>`<span class="ok">★${c.n}+${c.pts}</span>`);
+  const half=COMBOS.filter(c=>{const g=comboHave(p.fac,c);return g&&g<c.need.length}).map(c=>`<span class="half">☆${c.n}まであと${c.need.length-comboHave(p.fac,c)}</span>`);
+  return on.concat(half).join("　")||"&nbsp;";
+}
 function renderCatalog(){
   $("catalog").innerHTML=`<tr><th></th><th>施設</th><th>コスト</th><th style="text-align:left">効果</th></tr>`+
-  Object.values(FAC).map(f=>`<tr><td>${f.e}</td><td>${f.n}</td><td>${f.c}</td><td style="text-align:left">${f.d}</td></tr>`).join("");
+  Object.values(FAC).map(f=>`<tr><td>${f.e}</td><td>${f.n}</td><td>${f.c}</td><td style="text-align:left">${f.d}</td></tr>`).join("")+
+  `<tr><th colspan="4" style="text-align:left;padding-top:14px">セットボーナス（最後にコインに足す）</th></tr>`+
+  COMBOS.map(c=>`<tr><td>★</td><td>${c.n}</td><td>+${c.pts}</td><td style="text-align:left">${c.need.map(k=>FAC[k].e+FAC[k].n).join("＋")}</td></tr>`).join("");
 }
 $("startBtn").onclick=newGame;
 $("adBtn").onclick=()=>{if(advertise(S.players[0]))humanDone()};

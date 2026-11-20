@@ -38,10 +38,12 @@ h1{font-size:20px;margin:4px 0 2px}
 .ccard.now{border-color:var(--wood)}
 .ccard .lbl{font-size:11px;color:var(--mute)}
 .ccard .req{font-size:15px;font-weight:bold;margin-top:2px}
-.shelfbox{background:var(--wood-d);padding:8px;border-radius:12px;margin-bottom:10px}
+.shelfbox{background:var(--wood-d);padding:8px 22px 8px 8px;border-radius:12px;margin-bottom:10px}
 .shelf{position:relative;margin:0 auto;background:#c99a6b;}
 .cell{position:absolute;border:1px solid #b5845400;}
 .cell.row{border-bottom:3px solid var(--wood)}
+.cell.osusume{background:#f7d77a55}
+.osu-label{position:absolute;right:-2px;transform:translateX(100%);font-size:10px;color:#ffe9a8;writing-mode:vertical-rl;padding-left:2px}
 .cell.legal{background:#ffffff55;outline:2px dashed #fff;outline-offset:-4px;cursor:pointer}
 .tile{position:absolute;border-radius:6px;border:2px solid #0003;color:#fff;font-size:10px;line-height:1.2;padding:3px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;text-shadow:0 1px 1px #0005;pointer-events:none}
 .tile .nm{font-weight:bold;font-size:11px}
@@ -61,9 +63,12 @@ h1{font-size:20px;margin:4px 0 2px}
 .mcard{flex:1;border-radius:10px;color:#fff;padding:7px;font-size:12px;cursor:pointer;border:3px solid transparent;position:relative;min-height:92px}
 .mcard.sel{border-color:#222}
 .mcard.cant{opacity:.45;cursor:not-allowed}
-.mcard .nm{font-weight:bold;font-size:13px;margin-bottom:3px}
+.mcard .nm{font-weight:bold;font-size:13px;margin:16px 0 3px}
+.tile .osu{position:absolute;right:3px;top:2px;font-size:10px}
+.osu-label{background:#f7d77a;color:#5e3b20!important;border-radius:0 4px 4px 0}
 .mcard .shape{margin:4px 0;display:grid;gap:1px}
 .mcard .shape i{display:block;width:9px;height:9px;background:#fff9;border-radius:2px}
+.mcard .price s{opacity:.5;font-weight:normal;margin-right:3px}
 .mcard .price{position:absolute;right:6px;top:6px;background:#fff;color:var(--ink);border-radius:20px;padding:1px 7px;font-weight:bold}
 .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 button{font:inherit;font-size:14px;border:none;border-radius:10px;padding:9px 14px;background:var(--wood);color:#fff;cursor:pointer}
@@ -128,8 +133,10 @@ summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
       <p><b>目的：</b>12日間で、お客さんにぴったりのゲームを貸し出して星とお金を稼ごう。</p>
       <p><b>棚：</b>横5×縦6マス。箱は床（いちばん下の段）か、ほかの箱の上に乗せて置く。宙に浮かせて置くことはできない。向きは回転してよい。</p>
       <p><b>箱の大きさ：</b>小1×2（💰1）／中2×2（💰2）／大2×3（💰3）／特大3×3（💰4）。</p>
+      <p><b>おすすめ棚：</b>下から3段目（黄色の段）は目線の高さ。箱の一部でもこの段にかかっているゲームを貸し出すと⭐がもう1つもらえる。</p>
       <p><b>1日の流れ</b></p>
       <p>① <b>入荷</b>：入荷できるゲームから1つ買える（買わなくてもよい）。買ったら棚に置く。置けなければ床置き。</p>
+      <p>・売れ残ったゲームは1日ごとに💰1ずつ値下がりする。タダ（💰0）になっても売れ残ったら返品され、新しいゲームが並ぶ。貸し出しでもらえる💰は元の値段のまま。</p>
       <p>② <b>来店</b>：お客さんの「ジャンル」と「人数」に合うゲームを貸し出せる。合うのはジャンルが同じで、人数が対応範囲に入るもの。</p>
       <p>・取り出すとき、その箱の上に乗っている箱（さらにその上も）1つにつき💰1払う。床置きの箱は💰0。</p>
       <p>・貸し出すと⭐1と、箱の値段と同じだけの💰がもらえる。</p>
@@ -149,7 +156,7 @@ summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
 <div id="over"></div>
 
 <script>
-const W=5,H=6,DAYS=12;
+const W=5,H=6,DAYS=12,OSU=2; // OSU: おすすめ棚（下から3段目＝目線の高さ）
 const GN={strat:"戦略",party:"パーティー",coop:"協力",kids:"キッズ"};
 const SZ={S:{w:2,h:1,p:1,n:"小"},M:{w:2,h:2,p:2,n:"中"},L:{w:3,h:2,p:3,n:"大"},X:{w:3,h:3,p:4,n:"特大"}};
 const RAW=[
@@ -168,7 +175,7 @@ const RAW=[
 ];
 let S;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function mkTile(r,i){const s=SZ[r[2]];return {id:i,genre:r[0],name:r[1],size:r[2],w:s.w,h:s.h,price:s.p,pmin:r[3],pmax:r[4],used:false};}
+function mkTile(r,i){const s=SZ[r[2]];return {id:i,genre:r[0],name:r[1],size:r[2],w:s.w,h:s.h,price:s.p,cost:s.p,pmin:r[3],pmax:r[4],used:false};}
 
 function newGame(){
   const all=RAW.map(mkTile);
@@ -201,6 +208,7 @@ function above(p){
   while(q.length){const c=q.shift();S.placed.forEach(o=>{if(o!==p&&!res.includes(o)&&o.y===c.y+c.h&&o.x<c.x+c.w&&c.x<o.x+o.w){res.push(o);q.push(o);}});}
   return res;
 }
+function onOsusume(p){return p.y<=OSU&&OSU<p.y+p.h;}
 function matches(t,c){return t.genre===c.genre&&t.pmin<=c.n&&c.n<=t.pmax;}
 
 // ---------- actions ----------
@@ -217,9 +225,9 @@ function afterHand(){if(S.hand.length)return render();
   else endDay();
   render();}
 function buy(){
-  const t=S.market[S.mSel];if(!t||t.price>S.money)return;
-  S.money-=t.price;S.market.splice(S.mSel,1);refill();
-  addLog(`${S.day}日目：「${t.name}」を💰${t.price}で入荷。`);
+  const t=S.market[S.mSel];if(!t||t.cost>S.money)return;
+  S.money-=t.cost;S.market.splice(S.mSel,1);refill();
+  addLog(`${S.day}日目：「${t.name}」を💰${t.cost}で入荷。`);
   S.hand=[t];S.phase="place";S.after="serve";S.mSel=null;render();
 }
 function skipBuy(){S.phase="serve";S.sel=null;S.mSel=null;render();}
@@ -228,8 +236,9 @@ function rent(){
   const sel=S.sel;if(!sel)return;const c=S.cust[S.day-1];
   const t=sel.floor?sel.t:sel.p.t;const k=cost(sel);
   if(k>S.money)return;
-  S.money-=k;S.money+=t.price;S.star+=1;t.used=true;
-  addLog(`${S.day}日目：「${t.name}」を貸し出し（${GN[c.genre]}・${c.n}人）。⭐+1 💰+${t.price}${k?`（どかし代 −${k}）`:""}`);
+  const bonus=(!sel.floor&&onOsusume(sel.p))?1:0;
+  S.money-=k;S.money+=t.price;S.star+=1+bonus;t.used=true;
+  addLog(`${S.day}日目：「${t.name}」を貸し出し（${GN[c.genre]}・${c.n}人）。⭐+${1+bonus}${bonus?"（おすすめ棚）":""} 💰+${t.price}${k?`（どかし代 −${k}）`:""}`);
   let hand=[t];
   if(sel.floor){S.floor.splice(S.floor.indexOf(t),1);}
   else{const ab=above(sel.p);S.placed=S.placed.filter(p=>p!==sel.p&&!ab.includes(p));hand=hand.concat(ab.map(p=>p.t));}
@@ -237,6 +246,11 @@ function rent(){
 }
 function decline(){const c=S.cust[S.day-1];addLog(`${S.day}日目：${GN[c.genre]}・${c.n}人のお客さんをお断り。`);endDay();render();}
 function endDay(){
+  // 売れ残った入荷ゲームは1ずつ値下がり。タダ（0）でも売れ残ったら返品して補充
+  const gone=[];
+  S.market=S.market.filter(t=>{if(t.cost<=0){gone.push(t.name);return false;}t.cost--;return true;});
+  if(gone.length)addLog(`「${gone.join("」「")}」は売れ残って返品された。`);
+  refill();
   S.day++;
   if(S.day>DAYS){S.phase="end";return;}
   S.phase="buy";S.mSel=null;
@@ -246,7 +260,7 @@ function finalScore(){
   const unused=all.filter(t=>!t.used).length;
   return {star:S.star*3,money:S.money,floor:-2*S.floor.length,unused:-unused,total:S.star*3+S.money-2*S.floor.length-unused};
 }
-function rank(n){if(n>=40)return"伝説のボドゲカフェ";if(n>=30)return"行列のできる店";if(n>=20)return"街の人気店";if(n>=10)return"常連がつきはじめた店";return"新米オーナー";}
+function rank(n){if(n>=55)return"伝説のボドゲカフェ";if(n>=45)return"行列のできる店";if(n>=35)return"街の人気店";if(n>=25)return"常連がつきはじめた店";return"新米オーナー";}
 
 // ---------- render ----------
 const $=id=>document.getElementById(id);
@@ -268,9 +282,11 @@ function render(){
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const e=document.createElement("div");e.className="cell row";
     e.style.left=x*cs+"px";e.style.bottom=y*cs+"px";e.style.width=cs+"px";e.style.height=cs+"px";
+    if(y===OSU)e.classList.add("osusume");
     if(placing&&canPlace(d.w,d.h,x,y,g)){e.classList.add("legal");e.onclick=()=>{S.ghost={x,y};render();};}
     sh.appendChild(e);
   }
+  {const l=document.createElement("div");l.className="osu-label";l.textContent="おすすめ";l.style.bottom=OSU*cs+"px";l.style.height=cs+"px";sh.appendChild(l);}
   const lifted=S.sel&&!S.sel.floor?above(S.sel.p):[];
   S.placed.forEach(p=>{
     let cls="";
@@ -278,6 +294,7 @@ function render(){
     if(S.sel&&S.sel.p===p)cls+=" sel";
     if(lifted.includes(p))cls+=" lift";
     const e=tileEl(p.t,cls);
+    if(onOsusume(p))e.insertAdjacentHTML("beforeend",'<div class="osu">⭐</div>');
     e.style.left=p.x*cs+2+"px";e.style.bottom=p.y*cs+2+"px";e.style.width=p.w*cs-4+"px";e.style.height=p.h*cs-4+"px";
     if(cls.includes("pick"))e.onclick=()=>{S.sel={p};render();};
     sh.appendChild(e);
@@ -291,10 +308,10 @@ function render(){
     e.className=cls;e.textContent=`${t.name} ${t.pmin}〜${t.pmax}人${t.used?" ✓":""}`;if(ok)e.onclick=()=>{S.sel={floor:true,t};render();};fl.appendChild(e);});
   // market
   const mk=$("market");mk.innerHTML="";
-  S.market.forEach((t,i)=>{const e=document.createElement("div");const cant=t.price>S.money;
+  S.market.forEach((t,i)=>{const e=document.createElement("div");const cant=t.cost>S.money;
     e.className=`mcard g-${t.genre}${S.mSel===i?" sel":""}${cant&&S.phase==="buy"?" cant":""}`;
     let shp=`<div class="shape" style="grid-template-columns:repeat(${t.w},9px)">`+"<i></i>".repeat(t.w*t.h)+"</div>";
-    e.innerHTML=`<div class="price">💰${t.price}</div><div class="nm">${t.name}</div>${shp}<div>${GN[t.genre]}・${SZ[t.size].n}</div><div>${t.pmin}〜${t.pmax}人</div>`;
+    e.innerHTML=`<div class="price">${t.cost<t.price?`<s>${t.price}</s>`:""}${t.cost?`💰${t.cost}`:"タダ"}</div><div class="nm">${t.name}</div>${shp}<div>${GN[t.genre]}・${SZ[t.size].n}</div><div>${t.pmin}〜${t.pmax}人</div>`;
     if(S.phase==="buy"&&!cant)e.onclick=()=>{S.mSel=i;render();};mk.appendChild(e);});
   // message & buttons
   const m=$("msg"),b=$("btns"),ha=$("handArea");b.innerHTML="";ha.innerHTML="";
@@ -316,7 +333,7 @@ function render(){
     if(!S.sel){m.innerHTML=any?`<b>${S.day}日目・来店</b>：光っている箱から貸し出すゲームを選ぼう。`:`<b>${S.day}日目・来店</b>：合うゲームがない…今日はお断りしよう。`;
       btn("お断りする",decline,true);}
     else{const t=S.sel.floor?S.sel.t:S.sel.p.t,k=cost(S.sel);
-      m.innerHTML=`「${t.name}」を貸し出す？ どかし代 💰${k}${k?`（上の箱${k}つ）`:""}／もらえる：⭐1・💰${t.price}`+(k>S.money?"<br><span style='color:var(--ng)'>お金が足りません</span>":"");
+      m.innerHTML=`「${t.name}」を貸し出す？ どかし代 💰${k}${k?`（上の箱${k}つ）`:""}／もらえる：⭐${(!S.sel.floor&&onOsusume(S.sel.p))?"1+1（おすすめ棚）":"1"}・💰${t.price}`+(k>S.money?"<br><span style='color:var(--ng)'>お金が足りません</span>":"");
       btn("貸し出す",rent,false,k>S.money);btn("選び直す",()=>{S.sel=null;render();},true);btn("お断りする",decline,true);}
   }
   $("log").innerHTML=S.log.map(l=>`<div>${l}</div>`).join("");

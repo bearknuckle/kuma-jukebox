@@ -123,11 +123,13 @@
       <ul style="padding-left:1.2em;margin:6px 0">
         <li>全6か月。毎月はじめに <b>流行カード</b>（点が増えるジャンル2つ・減るジャンル1つ）と <b>イベント</b> がめくられます。来月の流行も見えています。</li>
         <li><b>素材集め</b>：場のカードを順番に1枚ずつ、2周取ります（2周目は逆順）。左の新しいカードほど高く、2〜0クレジット。手札は6枚まで。</li>
+        <li><b>ジャンルカードは表向き</b>：取ったジャンルカードは使うまで全員に見えます（素材カードは隠したまま）。誰が何を狙っているか読んで、かぶりを避けましょう。</li>
         <li><b>生成</b>：ジャンル1枚＋素材2枚で曲を作ります。1クレジットで手札1枚を山札の上と入れ替える「再生成」ができます。</li>
         <li><b>曲の点</b>：素材の★ ＋ 相性マークがジャンルと合う素材1枚につき＋2 ＋ 種類のちがう2枚が両方合えば「ハマり」＋1 ＋ 流行（＋2 / −1）。</li>
         <li><b>飽和</b>：同じジャンルを出した人が2人なら全員−1、3人なら−2、4人なら−3。</li>
         <li><b>チャート</b>：1位 5ファン、2位 3ファン、3位 1ファン（同点は同じ順位）。</li>
         <li><b>ロングテール</b>：出した曲は次の月から3か月、毎月1ファン入ります。</li>
+        <li><b>初ジャンル</b>：そのゲームで初めて出すジャンルの曲なら＋1ファン（取り下げになった曲はなし）。</li>
         <li>曲を出さずに休むと＋1クレジット。毎月はじめにも＋1クレジット。</li>
         <li>終了時、出したジャンルが4種類で＋2、5種類以上で＋4ファン。ファンが一番多い人の勝ち（同点はクレジットが多い人）。</li>
       </ul>
@@ -302,7 +304,9 @@ function renderPlayers(){
     var live = p.songs.filter(function(s){ return s.tail > 0; }).length;
     var turn = (S.phase === "draft" && S.order && S.order[S.pick] === i) ? ' <span class="turn">▶</span>' : '';
     return '<div class="pl' + (p.cpu ? '' : ' me') + '"><b>' + p.name + '</b>' + turn + '<br>⭐ ' + p.fans + 'ファン　💰 ' + p.credits +
-      '<br><span class="muted">手札 ' + p.hand.length + '・曲 ' + p.songs.length + (live ? '（現役 ' + live + '）' : '') + '</span></div>';
+      '<br><span class="muted">手札 ' + p.hand.length + '・曲 ' + p.songs.length + (live ? '（現役 ' + live + '）' : '') + '</span>' +
+      '<div class="chips">' + (handGenres(p).length ? handGenres(p).map(function(g){ return '<span class="chip" style="background:' + gcolor(g) + '">' + GNAME[g] + '</span>'; }).join("") : '<span class="muted">ジャンルなし</span>') + '</div>' +
+      (Object.keys(p.genresOut).length ? '<div class="muted" style="font-size:11px">出した：' + Object.keys(p.genresOut).map(function(g){ return GNAME[g]; }).join("・") + '</div>' : '') + '</div>';
   }).join("");
 }
 
@@ -367,7 +371,7 @@ function cardValue(p, c){
   if (c.kind === "genre"){
     var fit = p.hand.filter(function(h){ return h.kind === "elem" && h.fits.indexOf(c.g) >= 0; }).length;
     var have = handGenres(p).length;
-    return 1.5 + fit * 1.6 + trendAdj(c.g) * 0.8 + trendAdj(c.g, next) * 0.4 + (have === 0 ? 3 : 0) - (have >= 2 ? 1.5 : 0) + (p.genresOut[c.g] ? 0 : 0.6);
+    return 1.5 + fit * 1.6 + trendAdj(c.g) * 0.8 + trendAdj(c.g, next) * 0.4 + (have === 0 ? 3 : 0) - (have >= 2 ? 1.5 : 0) + (p.genresOut[c.g] ? 0 : 1) - rivalsHolding(p, c.g) * 0.5;
   }
   var gs = handGenres(p), v = c.star;
   if (gs.some(function(g){ return c.fits.indexOf(g) >= 0; })) v += 2.2;
@@ -386,6 +390,9 @@ function cpuPick(pi){
   if (best < 0){ addDraftLog(p.name + " は見送った"); S.pick++; draftStep(); return; }
   takeCard(pi, best);
 }
+function rivalsHolding(p, g){
+  return S.players.filter(function(o){ return o !== p && handGenres(o).indexOf(g) >= 0; }).length;
+}
 function bestSong(p){
   var gs = p.hand.filter(function(c){ return c.kind === "genre"; });
   var es = p.hand.filter(function(c){ return c.kind === "elem"; });
@@ -394,7 +401,8 @@ function bestSong(p){
     for (var i=0;i<es.length;i++) for (var j=i+1;j<es.length;j++){
       var r = songBase(g, es[i], es[j]);
       // 流行ジャンルは他の人とかぶりやすいので少し割り引く
-      var guess = r.total - (trendAdj(g.g) > 0 ? 0.9 : 0) + (p.genresOut[g.g] ? 0 : 0.5) + Math.random() * 0.9;
+      // 表向きのジャンルカードから、かぶりそうな人数を読む
+      var guess = r.total - rivalsHolding(p, g.g) * 0.75 - (trendAdj(g.g) > 0 ? 0.3 : 0) + (p.genresOut[g.g] ? 0 : 1.2) + Math.random() * 0.9;
       if (!best || guess > best.guess) best = {genre:g, a:es[i], b:es[j], base:r, guess:guess};
     }
   });
@@ -541,7 +549,11 @@ function reveal(){
   released.forEach(function(r){
     var p = S.players[r.pi];
     [r.song.genre, r.song.a, r.song.b].forEach(function(c){ p.hand.splice(p.hand.indexOf(c), 1); S.discard.push(c); });
-    if (!r.out){ p.songs.push({genre:r.song.genre.g, month:S.month, tail:TAIL}); p.genresOut[r.song.genre.g] = true; p.fans += r.fans || 0; }
+    if (!r.out){
+      r.first = !p.genresOut[r.song.genre.g];
+      if (r.first) r.fans = (r.fans || 0) + 1;
+      p.songs.push({genre:r.song.genre.g, month:S.month, tail:TAIL}); p.genresOut[r.song.genre.g] = true; p.fans += r.fans || 0;
+    }
   });
   // 表示
   var html = "";
@@ -566,7 +578,7 @@ function chartRow(r){
   var mini = '<span class="mini"><span class="g" style="background:' + gcolor(s.genre.g) + '">' + s.genre.name + '</span><span>' + s.a.name + '★' + s.a.star + '</span><span>' + s.b.name + '★' + s.b.star + '</span></span>';
   var rk = r.out ? '✕' : (r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank);
   var extra = r.out ? '<div class="out">類似チェックで取り下げ</div>' :
-    (r.fans ? '<div class="why">＋' + r.fans + 'ファン' + (r.fes ? '（フェス出演 +3 込み）' : '') + (r.buzz ? '・バズ！' : '') + '</div>' : '');
+    (r.fans ? '<div class="why">＋' + r.fans + 'ファン' + (r.fes ? '・フェス出演+3' : '') + (r.first ? '・初ジャンル+1' : '') + (r.buzz ? '・バズ！' : '') + '</div>' : '');
   return '<tr class="' + (r.pi === 0 ? 'me' : '') + '"><td class="rk">' + rk + '</td><td><b>' + p.name + '</b><br>' + mini + '<br>' + breakdown(r.base, r.sat) + extra + '</td><td class="pt">' + r.score + '点</td></tr>';
 }
 $("nextBtn").onclick = function(){
@@ -600,7 +612,9 @@ function cardEl(c){
   var b = document.createElement("button");
   if (c.kind === "genre"){
     b.className = "card genre"; b.style.background = gcolor(c.g);
-    b.innerHTML = '<span class="ty">ジャンル</span><span class="nm">' + c.name + '</span>' + (trendAdj(c.g) ? '<span class="ty">' + (trendAdj(c.g) > 0 ? '↑ 流行中 +2' : '↓ 不人気 −1') + '</span>' : '');
+    var riv = (S && S.phase === "make") ? rivalsHolding(S.players[0], c.g) : 0;
+    b.innerHTML = '<span class="ty">ジャンル</span><span class="nm">' + c.name + '</span>' + (trendAdj(c.g) ? '<span class="ty">' + (trendAdj(c.g) > 0 ? '↑ 流行中 +2' : '↓ 不人気 −1') + '</span>' : '') +
+      (riv ? '<span class="ty">⚠ ほかに' + riv + '人が持っている</span>' : '') + (S && S.players && !S.players[0].genresOut[c.g] && S.phase === "make" ? '<span class="ty">✨ 初ジャンル</span>' : '');
   } else {
     b.className = "card";
     b.innerHTML = '<span class="ty">' + TYPES[c.type] + '</span><span class="nm">' + c.name + '</span><span class="st">' + (c.star === 2 ? '★★' : '★') + '</span>' +

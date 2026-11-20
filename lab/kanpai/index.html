@@ -224,6 +224,19 @@ table.score tr.top td{background:#fff1c9;font-weight:900}
 .kanpai .rt{margin-top:6px;background:var(--amber);color:var(--ink);font-weight:900;padding:4px 12px;border-radius:10px;font-size:15px}
 .lastorder{display:inline-block;background:#6b3a8f;color:#fff;font-weight:900;font-size:12px;padding:3px 10px;border-radius:10px;margin-left:6px}
 .statline{font-size:13px;background:#f1e6cc;border-radius:10px;padding:8px 10px;margin-top:10px;line-height:1.6}
+/* v0.6 practice */
+#practiceBar{display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+body.practicemode #practiceBar{display:flex}
+body.practicemode #opps, body.practicemode .tablebar{display:none}
+.explain{display:none;margin-top:12px;background:var(--paper);color:var(--ink);border-radius:14px;padding:12px 14px;font-size:14.5px;line-height:1.7;text-align:left;border-left:8px solid #8a7a62}
+body.practicemode .explain{display:block}
+.explain.ok{border-left-color:#3fae63}
+.explain.ng{border-left-color:var(--red)}
+.explain .head{font-weight:900;font-size:16px;margin-bottom:2px}
+#solo .explain .mk{display:inline-flex;width:22px;height:22px;font-size:12px;border-radius:6px;vertical-align:-5px;margin:0 2px 0 1px}
+#solo .explain .mk small{display:none}
+.explain .tip{display:block;margin-top:6px;font-size:13px;color:#6b5a44;background:#f3e8d0;border-radius:8px;padding:6px 9px}
+.pstat{font-size:12.5px;opacity:.85;font-weight:700}
 /* modal */
 .modal{position:fixed;inset:0;background:rgba(20,10,5,.78);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
 .modal[hidden]{display:none}
@@ -280,13 +293,19 @@ table.score tr.top td{background:#fff1c9;font-weight:900}
       <div class="timer"><b id="timerBar"></b></div>
       <button class="btn red" id="sumimasenBtn">すいませーん！</button>
     </div>
+    <div id="practiceBar">
+      <button class="btn" id="pHint">💡 ヒント</button>
+      <button class="btn" id="pNone">🙅 出せるカードがない</button>
+      <button class="btn red" id="pNext" hidden>▶ つぎのおつまみへ</button>
+    </div>
+    <div class="explain" id="explain"></div>
   </div>
 
   <div id="bannerArea"></div>
 
   <div class="handhead"><h2>あなたの手札</h2><span class="c" id="myCount"></span></div>
   <div class="hand" id="hand"></div>
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ カンパイ！ v0.5</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ カンパイ！ v0.6</div>
 </div>
 
 <!-- ================= PARTY ================= -->
@@ -332,7 +351,10 @@ table.score tr.top td{background:#fff1c9;font-weight:900}
     <p class="note">🍻ハッピーアワー（次にカンパイした人はもう1枚捨てられる）・🔔ラストオーダー（あと3品で閉店。手札が一番少ない人の勝ち）・🧊お冷やどうぞ（手札が一番多い人が1枚捨てる）がときどき出ます。</p>
     <div class="statline" id="bestLine" hidden></div>
     <div class="lbl">あそびかた</div>
-    <div class="opt" id="optMode"><button data-v="solo" class="on">🤖 CPUと対戦</button><button data-v="party">🍻 みんなで1台</button></div>
+    <div class="opt" id="optMode"><button data-v="practice">🔰 れんしゅう</button><button data-v="solo" class="on">🤖 CPUと対戦</button><button data-v="party">🍻 みんなで1台</button></div>
+    <div id="practiceOpts" hidden>
+      <p class="note">ひとりで、時間を気にせずルールを覚えるモードです。カードを選ぶと、合う・合わないの理由が出ます。まちがえても手札は増えません。</p>
+    </div>
     <div id="soloOpts">
       <div class="lbl">対戦相手</div>
       <div class="opt" id="optCpu"><button data-v="1">1人</button><button data-v="2">2人</button><button data-v="3" class="on">3人</button></div>
@@ -493,14 +515,16 @@ function say(pi,key,prob=1){
 }
 
 /* ---------- match / round ---------- */
-function startMatch(){ M={round:0,total:settings.rounds,scores:null,final:false}; nextRound(); }
+function startMatch(){ M={round:0,total:settings.mode==='practice'?1:settings.rounds,scores:null,final:false}; nextRound(); }
 function nextRound(){ M.round++; newGame(); }
 
 function newGame(){
   if(G) clearTimers();
   const mode=settings.mode;
   let players;
-  if(mode==='solo'){
+  if(mode==='practice'){
+    players=[{name:'あなた',av:'🙂',cpu:false,hand:[]}];
+  } else if(mode==='solo'){
     players=[{name:'あなた',av:'🙂',cpu:false,hand:[]}];
     CPU_DEFS.slice(0,settings.cpu).forEach(c=>players.push({...c,cpu:true,hand:[]}));
   } else {
@@ -508,6 +532,7 @@ function newGame(){
   }
   if(!M.scores) M.scores=players.map(()=>0);
   document.body.classList.toggle('partymode', mode==='party');
+  document.body.classList.toggle('practicemode', mode==='practice');
   G={mode,players,drawPile:buildDrinks(),discard:[],snackPile:buildSnacks(),usedSnacks:[],
      snack:null,played:null,litSnack:null,litDrink:null,phase:'closed',step:0,flipT:0,timers:[],discarding:-1,
      kanpaiCount:players.map(()=>0),chainCount:players.map(()=>0),chainLen:0,round:0,over:false,startT:0,waitMs:0,
@@ -519,6 +544,14 @@ function newGame(){
   $('roundInfo').textContent=ri; $('pRound').textContent=ri;
   $('roundInfo').hidden=!ri; $('pRound').hidden=!ri;
   hideBadge('nama'); hideBadge('chain');
+  if(mode==='practice'){
+    G.snackPile=G.snackPile.filter(c=>c.kind!=='event');
+    G.pr={ok:0,ng:0,hint:0,t0:now(),showHint:false};
+    $('roundInfo').hidden=true;
+    renderAll(); prExplain('','🔰 れんしゅうモード','真ん中に出る<b>おつまみ</b>と、<b>味マークが1つでも同じ</b>お酒を手札から選びます。時間制限はありません。');
+    later(prFlip,700);
+    return;
+  }
   renderAll();
   setMsg(M.total>1 ? `ラウンド ${M.round}　おつまみが来ますよ…` : 'おつまみが来ますよ…');
   later(flipNext,1100);
@@ -882,6 +915,7 @@ function renderOpps(){
 }
 function cardExtra(p,c,showHint){
   let ex='';
+  if(G.mode==='practice'){ if(G.pr && G.pr.showHint && prCan(c)) ex+=' hint'; return ex; }
   if(c.wild && G.snack && !namaOpen()) ex+=' expired';
   if(showHint && phaseOpen() && canPlay(c)) ex+=' hint';
   return ex;
@@ -893,6 +927,7 @@ function renderHands(){
   h.innerHTML = me.hand.map(c=>cardHTML(c, cardExtra(me,c,LV[settings.lv].hint))).join('');
   $('myCount').textContent = `${me.hand.length} 枚` + (M.total>1?`　⭐ ${M.scores[0]}点`:'');
   bindCards(h,0);
+  if(G.mode==='practice' && G.pr) prStat();
 }
 function bindCards(container,pi){
   container.querySelectorAll('.card').forEach(el=>{
@@ -907,9 +942,131 @@ function bindCards(container,pi){
         discardOne(); return;
       }
       if(G.discarding>=0) return;
+      if(G.mode==='practice'){ prPlay(c); return; }
       tryPlay(pi,c);
     });
   });
+}
+
+/* ---------- practice mode ---------- */
+const mkI = m => `<span class="mk" style="--c:${MARKS[m].c}">${MARKS[m].e}</span>`;
+const mkList = c => c.marks.map(m=>`${mkI(m)}${MARKS[m].n}`).join('・');
+function prCan(c){
+  if(G.phase==='snack') return c.wild || shareMark(c,G.snack);
+  if(G.phase==='chain') return !c.wild && shareMark(c,G.played);
+  return false;
+}
+function prExplain(kind,head,html,tip){
+  const el=$('explain');
+  el.className='explain'+(kind?' '+kind:'');
+  el.innerHTML=`<div class="head">${head}</div>${html}${tip?`<span class="tip">💡 ${tip}</span>`:''}`;
+}
+function prStat(){
+  const r=G.pr; $('myCount').innerHTML=`${G.players[0].hand.length} 枚　<span class="pstat">⭕${r.ok} ❌${r.ng}</span>`;
+}
+function prButtons(next){
+  $('pNext').hidden=!next;
+  $('pNone').hidden=G.phase!=='snack';
+  $('pHint').hidden=!(G.phase==='snack'||G.phase==='chain');
+  $('pNext').textContent = G.phase==='chain' ? '▶ はしご酒をやめて、つぎのおつまみへ' : '▶ つぎのおつまみへ';
+}
+function prFlip(){
+  if(G.snack) G.usedSnacks.push(G.snack);
+  if(!G.snackPile.length) G.snackPile=shuffle(G.usedSnacks.splice(0));
+  G.snack=G.snackPile.pop();
+  G.played=null; G.litSnack=null; G.litDrink=null; G.chainLen=0; G.pr.showHint=false;
+  setPhase('snack'); G.flipT=now();
+  sFlip(); renderTable(true); renderHands(); prStat(); prButtons(false);
+  setMsg(`${G.snack.em} ${G.snack.name} が来ました`);
+  prExplain('',`${G.snack.em} ${G.snack.name}の味マークは ${mkList(G.snack)}`,
+    'このどちらかのマークを持っているお酒を、手札から選んでください。',
+    G.round++===0 ? '出せるお酒がないと思ったら「出せるカードがない」を押します。' : '');
+}
+function prPlay(c){
+  const me=G.players[0];
+  if(G.phase==='done'){ toast('「つぎのおつまみへ」を押してください'); return; }
+  const chain=G.phase==='chain';
+  const target=chain?G.played:G.snack;
+  if(!prCan(c)){
+    G.pr.ng++; sBad(); prStat();
+    $('hand').classList.add('shake'); setTimeout(()=>$('hand').classList.remove('shake'),400);
+    if(c.wild && chain){
+      prExplain('ng','❌ はしご酒に「とりあえず生」は出せません','生はおつまみに対してだけ使える万能カードです。はしご酒では、直前のお酒と味マークが合うお酒を選びます。','本番なら、お手つきで2枚引きます。');
+    } else {
+      prExplain('ng',`❌ ${c.name}は出せません`,
+        `${target.em}${target.name}は ${mkList(target)}、${c.em}${c.name}は ${mkList(c)}。<b>同じマークがありません</b>。`,
+        '本番なら、お手つきで2枚引きます。');
+    }
+    return;
+  }
+  // correct
+  G.pr.ok++;
+  const lit=shared(c,target), isTp=!chain && teppan(c,G.snack);
+  me.hand.splice(me.hand.indexOf(c),1); G.discard.push(c);
+  G.played=c; G.litDrink=lit; G.litSnack=chain?null:lit;
+  if(chain) G.chainLen++;
+  sClink(chain?G.chainLen:0);
+  showKanpai(me,c,target,lit,isTp,chain);
+  let head, body, tip='';
+  if(c.wild){
+    head='⭕ とりあえず生でカンパイ！';
+    body='とりあえず生は、どのおつまみにも合う万能カードです。';
+    tip='本番では「おつまみが出てから2秒以内」しか出せません。遅れて出すとお手つきです。';
+  } else {
+    head = chain ? `⭕ はしご！ ${target.name} → ${c.name}` : `⭕ カンパイ！ ${target.name} × ${c.name}`;
+    body = `${lit.map(m=>`${mkI(m)}${MARKS[m].n}`).join('と')} が同じなので出せます。`;
+    if(isTp){ body+='<br>🎉 マークが2つとも同じ<b>鉄板ペア</b>です！'; tip='本番の鉄板ペアでは、手札をもう1枚捨てられます。'; }
+  }
+  setPhase('closed');
+  renderTable(false,true); renderHands(); prStat();
+  if(!me.hand.length){ prExplain('ok',head,body,tip); later(prFinish,1200); return; }
+  const canChain = !c.wild && me.hand.some(x=>!x.wild && shareMark(x,c));
+  if(canChain){
+    setPhase('chain'); G.pr.showHint=false;
+    body+=`<br><br>🏮 <b>はしご酒のチャンス！</b> いま出した${c.em}${c.name}（${mkList(c)}）と合うお酒も、続けて出せます。`;
+    tip = (tip?tip+'<br>':'') + '本番のはしご酒は、カンパイのあと2秒以内です。';
+    renderHands(); prButtons(true);
+  } else {
+    setPhase('done');
+    if(!c.wild && me.hand.length) body += `<br><br>手札には${c.name}と合うお酒がないので、はしご酒はできません。`;
+    prButtons(true);
+  }
+  prExplain('ok',head,body,tip);
+}
+function prNone(){
+  if(G.phase!=='snack') return;
+  const me=G.players[0];
+  const ok=me.hand.filter(c=>prCan(c));
+  if(ok.length){
+    G.pr.ng++; G.pr.showHint=true; sBad(); renderHands(); prStat();
+    prExplain('ng','❌ 実は出せるカードがあります',
+      `光っているカードを見てください。${G.snack.name}（${mkList(G.snack)}）と同じマークがあります。`,
+      ok.some(c=>c.wild)&&ok.every(c=>c.wild) ? 'とりあえず生は、どのおつまみにも合います。' : '');
+    return;
+  }
+  G.pr.ok++; setPhase('done'); prStat(); prButtons(true);
+  prExplain('ok','⭕ 正解！ 出せるカードはありません',
+    `手札に ${mkList(G.snack)} を持つお酒がありません。`,
+    '本番では「すいませーん！」と頼むと、次のおつまみが来ます。');
+}
+function prHint(){
+  if(!(G.phase==='snack'||G.phase==='chain')) return;
+  G.pr.hint++; G.pr.showHint=true; renderHands();
+  const n=G.players[0].hand.filter(c=>prCan(c)).length;
+  if(!n) toast(G.phase==='snack'?'出せるカードはありません':'はしご酒で出せるカードはありません');
+}
+function prFinish(){
+  const r=G.pr, sec=Math.round((now()-r.t0)/1000);
+  const rate = r.ok+r.ng ? Math.round(r.ok/(r.ok+r.ng)*100) : 100;
+  M.final=true;
+  $('endTitle').textContent='🔰 れんしゅう おわり！';
+  $('endBody').innerHTML=`<p>手札を全部出しきりました。</p>
+    <div class="statline">⭕ 正解 <b>${r.ok}</b>回 ／ ❌ まちがい <b>${r.ng}</b>回（正解率 ${rate}%）<br>💡 ヒント ${r.hint}回 ／ ⏱ ${Math.floor(sec/60)}分${sec%60}秒</div>
+    <p style="margin-top:10px">${rate>=80?'ばっちりです！ メニューから「CPUと対戦」の「はじめて」で、本番の速さを試してみましょう。':'もう1回れんしゅうすると、味マークの組み合わせが見えてきます。'}</p>`;
+  $('endFlip').innerHTML=''; $('endModal').classList.remove('duo');
+  $('againBtn').textContent='もう1回れんしゅう';
+  $('endModal').hidden=false;
+  sClink(); setTimeout(()=>sClink(2),250);
 }
 
 /* party zones */
@@ -1002,7 +1159,7 @@ function optGroup(id,key,num,cb){
     settings[key]= num ? +b.dataset.v : b.dataset.v; cb && cb();
   });
 }
-optGroup('optMode','mode',false,()=>{ $('soloOpts').hidden = settings.mode!=='solo'; $('partyOpts').hidden = settings.mode!=='party'; });
+optGroup('optMode','mode',false,()=>{ $('soloOpts').hidden = settings.mode!=='solo'; $('partyOpts').hidden = settings.mode!=='party'; $('practiceOpts').hidden = settings.mode!=='practice'; });
 optGroup('optEvents','events',true); optGroup('optCpu','cpu',true); optGroup('optLv','lv',false); optGroup('optPn','pn',true); optGroup('optRounds','rounds',true);
 function openMenu(){ showBestLine(); if(G){G.over=true;clearTimers();} $('endModal').hidden=true; $('startModal').hidden=false; }
 $('startBtn').onclick=()=>{audio(); $('startModal').hidden=true; startMatch();};
@@ -1012,6 +1169,9 @@ $('rulesBtn').onclick=openMenu;
 $('pMenu').onclick=openMenu;
 $('restartBtn').onclick=()=>{audio(); $('endModal').hidden=true; $('startModal').hidden=true; startMatch();};
 $('sumimasenBtn').onclick=()=>{audio(); if(G && G.phase==='snack') sumimasen('あなた');};
+$('pHint').onclick=()=>{audio();prHint();};
+$('pNone').onclick=()=>{audio();prNone();};
+$('pNext').onclick=()=>{audio(); if(G&&G.mode==='practice') prFlip();};
 $('pSumimasen').addEventListener('pointerdown',e=>{e.preventDefault(); audio(); if(G && G.phase==='snack') sumimasen('だれか');});
 
 showBestLine();

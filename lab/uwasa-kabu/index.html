@@ -148,7 +148,7 @@ body.easy .fullonly{display:none!important}
     <p class="modedesc" id="modeDesc"></p>
   </div>
   <div class="panel">
-    <h3>あそびかた（全5ラウンド）</h3>
+    <h3>あそびかた（全<span id="roundN">5</span>ラウンド）</h3>
     <ol>
       <li>ニュースのウワサが1枚出る</li>
       <li>1回だけ <b>買う・売る・見送る</b> を選ぶ<span class="fullonly">（1回で<b>2株まで</b>）</span></li>
@@ -234,7 +234,10 @@ const COMP=[
   {id:'power',name:'電力',emo:'⚡',color:'var(--power)'},
 ];
 const CN=Object.fromEntries(COMP.map(c=>[c.id,c]));
-const ROUNDS=5, START_COINS=15, START_PRICE=5, SPY_COST=0, SPY_USES=2;
+// ラウンド数：ふだんは5。6人のときは手番が全員にひと回りするよう6
+function roundsFor(nPlayers){return Math.max(5,nPlayers)}
+const EASY_MISS=0.5;
+const START_COINS=15, START_PRICE=5, SPY_COST=0, SPY_USES=2;
 // ウワサの出どころ：p = 本当になる確率
 const SOURCES=[
   {id:'paper',name:'新聞',emo:'📰',p:0.9,cls:'s-paper',rely:'ほぼ本当（9割）'},
@@ -266,7 +269,8 @@ let S;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function clamp(v){return Math.max(1,Math.min(10,v))}
 function emptySh(){return {game:0,food:0,power:0}}
-function expect(card,p){const q=(p&&p.knows)?(card.real?1:0):card.src.p,e={};COMP.forEach(c=>{e[c.id]=q*(card.t[c.id]||0)+(1-q)*(card.f[c.id]||0)});return e}
+// かんたんモードのCPUは出どころを気にしない（どのウワサも7割当たると思っている）
+function expect(card,p){const q=(p&&p.knows)?(card.real?1:0):(!full()&&p&&!p.me)?0.7:card.src.p,e={};COMP.forEach(c=>{e[c.id]=q*(card.t[c.id]||0)+(1-q)*(card.f[c.id]||0)});return e}
 function total(p){return p.coins+COMP.reduce((s,c)=>s+p.sh[c.id]*S.prices[c.id],0)}
 
 /* ---------- CPU ---------- */
@@ -347,7 +351,13 @@ function cpuMove(p,ai=p.ai,style=p.name){
     const hi=COMP.map(x=>x.id).filter(id=>p.sh[id]>0&&S.prices[id]>=7&&e[id]<1).sort((a,b)=>S.prices[b]-S.prices[a])[0];
     if(hi)return {type:'sell',c:hi,n:Math.min(p.sh[hi],S.prices[hi]>=8?2:1)};
   }
-  const a=ai(p);if(a.type==='pass')return a;
+  let a=ai(p);
+  // かんたんモードのCPUは、ときどき判断をまちがえる（あわてて見送る・なんとなく買う）
+  if(!full()&&!p.me&&Math.random()<EASY_MISS){
+    const ids=COMP.map(x=>x.id).filter(id=>p.coins>=bp(id));
+    a=Math.random()<0.5||!ids.length?{type:'pass'}:{type:'buy',c:ids[Math.random()*ids.length|0]};
+  }
+  if(a.type==='pass')return a;
   const conf=Math.abs(e[a.c]);let n=1;
   if(p.knows&&conf>=1)n=2;
   else if(style==='ウサギ'&&a.type==='buy')n=2;
@@ -365,19 +375,21 @@ let numCpu=3;
 try{const v=+localStorage.getItem('uwasa-cpu');if(v>=1&&v<=5)numCpu=v}catch(e){}
 function setCpu(n){numCpu=n;try{localStorage.setItem('uwasa-cpu',n)}catch(e){}renderSetup()}
 function renderSetup(){
+  document.getElementById('roundN').textContent=roundsFor(numCpu+1);
   document.body.classList.toggle('easy',mode==='easy');
   document.getElementById('modeSel').innerHTML=[['easy','かんたん'],['full','ぜんぶ']].map(([m,l])=>`<button class="${m===mode?'on':''}" onclick="setMode('${m}')">${l}</button>`).join('');
-  document.getElementById('modeDesc').innerHTML=mode==='easy'?'ウワサとその出どころを見て、1株ずつ売り買い。<b>はじめての人はこちら</b>':'売買で値段が動く・手番のかけひき・情報屋・2株まで・最後の一斉売り。<b>慣れてきたらこちら</b>';
+  document.getElementById('modeDesc').innerHTML=mode==='easy'?'ウワサとその出どころを見て、1株ずつ売り買い。CPUは出どころを気にせず、ときどきあわてるので、<b>出どころを読めば勝てる</b>。はじめての人はこちら':'売買で値段が動く・手番のかけひき・情報屋・2株まで・最後の一斉売り。<b>慣れてきたらこちら</b>';
   document.getElementById('cnt').innerHTML=[1,2,3,4,5].map(n=>`<button class="${n===numCpu?'on':''}" onclick="setCpu(${n})">${n}人</button>`).join('');
   document.getElementById('cpuIntro').innerHTML=CPUS.map((c,i)=>`<div class="${i<numCpu?'':'off'}"><span class="av">${c.icon}</span><span><b>${c.name}</b><small>${c.desc}</small></span></div>`).join('');
 }
 
 /* ---------- flow ---------- */
 function newGame(){
-  const srcs=shuffle([0,0,1,1,2,2,Math.floor(Math.random()*3)]).slice(0,ROUNDS).map(i=>SOURCES[i]);
-  const deck=shuffle(CARDS.slice()).slice(0,ROUNDS).map((c,i)=>({...c,src:srcs[i],real:Math.random()<srcs[i].p}));
+  const R=roundsFor(numCpu+1);
+  const srcs=shuffle([0,0,1,1,2,2,Math.floor(Math.random()*3)]).slice(0,R).map(i=>SOURCES[i]);
+  const deck=shuffle(CARDS.slice()).slice(0,R).map((c,i)=>({...c,src:srcs[i],real:Math.random()<srcs[i].p}));
   S=null;document.body.classList.toggle('easy',mode==='easy');
-  S={mode,qty:1,
+  S={mode,qty:1,rounds:R,
     round:0,deck,card:null,phase:'act',log:[],lastDelta:{},
     prices:{game:START_PRICE,food:START_PRICE,power:START_PRICE},
     hist:{game:[START_PRICE],food:[START_PRICE],power:[START_PRICE]},
@@ -515,7 +527,7 @@ function showLesson(){
 }
 
 function next(){
-  if(S.round>=ROUNDS) finish(); else startRound();
+  if(S.round>=S.rounds) finish(); else startRound();
 }
 
 // 結果発表：全員が持ち株を一斉に売る。2株売られるごとに株価−1。
@@ -544,7 +556,7 @@ function finish(){
   const me=S.players[0], gain=me.final-START_COINS;
   document.getElementById('endStats').innerHTML=`<h3>ふりかえり</h3><ul>
     <li>あなたの増えたお金：<b class="${gain>0?'up':gain<0?'down':''}">${gain>0?'+':''}${gain}コイン</b></li>
-    <li>5つのウワサのうち、本当だったのは <b>${S.hits}つ</b>（${SOURCES.filter(x=>S.bySrc[x.id][1]).map(x=>`${x.emo}${x.name} ${S.bySrc[x.id][0]}/${S.bySrc[x.id][1]}`).join('・')}）</li>
+    <li>${S.rounds}つのウワサのうち、本当だったのは <b>${S.hits}つ</b>（${SOURCES.filter(x=>S.bySrc[x.id][1]).map(x=>`${x.emo}${x.name} ${S.bySrc[x.id][0]}/${S.bySrc[x.id][1]}`).join('・')}）</li>
     ${full()?`<li>情報屋を使った回数：<b>${me.spyUsed}回</b>（CPU：${S.players.slice(1).map(p=>p.icon+p.spyUsed).join(' ')}）</li>`:''}
     <li>${full()?'一斉に売ったときの株価':'最後の株価'}：${COMP.map(c=>{const l=S.liq[c.id];return full()&&l.sold?`${c.emo}${l.before}→<b class="down">${l.after}</b>（${l.sold}株・1株平均${Math.round(l.avg*10)/10}）`:`${c.emo}${l.before}${full()?'（売りなし）':''}`}).join('　')}</li>
   </ul>
@@ -556,14 +568,14 @@ function finish(){
 /* ---------- render ---------- */
 function spark(id){
   const h=S.hist[id], w=70, ht=26;
-  const xs=i=>h.length<2?w/2:i*(w/(ROUNDS));
+  const xs=i=>h.length<2?w/2:i*(w/(S.rounds));
   const ys=v=>ht-2-(v-1)/9*(ht-4);
   const pts=h.map((v,i)=>`${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join(' ');
   const last=h.length-1;
   return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}"><line x1="0" x2="${w}" y1="${ys(5)}" y2="${ys(5)}" stroke="#e3d7bc" stroke-dasharray="2 3"/><polyline points="${pts}" fill="none" stroke="${CN[id].color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xs(last)}" cy="${ys(h[last])}" r="3" fill="${CN[id].color}"/></svg>`;
 }
 function render(animate){
-  document.getElementById('roundDots').innerHTML=Array.from({length:ROUNDS},(_,i)=>`<i class="${i+1<S.round?'on':i+1===S.round?'now':''}"></i>`).join('');
+  document.getElementById('roundDots').innerHTML=Array.from({length:S.rounds},(_,i)=>`<i class="${i+1<S.round?'on':i+1===S.round?'now':''}"></i>`).join('');
   const me=S.players[0], canAct=S.phase==='act', q=S.qty||1;
   const qe=document.getElementById('qty');qe.classList.toggle('hidden',!canAct||!full());
   qe.innerHTML=[1,2].map(n=>`<button class="${n===q?'on':''}" onclick="setQty(${n})">${n}株ずつ</button>`).join('');
@@ -589,7 +601,7 @@ function render(animate){
   if(S.phase==='act'){phase.innerHTML=`あなたの番（${S.turn+1}番目）：<b>1回だけ</b> 買う・売る・見送る${full()?'（2株まで）':''}を選ぼう（所持金 ${me.coins}コイン）`;btn.textContent='見送る';btn.onclick=()=>act('pass')}
   else if(S.phase==='cpu'||S.phase==='wait'){phase.textContent=(S.phase==='wait'||!S.players[S.order[S.turn]])?'…':`${S.players[S.order[S.turn]].icon} ${S.players[S.order[S.turn]].name}が考え中…`;btn.textContent='…';btn.disabled=true;btn.onclick=null}
   else if(S.phase==='reveal'){phase.textContent='みんな決めた！ウワサの答えは？';btn.textContent='🃏 カードを裏返す';btn.onclick=reveal}
-  else {phase.textContent='';btn.textContent=S.round>=ROUNDS?'🏆 結果発表':'次のラウンドへ ▶';btn.onclick=next}
+  else {phase.textContent='';btn.textContent=S.round>=S.rounds?'🏆 結果発表':'次のラウンドへ ▶';btn.onclick=next}
 
   document.getElementById('players').innerHTML=S.players.map(p=>{
     const hold=COMP.filter(c=>p.sh[c.id]).map(c=>c.emo+'×'+p.sh[c.id]).join(' ')||'株なし';

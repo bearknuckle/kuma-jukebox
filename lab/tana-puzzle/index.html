@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ボドゲカフェの棚パズル</title>
+<!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="試作ゲームラボ">
+<meta property="og:title" content="ボドゲカフェの棚パズル｜試作ゲームラボ">
+<meta property="og:description" content="ボドゲカフェの店長になって、大きさバラバラの箱を棚に詰め、お客さんにぴったりのゲームを貸し出す。奥にしまった名作ほど取り出しにくい。">
+<meta property="og:url" content="https://game-lab-oj9t.onrender.com/tana-puzzle/">
+<meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+:root{
+  --bg:#f6efe3; --wood:#8a5a34; --wood-d:#5e3b20; --ink:#2b2118; --mute:#7a6a58;
+  --strat:#3f6fb5; --party:#e0703a; --coop:#3c9a6a; --kids:#d7a21e;
+  --ok:#2f8f5b; --ng:#c0392b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);}
+.wrap{max-width:520px;margin:0 auto;padding:12px 12px 40px}
+h1{font-size:20px;margin:4px 0 2px}
+.sub{font-size:12px;color:var(--mute);margin-bottom:10px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.stat{background:#fff;border-radius:10px;padding:6px 10px;font-size:13px;box-shadow:0 1px 2px #0001}
+.stat b{font-size:16px}
+.panel{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px;box-shadow:0 1px 3px #0001}
+.panel h2{font-size:14px;margin:0 0 6px;color:var(--wood-d)}
+.msg{font-size:14px;line-height:1.5}
+.cust{display:flex;gap:8px}
+.ccard{flex:1;border:2px solid #e7dccb;border-radius:10px;padding:8px;font-size:13px}
+.ccard.now{border-color:var(--wood)}
+.ccard .lbl{font-size:11px;color:var(--mute)}
+.ccard .req{font-size:15px;font-weight:bold;margin-top:2px}
+.shelfbox{background:var(--wood-d);padding:8px;border-radius:12px;margin-bottom:10px}
+.shelf{position:relative;margin:0 auto;background:#c99a6b;}
+.cell{position:absolute;border:1px solid #b5845400;}
+.cell.row{border-bottom:3px solid var(--wood)}
+.cell.legal{background:#ffffff55;outline:2px dashed #fff;outline-offset:-4px;cursor:pointer}
+.tile{position:absolute;border-radius:6px;border:2px solid #0003;color:#fff;font-size:10px;line-height:1.2;padding:3px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;text-shadow:0 1px 1px #0005;pointer-events:none}
+.tile .nm{font-weight:bold;font-size:11px}
+.tile .pl{font-size:10px;opacity:.95}
+.tile.pick{pointer-events:auto;cursor:pointer;box-shadow:0 0 0 3px #fff,0 0 10px 3px #fff8;animation:pulse 1s infinite alternate}
+.tile.sel{box-shadow:0 0 0 3px #ff0,0 0 12px 4px #ff08}
+.tile.lift{opacity:.55;outline:2px dashed #fff}
+.tile.ghost{opacity:.6;border-style:dashed}
+.tile .used{position:absolute;right:3px;bottom:2px;font-size:10px}
+@keyframes pulse{from{filter:brightness(1)}to{filter:brightness(1.25)}}
+.g-strat{background:var(--strat)}.g-party{background:var(--party)}.g-coop{background:var(--coop)}.g-kids{background:var(--kids)}
+.floor{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.chip{border-radius:8px;color:#fff;font-size:11px;padding:4px 7px;border:2px solid #0002}
+.chip.pick{cursor:pointer;box-shadow:0 0 0 3px #fff,0 0 8px 2px #0004}
+.chip.sel{box-shadow:0 0 0 3px #ff0}
+.market{display:flex;gap:6px}
+.mcard{flex:1;border-radius:10px;color:#fff;padding:7px;font-size:12px;cursor:pointer;border:3px solid transparent;position:relative;min-height:92px}
+.mcard.sel{border-color:#222}
+.mcard.cant{opacity:.45;cursor:not-allowed}
+.mcard .nm{font-weight:bold;font-size:13px;margin-bottom:3px}
+.mcard .shape{margin:4px 0;display:grid;gap:1px}
+.mcard .shape i{display:block;width:9px;height:9px;background:#fff9;border-radius:2px}
+.mcard .price{position:absolute;right:6px;top:6px;background:#fff;color:var(--ink);border-radius:20px;padding:1px 7px;font-weight:bold}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+button{font:inherit;font-size:14px;border:none;border-radius:10px;padding:9px 14px;background:var(--wood);color:#fff;cursor:pointer}
+button.sec{background:#e7dccb;color:var(--ink)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.hand{display:flex;align-items:center;gap:8px;font-size:13px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--mute);margin-top:4px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;vertical-align:-1px;background:var(--c)}
+details{font-size:13px;line-height:1.6}
+summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
+.log{font-size:12px;color:var(--mute);max-height:110px;overflow:auto;line-height:1.5}
+.final table{width:100%;border-collapse:collapse;font-size:14px}
+.final td{padding:4px 2px;border-bottom:1px solid #eee}
+.final td:last-child{text-align:right;font-weight:bold}
+.rank{font-size:20px;font-weight:bold;text-align:center;margin:8px 0;color:var(--wood-d)}
+.back-link{display:block;text-align:center;font-size:13px;color:var(--mute);margin-top:12px}
+.overlay{position:fixed;inset:0;background:#0006;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay .panel{max-width:420px;width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ボドゲカフェの棚パズル</h1>
+  <div class="sub">ひとりで遊ぶ試作版（12日間）</div>
+
+  <div class="stats">
+    <div class="stat">日 <b id="sDay">1</b>/12</div>
+    <div class="stat">💰 <b id="sMoney">5</b></div>
+    <div class="stat">⭐ <b id="sStar">0</b></div>
+    <div class="stat">山札 <b id="sDeck">0</b></div>
+  </div>
+
+  <div class="panel"><div class="msg" id="msg"></div>
+    <div id="handArea"></div>
+    <div class="btns" id="btns"></div>
+  </div>
+
+  <div class="panel">
+    <h2>お客さん</h2>
+    <div class="cust" id="cust"></div>
+  </div>
+
+  <div class="shelfbox"><div class="shelf" id="shelf"></div></div>
+
+  <div class="panel">
+    <h2>床置き（終了時 1箱 −2点）</h2>
+    <div class="floor" id="floor"></div>
+  </div>
+
+  <div class="panel">
+    <h2>入荷できるゲーム</h2>
+    <div class="market" id="market"></div>
+    <div class="legend">
+      <span style="--c:var(--strat)">戦略</span><span style="--c:var(--party)">パーティー</span>
+      <span style="--c:var(--coop)">協力</span><span style="--c:var(--kids)">キッズ</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <details>
+      <summary>ルール</summary>
+      <p><b>目的：</b>12日間で、お客さんにぴったりのゲームを貸し出して星とお金を稼ごう。</p>
+      <p><b>棚：</b>横5×縦6マス。箱は床（いちばん下の段）か、ほかの箱の上に乗せて置く。宙に浮かせて置くことはできない。向きは回転してよい。</p>
+      <p><b>箱の大きさ：</b>小1×2（💰1）／中2×2（💰2）／大2×3（💰3）／特大3×3（💰4）。</p>
+      <p><b>1日の流れ</b></p>
+      <p>① <b>入荷</b>：入荷できるゲームから1つ買える（買わなくてもよい）。買ったら棚に置く。置けなければ床置き。</p>
+      <p>② <b>来店</b>：お客さんの「ジャンル」と「人数」に合うゲームを貸し出せる。合うのはジャンルが同じで、人数が対応範囲に入るもの。</p>
+      <p>・取り出すとき、その箱の上に乗っている箱（さらにその上も）1つにつき💰1払う。床置きの箱は💰0。</p>
+      <p>・貸し出すと⭐1と、箱の値段と同じだけの💰がもらえる。</p>
+      <p>・遊び終わった箱と、どかした箱は、好きな場所に置き直す（ここが整理のチャンス）。</p>
+      <p>③ 合うゲームがない、または出したくなければお断りしてもよい。</p>
+      <p><b>得点：</b>⭐×3 ＋ 💰 − 床置きの箱×2 − 一度も貸し出さなかった箱（積みゲー）×1。</p>
+      <p>「次のお客さん」は1日先まで見えるので、先回りして入荷しておこう。</p>
+    </details>
+  </div>
+
+  <div class="panel"><h2>記録</h2><div class="log" id="log"></div>
+    <div class="btns"><button class="sec" id="restart">はじめから</button></div>
+  </div>
+  <a class="back-link" href="../">← 試作ゲームラボに戻る</a>
+</div>
+
+<div id="over"></div>
+
+<script>
+const W=5,H=6,DAYS=12;
+const GN={strat:"戦略",party:"パーティー",coop:"協力",kids:"キッズ"};
+const SZ={S:{w:2,h:1,p:1,n:"小"},M:{w:2,h:2,p:2,n:"中"},L:{w:3,h:2,p:3,n:"大"},X:{w:3,h:3,p:4,n:"特大"}};
+const RAW=[
+ ["strat","帝国の砂時計","L",2,4],["strat","鉄道王の遺言","X",3,5],["strat","火星開拓団","L",1,4],["strat","香辛料ギルド","M",2,4],
+ ["strat","七つの城塞","X",2,4],["strat","深海採掘社","L",2,5],["strat","錬金術師の塔","M",2,3],["strat","星図の航海者","L",3,5],
+ ["strat","王朝年代記","X",3,6],["strat","大運河計画","L",2,4],
+ ["party","ぴったり言葉","S",3,8],["party","嘘つきピザ屋","S",4,8],["party","せーので指さし","S",3,6],["party","早口おばけ","M",3,6],
+ ["party","ジェスチャー探偵","M",4,8],["party","なぞなぞ居酒屋","S",3,6],["party","ハッタリ市場","M",3,6],["party","一文字しりとり","S",2,6],
+ ["party","似顔絵バトル","M",4,8],["party","大声オークション","L",4,8],
+ ["coop","沈没船からの脱出","M",1,4],["coop","森の消防隊","M",2,5],["coop","雪山レスキュー","L",1,4],["coop","魔王城の夜","L",2,4],
+ ["coop","宇宙ステーション修理","M",2,4],["coop","迷子のドラゴン","S",2,5],["coop","静かな図書館","S",2,4],["coop","嵐の灯台","M",1,5],
+ ["coop","古代遺跡の謎","L",2,5],["coop","夜行列車の怪","M",3,6],
+ ["kids","こぶたのおつかい","S",2,4],["kids","くだものタワー","M",2,6],["kids","おばけかくれんぼ","M",2,4],["kids","ぴょんぴょん池","S",2,5],
+ ["kids","おかしの家","M",2,4],["kids","ねこのつり堀","S",2,6],["kids","どうぶつ積み木","L",2,4],["kids","にじいろビー玉","M",2,5],
+ ["kids","いちごつみ","S",2,4],["kids","くまの郵便屋","M",3,6]
+];
+let S;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function mkTile(r,i){const s=SZ[r[2]];return {id:i,genre:r[0],name:r[1],size:r[2],w:s.w,h:s.h,price:s.p,pmin:r[3],pmax:r[4],used:false};}
+
+function newGame(){
+  const all=RAW.map(mkTile);
+  const starters=[all.find(t=>t.name==="せーので指さし"),all.find(t=>t.name==="おばけかくれんぼ")];
+  const deck=shuffle(all.filter(t=>!starters.includes(t)));
+  // お客さんデッキ：ジャンルを均等に、人数は実在する箱の範囲から
+  const cust=[];
+  const genres=shuffle(["strat","strat","strat","party","party","party","coop","coop","coop","kids","kids","kids","strat","party","coop","kids","party","coop","kids","strat"]);
+  genres.forEach(g=>{const c=shuffle(all.filter(t=>t.genre===g))[0];const n=c.pmin+Math.floor(Math.random()*(c.pmax-c.pmin+1));cust.push({genre:g,n:Math.max(2,Math.min(n,6))});});
+  S={day:1,money:5,star:0,placed:[],floor:[],deck,market:[],cust:shuffle(cust).slice(0,DAYS+1),
+     phase:"place",after:"buy",hand:starters.slice(),rot:false,ghost:null,sel:null,mSel:null,log:[]};
+  refill();
+  addLog("開店！最初のゲーム2つを棚に置こう。");
+  render();
+}
+function refill(){while(S.market.length<3&&S.deck.length)S.market.push(S.deck.shift());}
+function addLog(t){S.log.unshift(t);}
+
+function grid(){const g=[...Array(H)].map(()=>Array(W).fill(null));S.placed.forEach(p=>{for(let x=p.x;x<p.x+p.w;x++)for(let y=p.y;y<p.y+p.h;y++)g[y][x]=p;});return g;}
+function dims(t){return S.rot?{w:t.h,h:t.w}:{w:t.w,h:t.h};}
+function canPlace(w,h,x,y,g){
+  if(x<0||y<0||x+w>W||y+h>H)return false;
+  for(let i=x;i<x+w;i++)for(let j=y;j<y+h;j++)if(g[j][i])return false;
+  if(y===0)return true;
+  for(let i=x;i<x+w;i++)if(g[y-1][i])return true;
+  return false;
+}
+function above(p){
+  const res=[],q=[p];
+  while(q.length){const c=q.shift();S.placed.forEach(o=>{if(o!==p&&!res.includes(o)&&o.y===c.y+c.h&&o.x<c.x+c.w&&c.x<o.x+o.w){res.push(o);q.push(o);}});}
+  return res;
+}
+function matches(t,c){return t.genre===c.genre&&t.pmin<=c.n&&c.n<=t.pmax;}
+
+// ---------- actions ----------
+function placeAt(x,y){
+  const t=S.hand[0],d=dims(t);
+  S.placed.push({t,x,y,w:d.w,h:d.h});
+  S.hand.shift();S.ghost=null;S.rot=false;
+  afterHand();
+}
+function toFloor(){S.floor.push(S.hand.shift());S.ghost=null;S.rot=false;afterHand();}
+function afterHand(){if(S.hand.length)return render();
+  if(S.after==="buy"){S.phase="buy";S.mSel=null;}
+  else if(S.after==="serve"){S.phase="serve";S.sel=null;}
+  else endDay();
+  render();}
+function buy(){
+  const t=S.market[S.mSel];if(!t||t.price>S.money)return;
+  S.money-=t.price;S.market.splice(S.mSel,1);refill();
+  addLog(`${S.day}日目：「${t.name}」を💰${t.price}で入荷。`);
+  S.hand=[t];S.phase="place";S.after="serve";S.mSel=null;render();
+}
+function skipBuy(){S.phase="serve";S.sel=null;S.mSel=null;render();}
+function cost(sel){if(sel.floor)return 0;return above(sel.p).length;}
+function rent(){
+  const sel=S.sel;if(!sel)return;const c=S.cust[S.day-1];
+  const t=sel.floor?sel.t:sel.p.t;const k=cost(sel);
+  if(k>S.money)return;
+  S.money-=k;S.money+=t.price;S.star+=1;t.used=true;
+  addLog(`${S.day}日目：「${t.name}」を貸し出し（${GN[c.genre]}・${c.n}人）。⭐+1 💰+${t.price}${k?`（どかし代 −${k}）`:""}`);
+  let hand=[t];
+  if(sel.floor){S.floor.splice(S.floor.indexOf(t),1);}
+  else{const ab=above(sel.p);S.placed=S.placed.filter(p=>p!==sel.p&&!ab.includes(p));hand=hand.concat(ab.map(p=>p.t));}
+  S.hand=hand;S.phase="place";S.after="end";S.sel=null;render();
+}
+function decline(){const c=S.cust[S.day-1];addLog(`${S.day}日目：${GN[c.genre]}・${c.n}人のお客さんをお断り。`);endDay();render();}
+function endDay(){
+  S.day++;
+  if(S.day>DAYS){S.phase="end";return;}
+  S.phase="buy";S.mSel=null;
+}
+function finalScore(){
+  const all=[...S.placed.map(p=>p.t),...S.floor];
+  const unused=all.filter(t=>!t.used).length;
+  return {star:S.star*3,money:S.money,floor:-2*S.floor.length,unused:-unused,total:S.star*3+S.money-2*S.floor.length-unused};
+}
+function rank(n){if(n>=40)return"伝説のボドゲカフェ";if(n>=30)return"行列のできる店";if(n>=20)return"街の人気店";if(n>=10)return"常連がつきはじめた店";return"新米オーナー";}
+
+// ---------- render ----------
+const $=id=>document.getElementById(id);
+function cellSize(){return Math.floor(Math.min(64,(Math.min(window.innerWidth,520)-56)/W));}
+function tileEl(t,cls=""){const d=document.createElement("div");d.className=`tile g-${t.genre} ${cls}`;
+  d.innerHTML=`<div class="nm">${t.name}</div><div class="pl">${t.pmin}〜${t.pmax}人</div>${t.used?'<div class="used">✓</div>':""}`;return d;}
+function render(){
+  $("sDay").textContent=Math.min(S.day,DAYS);$("sMoney").textContent=S.money;$("sStar").textContent=S.star;$("sDeck").textContent=S.deck.length;
+  const c=S.cust[S.day-1],nx=S.cust[S.day];
+  // customers
+  $("cust").innerHTML=S.phase==="end"?"<div class='msg'>閉店しました</div>":
+   `<div class="ccard now"><div class="lbl">今日のお客さん</div><div class="req" style="color:var(--${c.genre})">${GN[c.genre]}</div><div>${c.n}人で遊びたい</div></div>`+
+   (S.day<DAYS?`<div class="ccard"><div class="lbl">次のお客さん</div><div class="req" style="color:var(--${nx.genre})">${GN[nx.genre]}</div><div>${nx.n}人で遊びたい</div></div>`:`<div class="ccard"><div class="lbl">次のお客さん</div><div>最終日です</div></div>`);
+  // shelf
+  const cs=cellSize(),sh=$("shelf");sh.style.width=cs*W+"px";sh.style.height=cs*H+"px";sh.innerHTML="";
+  const g=grid();
+  const placing=S.phase==="place"&&S.hand.length;
+  const d=placing?dims(S.hand[0]):null;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const e=document.createElement("div");e.className="cell row";
+    e.style.left=x*cs+"px";e.style.bottom=y*cs+"px";e.style.width=cs+"px";e.style.height=cs+"px";
+    if(placing&&canPlace(d.w,d.h,x,y,g)){e.classList.add("legal");e.onclick=()=>{S.ghost={x,y};render();};}
+    sh.appendChild(e);
+  }
+  const lifted=S.sel&&!S.sel.floor?above(S.sel.p):[];
+  S.placed.forEach(p=>{
+    let cls="";
+    if(S.phase==="serve"&&matches(p.t,c))cls="pick";
+    if(S.sel&&S.sel.p===p)cls+=" sel";
+    if(lifted.includes(p))cls+=" lift";
+    const e=tileEl(p.t,cls);
+    e.style.left=p.x*cs+2+"px";e.style.bottom=p.y*cs+2+"px";e.style.width=p.w*cs-4+"px";e.style.height=p.h*cs-4+"px";
+    if(cls.includes("pick"))e.onclick=()=>{S.sel={p};render();};
+    sh.appendChild(e);
+  });
+  if(placing&&S.ghost){const e=tileEl(S.hand[0],"ghost");const gx=S.ghost;
+    e.style.left=gx.x*cs+2+"px";e.style.bottom=gx.y*cs+2+"px";e.style.width=d.w*cs-4+"px";e.style.height=d.h*cs-4+"px";sh.appendChild(e);}
+  // floor
+  const fl=$("floor");fl.innerHTML=S.floor.length?"":"<span style='font-size:12px;color:var(--mute)'>なし</span>";
+  S.floor.forEach(t=>{const e=document.createElement("div");let cls=`chip g-${t.genre}`;
+    const ok=S.phase==="serve"&&matches(t,c);if(ok)cls+=" pick";if(S.sel&&S.sel.floor&&S.sel.t===t)cls+=" sel";
+    e.className=cls;e.textContent=`${t.name} ${t.pmin}〜${t.pmax}人${t.used?" ✓":""}`;if(ok)e.onclick=()=>{S.sel={floor:true,t};render();};fl.appendChild(e);});
+  // market
+  const mk=$("market");mk.innerHTML="";
+  S.market.forEach((t,i)=>{const e=document.createElement("div");const cant=t.price>S.money;
+    e.className=`mcard g-${t.genre}${S.mSel===i?" sel":""}${cant&&S.phase==="buy"?" cant":""}`;
+    let shp=`<div class="shape" style="grid-template-columns:repeat(${t.w},9px)">`+"<i></i>".repeat(t.w*t.h)+"</div>";
+    e.innerHTML=`<div class="price">💰${t.price}</div><div class="nm">${t.name}</div>${shp}<div>${GN[t.genre]}・${SZ[t.size].n}</div><div>${t.pmin}〜${t.pmax}人</div>`;
+    if(S.phase==="buy"&&!cant)e.onclick=()=>{S.mSel=i;render();};mk.appendChild(e);});
+  // message & buttons
+  const m=$("msg"),b=$("btns"),ha=$("handArea");b.innerHTML="";ha.innerHTML="";
+  const btn=(t,f,sec,dis)=>{const x=document.createElement("button");x.textContent=t;if(sec)x.className="sec";x.disabled=!!dis;x.onclick=f;b.appendChild(x);};
+  if(S.phase==="place"){
+    const t=S.hand[0];
+    m.innerHTML=S.after==="end"?`<b>棚に戻す</b>：点線のマスをタップして置き場所を選ぼう（左下の角がそのマスに来ます）。残り${S.hand.length}箱`:
+      `<b>棚に置く</b>：点線のマスをタップして置き場所を選ぼう（左下の角がそのマスに来ます）。${S.hand.length>1?`残り${S.hand.length}箱`:""}`;
+    ha.innerHTML=`<div class="hand" style="margin-top:6px"><span class="chip g-${t.genre}">${t.name}</span><span>${d.w}×${d.h}（横×縦）</span></div>`;
+    btn("回転",()=>{S.rot=!S.rot;S.ghost=null;render();},true);
+    btn("ここに置く",()=>placeAt(S.ghost.x,S.ghost.y),false,!S.ghost);
+    btn("床に置く",toFloor,true);
+  }else if(S.phase==="buy"){
+    m.innerHTML=`<b>${S.day}日目・入荷</b>：買うゲームを選ぶか、今日は買わずに開店しよう。`;
+    btn(S.mSel!=null?`「${S.market[S.mSel].name}」を買う`:"買うゲームを選んでね",buy,false,S.mSel==null);
+    btn("買わない",skipBuy,true);
+  }else if(S.phase==="serve"){
+    const any=S.placed.some(p=>matches(p.t,c))||S.floor.some(t=>matches(t,c));
+    if(!S.sel){m.innerHTML=any?`<b>${S.day}日目・来店</b>：光っている箱から貸し出すゲームを選ぼう。`:`<b>${S.day}日目・来店</b>：合うゲームがない…今日はお断りしよう。`;
+      btn("お断りする",decline,true);}
+    else{const t=S.sel.floor?S.sel.t:S.sel.p.t,k=cost(S.sel);
+      m.innerHTML=`「${t.name}」を貸し出す？ どかし代 💰${k}${k?`（上の箱${k}つ）`:""}／もらえる：⭐1・💰${t.price}`+(k>S.money?"<br><span style='color:var(--ng)'>お金が足りません</span>":"");
+      btn("貸し出す",rent,false,k>S.money);btn("選び直す",()=>{S.sel=null;render();},true);btn("お断りする",decline,true);}
+  }
+  $("log").innerHTML=S.log.map(l=>`<div>${l}</div>`).join("");
+  // end
+  const ov=$("over");ov.innerHTML="";
+  if(S.phase==="end"){const f=finalScore();m.innerHTML="<b>閉店！</b>結果を見よう。";
+    ov.innerHTML=`<div class="overlay"><div class="panel final"><h2>12日間の結果</h2><table>
+     <tr><td>⭐ ${S.star} × 3</td><td>${f.star}</td></tr><tr><td>💰 残り</td><td>${f.money}</td></tr>
+     <tr><td>床置き ${S.floor.length}箱</td><td>${f.floor}</td></tr><tr><td>積みゲー ${-f.unused}箱</td><td>${f.unused}</td></tr>
+     <tr><td>合計</td><td>${f.total}点</td></tr></table><div class="rank">${rank(f.total)}</div>
+     <div class="btns"><button id="again">もう一度</button><button class="sec" id="close">棚を見る</button></div></div></div>`;
+    $("again").onclick=newGame;$("close").onclick=()=>{ov.innerHTML="";};
+    btn("結果を見る",()=>render(),false);
+  }
+}
+$("restart").onclick=newGame;
+window.addEventListener("resize",()=>render());
+newGame();
+</script>
+</body>
+</html>

@@ -63,8 +63,8 @@ def main():
     for i, label in enumerate(categories()):
         w, c = text_path(bold, label)
         cw = w * sc + 40
-        if x + cw > 1150:  # 入りきらなければ次の行へ（2行まで）
-            if y > 420:
+        if x + cw > 1150:  # 入りきらなければ次の行へ（3行まで）
+            if y > 478:
                 break
             x, y = 530, y + 58
         parts.append(f'<rect x="{x}" y="{y}" rx="22" width="{cw:.0f}" height="44" fill="#2a2639"/>')

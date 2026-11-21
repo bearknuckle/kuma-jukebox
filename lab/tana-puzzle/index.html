@@ -85,6 +85,9 @@ summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
 .final td:last-child{text-align:right;font-weight:bold}
 .rank{font-size:20px;font-weight:bold;text-align:center;margin:8px 0;color:var(--wood-d)}
 .back-link{display:block;text-align:center;font-size:13px;color:var(--mute);margin-top:12px}
+.modes{display:flex;gap:6px;margin-bottom:10px}
+.modes button{background:#e7dccb;color:var(--ink)}
+.modes button.sel{background:var(--wood);color:#fff}
 .overlay{position:fixed;inset:0;background:#0006;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .overlay .panel{max-width:420px;width:100%}
 </style>
@@ -92,10 +95,11 @@ summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
 <body>
 <div class="wrap">
   <h1>ボドゲカフェの棚パズル</h1>
-  <div class="sub">ひとりで遊ぶ試作版（12日間）</div>
+  <div class="sub">ひとりで遊ぶ試作版（<span id="subDays">12</span>日間）</div>
+  <div class="modes" id="modes"><button type="button" data-days="12">通常（12日）</button><button type="button" data-days="6">5分モード（6日）</button></div>
 
   <div class="stats">
-    <div class="stat">日 <b id="sDay">1</b>/12</div>
+    <div class="stat">日 <b id="sDay">1</b>/<span id="sDays">12</span></div>
     <div class="stat">💰 <b id="sMoney">5</b></div>
     <div class="stat">⭐ <b id="sStar">0</b></div>
     <div class="stat">山札 <b id="sDeck">0</b></div>
@@ -131,6 +135,7 @@ summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
     <details>
       <summary>ルール</summary>
       <p><b>目的：</b>12日間で、お客さんにぴったりのゲームを貸し出して星とお金を稼ごう。</p>
+      <p><b>5分モード：</b>6日間でサクッと遊べる短いモード。ランクの基準も日数に合わせて下がります。上のボタンで切り替えると、最初から始まります。</p>
       <p><b>棚：</b>横5×縦6マス。箱は床（いちばん下の段）か、ほかの箱の上に乗せて置く。宙に浮かせて置くことはできない。向きは回転してよい。</p>
       <p><b>箱の大きさ：</b>小1×2（💰1）／中2×2（💰2）／大2×3（💰3）／特大3×3（💰4）。</p>
       <p><b>おすすめ棚：</b>下から3段目（黄色の段）は目線の高さ。箱の一部でもこの段にかかっているゲームを貸し出すと⭐がもう1つもらえる。</p>
@@ -156,7 +161,8 @@ summary{cursor:pointer;font-weight:bold;color:var(--wood-d)}
 <div id="over"></div>
 
 <script>
-const W=5,H=6,DAYS=12,OSU=2; // OSU: おすすめ棚（下から3段目＝目線の高さ）
+const W=5,H=6,OSU=2;
+let DAYS=12; // OSU: おすすめ棚（下から3段目＝目線の高さ）
 const GN={strat:"戦略",party:"パーティー",coop:"協力",kids:"キッズ"};
 const SZ={S:{w:2,h:1,p:1,n:"小"},M:{w:2,h:2,p:2,n:"中"},L:{w:3,h:2,p:3,n:"大"},X:{w:3,h:3,p:4,n:"特大"}};
 const RAW=[
@@ -260,7 +266,7 @@ function finalScore(){
   const unused=all.filter(t=>!t.used).length;
   return {star:S.star*3,money:S.money,floor:-2*S.floor.length,unused:-unused,total:S.star*3+S.money-2*S.floor.length-unused};
 }
-function rank(n){if(n>=55)return"伝説のボドゲカフェ";if(n>=45)return"行列のできる店";if(n>=35)return"街の人気店";if(n>=25)return"常連がつきはじめた店";return"新米オーナー";}
+function rank(n){const t=[55,45,35,25].map(v=>Math.round(v*DAYS/12));if(n>=t[0])return"伝説のボドゲカフェ";if(n>=t[1])return"行列のできる店";if(n>=t[2])return"街の人気店";if(n>=t[3])return"常連がつきはじめた店";return"新米オーナー";}
 
 // ---------- render ----------
 const $=id=>document.getElementById(id);
@@ -268,7 +274,8 @@ function cellSize(){return Math.floor(Math.min(64,(Math.min(window.innerWidth,52
 function tileEl(t,cls=""){const d=document.createElement("div");d.className=`tile g-${t.genre} ${cls}`;
   d.innerHTML=`<div class="nm">${t.name}</div><div class="pl">${t.pmin}〜${t.pmax}人</div>${t.used?'<div class="used">✓</div>':""}`;return d;}
 function render(){
-  $("sDay").textContent=Math.min(S.day,DAYS);$("sMoney").textContent=S.money;$("sStar").textContent=S.star;$("sDeck").textContent=S.deck.length;
+  $("sDay").textContent=Math.min(S.day,DAYS);$("sDays").textContent=DAYS;$("subDays").textContent=DAYS;
+  document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("sel",+b.dataset.days===DAYS));$("sMoney").textContent=S.money;$("sStar").textContent=S.star;$("sDeck").textContent=S.deck.length;
   const c=S.cust[S.day-1],nx=S.cust[S.day];
   // customers
   $("cust").innerHTML=S.phase==="end"?"<div class='msg'>閉店しました</div>":
@@ -340,7 +347,7 @@ function render(){
   // end
   const ov=$("over");ov.innerHTML="";
   if(S.phase==="end"){const f=finalScore();m.innerHTML="<b>閉店！</b>結果を見よう。";
-    ov.innerHTML=`<div class="overlay"><div class="panel final"><h2>12日間の結果</h2><table>
+    ov.innerHTML=`<div class="overlay"><div class="panel final"><h2>${DAYS}日間の結果</h2><table>
      <tr><td>⭐ ${S.star} × 3</td><td>${f.star}</td></tr><tr><td>💰 残り</td><td>${f.money}</td></tr>
      <tr><td>床置き ${S.floor.length}箱</td><td>${f.floor}</td></tr><tr><td>積みゲー ${-f.unused}箱</td><td>${f.unused}</td></tr>
      <tr><td>合計</td><td>${f.total}点</td></tr></table><div class="rank">${rank(f.total)}</div>
@@ -349,7 +356,10 @@ function render(){
     btn("結果を見る",()=>render(),false);
   }
 }
-$("restart").onclick=newGame;
+$("restart").onclick=()=>newGame();
+function setDays(d){DAYS=d;try{localStorage.setItem("tana-days",""+d);}catch(e){}newGame();}
+document.querySelectorAll("#modes button").forEach(b=>{b.onclick=()=>setDays(+b.dataset.days);});
+try{const sv=localStorage.getItem("tana-days");if(sv==="6")DAYS=6;}catch(e){}
 window.addEventListener("resize",()=>render());
 newGame();
 </script>

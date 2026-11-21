@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="スタジアム経営｜試作ゲームラボ">
-<meta property="og:description" content="球場のオーナーになって、売店やイベントで稼ぐ経営ゲーム。試合の勝ち負けはサイコロまかせ。9試合でいちばん稼いだオーナーの勝ち。">
+<meta property="og:description" content="球場のオーナーになって、売店やイベントで稼ぐ経営ゲーム。試合の勝ち負けはサイコロまかせ。9試合（5試合の短縮モードも選べる）でいちばん稼いだオーナーの勝ち。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/stadium-keiei/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -32,6 +32,8 @@ button:active{transform:translateY(2px);box-shadow:0 1px 0 #a63f19}
 button:disabled{background:#c9c2b4;box-shadow:0 3px 0 #9d968a;cursor:default}
 button.sub{background:#5b6b63;box-shadow:0 3px 0 #38443e}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.modes{margin:10px 0 4px}
+.modes button.sel{background:var(--accent);box-shadow:0 3px 0 #a63f19}
 .scoreboard{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .team{border:2px solid var(--line);border-radius:12px;padding:8px;background:#fff;position:relative}
 .team.turn{border-color:var(--accent)}
@@ -83,10 +85,10 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
 </head>
 <body>
 <div class="wrap">
-<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ スタジアム経営 v0.3</p>
+<p class="back"><a href="../">← 試作ゲームラボに戻る</a> ・ スタジアム経営 v0.4</p>
 <header>
   <h1>⚾ スタジアム経営</h1>
-  <p>球場の売店とイベントで、9試合でいちばん稼いだオーナーの勝ち</p>
+  <p>球場の売店とイベントで、<span id="subRounds">9</span>試合でいちばん稼いだオーナーの勝ち</p>
   <div class="inning" id="inning"></div>
 </header>
 
@@ -102,9 +104,11 @@ td,th{border-bottom:1px solid var(--line);padding:6px;text-align:center}
     <li>収入＝<b>チケット代（ファンの数）</b>＋施設の収入。</li>
     <li>球場の区画は<b>5つ</b>。6つ目を建てるときは、先に1つ<b>取り壊します</b>（お金は戻りません）。</li>
     <li>決まった施設がそろうと<b>セットボーナス</b>（例：焼きそば屋台＋ビール売り子で「グルメ球場」+8）。最後にコインに足します。</li>
-    <li>9回（9試合）を終えて、<b>コイン＋セットボーナスの合計がいちばん多い人の勝ち</b>。同点ならファンが多い人の勝ち。</li>
+    <li><span id="ruleRounds">9</span>試合を終えて、<b>コイン＋セットボーナスの合計がいちばん多い人の勝ち</b>。同点ならファンが多い人の勝ち。</li>
   </ul>
   <p class="muted">アナログ版で使うもの：施設カード18枚（9種類×2枚）、イベントカード10枚、サイコロ、コイン、値引きチップ、ファン数のトラック。</p>
+  <div class="row modes" id="modes"><button type="button" class="sub" data-rounds="9">通常（9試合）</button><button type="button" class="sub" data-rounds="5">短縮モード（5試合）</button></div>
+  <p class="muted">短縮モードは5試合で終わるので、サクッと遊びたいときに。</p>
   <div class="row"><button id="startBtn">CPU2人と試合開始</button></div>
 </div>
 
@@ -167,7 +171,7 @@ const EVENTS = [
   {k:"magic",e:"✨",n:"優勝マジック点灯",d:"グッズショップの収入 +3。"},
   {k:"payday",e:"💴",n:"給料日",d:"屋台とビール売り子の収入 +1。"}
 ];
-const ROUNDS = 9;
+let ROUNDS = 9;
 const SLOTS = 5;
 const COMBOS = [
   {n:"グルメ球場",need:["yakisoba","beer"],pts:8},
@@ -420,6 +424,10 @@ function renderCatalog(){
   `<tr><th colspan="4" style="text-align:left;padding-top:14px">セットボーナス（最後にコインに足す）</th></tr>`+
   COMBOS.map(c=>`<tr><td>★</td><td>${c.n}</td><td>+${c.pts}</td><td style="text-align:left">${c.need.map(k=>FAC[k].e+FAC[k].n).join("＋")}</td></tr>`).join("");
 }
+function paintModes(){document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("sel",+b.dataset.rounds===ROUNDS));$("subRounds").textContent=ROUNDS;$("ruleRounds").textContent=ROUNDS;}
+document.querySelectorAll("#modes button").forEach(b=>{b.onclick=()=>{ROUNDS=+b.dataset.rounds;try{localStorage.setItem("stadium-rounds",""+ROUNDS);}catch(e){}paintModes();};});
+try{const sv=localStorage.getItem("stadium-rounds");if(sv==="5")ROUNDS=5;}catch(e){}
+paintModes();
 $("startBtn").onclick=newGame;
 $("adBtn").onclick=()=>{if(advertise(S.players[0]))humanDone()};
 $("passBtn").onclick=()=>{S.players[0].last="パス";log(`<div>🧑‍💼 あなた：パス</div>`);humanDone()};

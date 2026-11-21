@@ -117,11 +117,14 @@
   <div id="start" class="panel">
     <h2>対戦相手</h2>
     <div class="seg" id="cpuSeg"></div>
+    <h2 style="margin-top:14px">モード</h2>
+    <div class="seg" id="modeSeg"></div>
+    <p class="muted" style="margin:6px 0 0">おためしは1か月だけ。まず流れをつかみたいときに。</p>
     <div class="btnrow"><button class="btn primary" id="startBtn">はじめる</button></div>
     <details style="margin-top:12px">
       <summary>あそびかた</summary>
       <ul style="padding-left:1.2em;margin:6px 0">
-        <li>全6か月。毎月はじめに <b>流行カード</b>（点が増えるジャンル2つ・減るジャンル1つ）と <b>イベント</b> がめくられます。来月の流行も見えています。</li>
+        <li>全6か月（おためしモードは1か月だけ）。毎月はじめに <b>流行カード</b>（点が増えるジャンル2つ・減るジャンル1つ）と <b>イベント</b> がめくられます。来月の流行も見えています。</li>
         <li><b>素材集め</b>：場のカードを順番に1枚ずつ、2周取ります（2周目は逆順）。左の新しいカードほど高く、2〜0クレジット。手札は6枚まで。</li>
         <li><b>ジャンルカードは表向き</b>：取ったジャンルカードは使うまで全員に見えます（素材カードは隠したまま）。誰が何を狙っているか読んで、かぶりを避けましょう。</li>
         <li><b>生成</b>：ジャンル1枚＋素材2枚で曲を作ります。1クレジットで手札1枚を山札の上と入れ替える「再生成」ができます。</li>
@@ -230,6 +233,8 @@ function $(id){ return document.getElementById(id); }
 var S = null;
 var cpuCount = 3;
 try { var sv = parseInt(localStorage.getItem("hitchart-cpu"), 10); if (sv >= 1 && sv <= 3) cpuCount = sv; } catch (e) {}
+var trialMode = false;
+try { if (localStorage.getItem("hitchart-trial") === "1") trialMode = true; } catch (e) {}
 
 function buildDeck(){
   var d = [], uid = 0;
@@ -242,6 +247,7 @@ function costAt(i){ return i < 2 ? 2 : (i < 4 ? 1 : 0); }
 function marketSize(){ return S.players.length * 2 + 1; }
 
 function newGame(){
+  MONTHS = trialMode ? 1 : 6;
   var deck = buildDeck();
   S = {deck:deck, discard:[], month:0, players:[], market:[], trends:shuffle(TRENDS.slice()), events:[], log:[]};
   var evs = []; EVENTS.forEach(function(e){ for (var i=0;i<e.n;i++) evs.push(e); });
@@ -625,6 +631,15 @@ function cardEl(c){
 function show(id){
   ["draftPanel", "makePanel", "resultPanel", "endPanel"].forEach(function(x){ $(x).classList.toggle("hidden", x !== id); });
 }
+function renderModeSeg(){
+  $("modeSeg").innerHTML = "";
+  [[false, "通常（6か月）"], [true, "おためし（1か月）"]].forEach(function(pair){
+    var b = document.createElement("button"); b.textContent = pair[1];
+    if (pair[0] === trialMode) b.className = "on";
+    b.onclick = function(){ trialMode = pair[0]; try { localStorage.setItem("hitchart-trial", trialMode ? "1" : "0"); } catch (e) {} renderModeSeg(); };
+    $("modeSeg").appendChild(b);
+  });
+}
 function renderCpuSeg(){
   $("cpuSeg").innerHTML = "";
   [1, 2, 3].forEach(function(n){
@@ -634,6 +649,7 @@ function renderCpuSeg(){
     $("cpuSeg").appendChild(b);
   });
 }
+renderModeSeg();
 renderCpuSeg();
 $("startBtn").onclick = newGame;
 </script>

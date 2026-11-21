@@ -340,6 +340,7 @@
           <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
           <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
           <li><b>CPU仲間</b>：接客はイベントにパワーを置き、店長は収入や支援、仕入れは市場の入れ替えや安いカードの購入（あなたの捨て札に入ります）を自動で行います。</li>
+          <li><b>全員の力が必要</b>：CPU仲間のパワーは、必要パワーの半分までしか入りません。残りはあなたの担当です。誰か1人でも止まると、クリアは難しくなります。</li>
         </ul>
       </details>
 
@@ -800,13 +801,17 @@
         cpuTimers = {};
       }
 
+      // CPU仲間のパワーは、必要パワーの半分までしか入らない（残りはプレイヤーの担当）
+      function cpuRoom(ev) { return Math.floor(ev.def.need / 2) - ev.cpuPower; }
+
       function cpuAct(role) {
         if (role === "service") {
           if (S.events.length === 0) return;
-          var ev = S.events.slice().sort(function (a, b) {
+          var ev = S.events.filter(function (e) { return cpuRoom(e) > 0; }).sort(function (a, b) {
             return (a.def.need - eventTotal(a)) - (b.def.need - eventTotal(b));
           })[0];
-          var p = Math.random() < 0.45 ? 2 : 1;
+          if (!ev) return;
+          var p = Math.min(Math.random() < 0.45 ? 2 : 1, cpuRoom(ev));
           ev.cpuPower += p;
           logMsg("仲間（接客）が「" + ev.def.name + "」にパワー+" + p + "（合計 " + eventTotal(ev) + "/" + ev.def.need + "）。", "cpu");
           checkEventComplete(ev);
@@ -814,7 +819,9 @@
           if (S.commonDiscard.length >= 2 && S.marketDeck.length <= 32) {
             income(2, "仲間（店長）の資金繰り");
           } else if (S.events.length > 0) {
-            var ev2 = pick(S.events);
+            var targets = S.events.filter(function (e) { return cpuRoom(e) > 0; });
+            if (targets.length === 0) return;
+            var ev2 = pick(targets);
             ev2.cpuPower += 1;
             logMsg("仲間（店長）の支援で「" + ev2.def.name + "」にパワー+1（合計 " + eventTotal(ev2) + "/" + ev2.def.need + "）。", "cpu");
             checkEventComplete(ev2);

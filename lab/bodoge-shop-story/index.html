@@ -287,7 +287,7 @@
             <div class="bar bar-deck" id="bar-deck"><div style="width:100%"></div></div>
           </div>
           <div>
-            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 30</small></span></div>
+            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 24</small></span></div>
             <div class="bar bar-rep" id="bar-rep"><div style="width:0%"></div></div>
           </div>
         </div>
@@ -335,7 +335,7 @@
         <p>3人チームで1つのボードゲームショップを経営する協力ゲームです。あなたが1つの役割を担当し、残り2つの役割はCPU仲間が自動で動きます。</p>
         <ul>
           <li><b>市場デッキ（45枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
-          <li><b>勝敗</b>：閉店までに評判30以上で勝ち。評判が30に届いた時点で即クリアです。</li>
+          <li><b>勝敗</b>：閉店までに評判24以上で勝ち。評判が24に届いた時点で即クリアです。</li>
           <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
           <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
           <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
@@ -352,7 +352,7 @@
     <div class="overlay" id="title-overlay">
       <div class="sheet">
         <h1>ボドゲショップ物語（試作）</h1>
-        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判30を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
+        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判24を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
         <div class="role-pick" id="role-pick"></div>
       </div>
     </div>
@@ -429,14 +429,14 @@
         { name: "新作の予約殺到", need: 6, rep: 4, income: 2 },
         { name: "人気配信者が来店", need: 4, rep: 4, income: 0 },
         { name: "新聞の取材", need: 5, rep: 5, income: 0 },
-        { name: "レジ故障", need: 3, rep: 0, income: 4 },
+        { name: "レジ故障", need: 3, rep: 1, income: 4 },
         { name: "クレーム対応", need: 3, rep: 1, income: 0, claim: true },
-        { name: "棚が崩れた", need: 2, rep: 1, income: 1 },
+        { name: "棚が崩れた", need: 2, rep: 2, income: 1 },
         { name: "常連さんの誕生日会", need: 4, rep: 3, income: 1 },
         { name: "在庫チェック", need: 4, rep: 2, income: 2 }
       ];
 
-      var DECK_SIZE = 45, TARGET = 30, EVENT_COUNT = 11;
+      var DECK_SIZE = 45, TARGET = 24, EVENT_COUNT = 13;
 
       /* ================= state ================= */
       var S = null;
@@ -782,7 +782,7 @@
       function startCpu() {
         Object.keys(ROLE_INFO).forEach(function (r) {
           if (r === S.role) return;
-          var base = r === "service" ? 5500 : r === "manager" ? 8500 : 11000;
+          var base = r === "service" ? 4800 : r === "manager" ? 8500 : 11000;
           var tick = function () {
             if (!S || S.phase !== "playing") return;
             cpuAct(r);

@@ -165,7 +165,7 @@
         <li><b>ギアチェンジ +1点：</b>テンポ「遅い」の曲の次に「速い」曲が来たとき（1回ごと）</li>
         <li><b>単調 −1点：</b>同じテンポが3曲続いたとき。4曲目以降も続けば1曲ごとにさらに −1</li>
         <li><b>アンコール +5点：</b>8曲目の盛り上がりが、セトリ内で単独最高</li>
-        <li><b>失速 −2点：</b>盛り上がり5の直後に1が来たとき（1回ごと）</li>
+        <li><b>失速 −2点：</b>盛り上がり5の直後に1が来たとき（1回ごと。ただしバラードの曲は除く）</li>
       </ul>
     </details>
   </div>
@@ -279,7 +279,7 @@ function scoreSetlist(list){
     if (a.genre === b.genre) genrePts += 2;
     if (b.heat > a.heat) rise += 1;
     if (b.heat < a.heat) drops.push(i + 1);
-    if (a.heat === 5 && b.heat === 1) stall -= 2;
+    if (a.heat === 5 && b.heat === 1 && b.genre !== "ballad") stall -= 2;
     if (a.tempo === "遅い" && b.tempo === "速い") gear += 1;
   }
   // 単調：同じテンポが3曲以上続くと、3曲目から1曲ごとに −1
@@ -623,7 +623,7 @@ function showResult(){
     ["流れが切れる（2回目以降の下降）", ps.cut, cs.cut],
     ["つかみ（1曲目が盛り上がり3以上）", ps.tsukami, cs.tsukami],
     ["アンコール（最後が単独最高）", ps.encore, cs.encore],
-    ["失速（5の直後に1）", ps.stall, cs.stall],
+    ["失速（5の直後に1・バラード除く）", ps.stall, cs.stall],
     ["ギアチェンジ（遅い→速い）", ps.gear, cs.gear],
     ["単調（同じテンポが3曲続く）", ps.mono, cs.mono]
   ];

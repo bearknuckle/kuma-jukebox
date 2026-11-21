@@ -154,7 +154,7 @@ const GAMES=[
   {
     id:'setori-shokunin', name:'セトリ職人', icon:'🎤', color:'#e07b39',
     desc:'ライブのセットリストを組むカードゲーム。取った曲はすぐ1〜8曲目の枠に置き、あとからは動かせない。中盤で一度落とす聴かせどころから、アンコールまで上げきってCPU店長と勝負。',
-    players:'1人（CPU 1人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.5', updated:'2026-11-21', isNew:true
+    players:'1人（CPU 1人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.6', updated:'2026-11-22', isNew:true
   },
   {
     id:'doubutsu-kabu', name:'せーの株 どうぶつ版', icon:'🦦', color:'#3f8f5a',
@@ -174,6 +174,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-22', id:'setori-shokunin',  version:'0.6', text:'失速（盛り上がり5→1で−2）の対象からバラードを除外。わざと落とす聴かせどころを罰しないように'},
   {date:'2026-11-22', id:'bodoge-shop-story', version:'0.3', text:'CPU仲間のパワーは必要パワーの半分までに制限。誰か1人でも止まるとクリアが難しくなるよう、全員の力が必要なバランスに'},
   {date:'2026-11-22', id:'stadium-keiei',    version:'0.4', text:'5試合で終わる「短縮モード」を追加（通常は9試合）。モードは保存され、次回もそのまま遊べる'},
   {date:'2026-11-22', id:'bodoge-shop-story', version:'0.2', text:'難易度を調整：評判の目標を30→24に、イベントを11枚→13枚に増やし、レジ故障と棚が崩れたの評判も底上げ。CPU接客も少し速く'},

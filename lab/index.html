@@ -149,7 +149,7 @@ const GAMES=[
   {
     id:'setori-shokunin', name:'セトリ職人', icon:'🎤', color:'#e07b39',
     desc:'ライブのセットリストを組むカードゲーム。取った曲はすぐ1〜8曲目の枠に置き、あとからは動かせない。中盤で一度落とす聴かせどころから、アンコールまで上げきってCPU店長と勝負。',
-    players:'1人（CPU 1人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.4', updated:'2026-11-20', isNew:true
+    players:'1人（CPU 1人）', time:'5分', genre:'音楽', added:'2026-11-18', version:'0.5', updated:'2026-11-21', isNew:true
   },
   {
     id:'doubutsu-kabu', name:'せーの株 どうぶつ版', icon:'🦦', color:'#3f8f5a',
@@ -169,6 +169,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-21', id:'setori-shokunin',  version:'0.5', text:'曲を選ぶと各枠に最終得点の目安を表示（一番高い枠に★）。リハーサルの入れ替え候補にも点数の増減を表示'},
   {date:'2026-11-21', id:'izakaya-seri',    version:'0.1', text:'新しく登場（お酒のゲーム・同時に金額を出して落とすおつまみのせり市）'},
   {date:'2026-11-20', id:'uwasa-kabu',       version:'0.9', text:'かんたんモードのCPUを少しやさしく、6人で遊ぶときは6ラウンドにして手番がひと回りするように'},
   {date:'2026-11-20', id:'stadium-keiei',    version:'0.3', text:'球場の区画を5つに（6つ目は取り壊して建てる）、施設がそろうと最後にもらえるセットボーナス5種類を追加'},

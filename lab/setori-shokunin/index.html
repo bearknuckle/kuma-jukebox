@@ -121,6 +121,8 @@
   .cpuboard div.on{background:var(--panel)}
   .cpumsg{font-size:12.5px;color:var(--ink2);margin:8px 0 0;min-height:1.4em}
   .preview{font-size:13.5px;margin:10px 0 0}
+  .slot .prev{font-size:11px;font-weight:800;white-space:nowrap}
+  .slot .prev.pos{color:var(--good)} .slot .prev.neg{color:var(--bad)} .slot .prev.zero{color:var(--ink2)}
   .preview b{font-size:16px}
   .levelrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;font-size:13px;color:var(--ink2)}
   .levelrow button{min-height:36px;padding:4px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font-weight:700;font-size:13px}
@@ -150,6 +152,7 @@
         <li><b>置き方：</b>取った曲はすぐに1〜8曲目の空いている枠に置きます。<b>置いた曲は動かせません。</b>8曲目はアンコールです。CPU店長のセトリは表向きで見えています。</li>
         <li><b>CPU店長の強さ：</b>最初の1枚を取る前に「はじめて」「ふつう」から選べます。</li>
         <li><b>リハーサル：</b>8曲そろったら、自分のセトリの2曲を<b>1回だけ</b>入れ替えられます（入れ替えずに開演してもOK）。</li>
+        <li><b>得点の目安：</b>ドラフトで曲を選ぶと、各空き枠に最終得点の目安（残りを標準的な流れで埋めた場合）が出て、一番高い枠に★が付きます。リハーサルでは、1曲目を選ぶと入れ替え候補ごとに点数が何点変わるか出ます。</li>
       </ul>
       <p class="muted" style="margin:8px 0 2px"><b>得点</b></p>
       <ul>
@@ -181,6 +184,7 @@
     <div class="cards" id="draft-cards"></div>
     <p class="muted" style="margin:14px 0 6px">あなたのセトリ（<span id="placed-count">0</span> / 8曲）</p>
     <div class="slots" id="draft-slots"></div>
+    <p class="preview" id="draft-preview"></p>
     <p class="cpumsg" id="cpu-msg"></p>
     <p class="muted" style="margin:10px 0 0">CPU店長のセトリ</p>
     <div class="cpuboard" id="cpu-board"></div>
@@ -412,17 +416,23 @@ function slotButton(c, i, opts){
   if (opts.dip) cls += " dip";
   b.className = cls;
   var zone = (i >= KIKI_FROM && i <= KIKI_TO) ? '<span class="zone">聴かせどころ候補</span>' : "";
+  var prev = opts.preview ? '<span class="prev ' + opts.preview.cls + '">' + opts.preview.text + '</span>' : "";
   if (c){
     b.innerHTML = '<span class="no">' + slotLabel(i) + '</span><span class="sttl">' + c.title + '</span>' +
-      '<span class="smeta">' + c.genreName + "／熱" + c.heat + "／" + c.tempo + '</span>';
+      '<span class="smeta">' + c.genreName + "／熱" + c.heat + "／" + c.tempo + '</span>' + prev;
   } else {
     b.innerHTML = '<span class="no">' + slotLabel(i) + '</span><span class="empty">' +
-      (opts.pickable ? "ここに置く" : "（空き）") + '</span>' + zone;
+      (opts.pickable ? "ここに置く" : "（空き）") + '</span>' + zone + prev;
   }
   if (opts.onClick) b.addEventListener("click", opts.onClick); else b.disabled = true;
   return b;
 }
 
+/* 置いた場合の目安：空き枠を標準的な流れ（CPU_SHAPE）で埋めて採点する */
+function estimatePlace(slots, idx, card){
+  var trial = slots.slice(); trial[idx] = card;
+  return cpuEstimate(trial);
+}
 /* ============ フェーズ1：ドラフト ============ */
 function startRound(){
   state.choices = state.deck.splice(0, 3);
@@ -478,13 +488,25 @@ function renderDraft(){
   var slotsBox = document.getElementById("draft-slots");
   slotsBox.innerHTML = "";
   var dips = dropsOf(state.slots);
+  var ests = null, bestEst = null;
+  if (state.sel >= 0){
+    ests = state.slots.map(function(c, i){ return c ? null : estimatePlace(state.slots, i, state.choices[state.sel]); });
+    bestEst = Math.max.apply(null, ests.filter(function(v){ return v !== null; }));
+  }
   state.slots.forEach(function(c, i){
     var can = !c && state.sel >= 0;
+    var pv = null;
+    if (can && ests){
+      pv = { text: "目安" + ests[i] + "点" + (ests[i] === bestEst ? " ★" : ""), cls: ests[i] === bestEst ? "pos" : "zero" };
+    }
     slotsBox.appendChild(slotButton(c, i, {
-      pickable: can, dip: !!dips[i],
+      pickable: can, dip: !!dips[i], preview: pv,
       onClick: can ? function(){ placeCard(state.sel, i); } : null
     }));
   });
+  document.getElementById("draft-preview").innerHTML = state.sel >= 0
+    ? "「" + state.choices[state.sel].title + "」の目安です（残りを標準的な流れで埋めた場合）。★が一番高い枠です。"
+    : "";
   renderCpuBoard("cpu-board");
 }
 function placeCard(ci, slot){
@@ -516,11 +538,18 @@ function renderRehearsal(){
   var box = document.getElementById("rehearsal-slots");
   box.innerHTML = "";
   var dips = dropsOf(state.slots);
+  var baseTotal = scoreSetlist(state.slots).total;
   state.slots.forEach(function(c, i){
     var clickable = !state.swapped;
+    var pv = null;
+    if (!state.swapped && state.swapSel >= 0 && i !== state.swapSel){
+      var trial = state.slots.slice(); var tx = trial[state.swapSel]; trial[state.swapSel] = trial[i]; trial[i] = tx;
+      var d = scoreSetlist(trial).total - baseTotal;
+      pv = { text: d > 0 ? "+" + d + "点" : d < 0 ? d + "点" : "±0点", cls: d > 0 ? "pos" : d < 0 ? "neg" : "zero" };
+    }
     box.appendChild(slotButton(c, i, {
       swapsel: state.swapSel === i,
-      dip: !!dips[i],
+      dip: !!dips[i], preview: pv,
       onClick: clickable ? function(){
         if (state.swapSel < 0){ state.swapSel = i; }
         else if (state.swapSel === i){ state.swapSel = -1; }

@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="試作ゲームラボ">
+<meta property="og:title" content="ボドゲショップ物語｜試作ゲームラボ">
+<meta property="og:description" content="みんなで1つのボドゲショップを経営する協力デッキ構築。役割ごとにデッキが違い、市場デッキがお金と残り時間を兼ねる。">
+<meta property="og:url" content="https://game-lab-oj9t.onrender.com/bodoge-shop-story/">
+<meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <title>ボドゲショップ物語</title>
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2rem; }
+    </style>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f3eddc;
+        --bg-deep: #e9dfc6;
+        --surface: #fffdf4;
+        --surface-2: #f6efdb;
+        --ink: #2c2115;
+        --ink-2: #6f5f45;
+        --line: #d8c9a4;
+        --line-strong: #b9a678;
+        --accent: #1e6b41;
+        --accent-strong: #155231;
+        --accent-soft: #dcead9;
+        --gold: #b97e14;
+        --gold-soft: #f3e3ba;
+        --red: #b03a26;
+        --red-soft: #f6dcd2;
+        --teal: #1d6a80;
+        --teal-soft: #d5e7ec;
+        --gray-soft: #e7dfca;
+        --shadow: 0 2px 6px rgba(74, 54, 16, 0.14);
+        --shadow-lg: 0 10px 30px rgba(50, 36, 8, 0.28);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #191b15;
+          --bg-deep: #101208;
+          --surface: #24261d;
+          --surface-2: #2c2e23;
+          --ink: #f1ead6;
+          --ink-2: #b3a888;
+          --line: #4a4634;
+          --line-strong: #6b644a;
+          --accent: #4cb377;
+          --accent-strong: #63c78d;
+          --accent-soft: #26382a;
+          --gold: #d9a83f;
+          --gold-soft: #3d3319;
+          --red: #e07a5f;
+          --red-soft: #43291f;
+          --teal: #5fb0c4;
+          --teal-soft: #1e3238;
+          --gray-soft: #33321f;
+          --shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+          --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.55);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+      main { max-width: 880px; margin: 0 auto; padding: 10px 12px 40px; }
+
+      /* ---------- status bar ---------- */
+      .status {
+        position: sticky; top: 0; z-index: 20;
+        background: var(--bg);
+        padding: 8px 0 10px;
+        border-bottom: 2px solid var(--line-strong);
+      }
+      .status-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 8px 14px; }
+      .stat-label { font-size: 12px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.04em; display: flex; justify-content: space-between; align-items: baseline; }
+      .stat-value { font-size: 20px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+      .stat-value small { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+      .bar { height: 9px; border-radius: 99px; background: var(--gray-soft); overflow: hidden; margin-top: 3px; border: 1px solid var(--line); }
+      .bar > div { height: 100%; transition: width 0.35s ease; }
+      .bar-deck > div { background: var(--teal); }
+      .bar-rep > div { background: var(--gold); }
+      .bar.low > div { background: var(--red); }
+      .status-sub { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+      .cpu-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 12px; font-weight: 700;
+        padding: 3px 9px; border-radius: 99px;
+        border: 1px solid var(--line-strong); background: var(--surface);
+      }
+      .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+      @media (prefers-reduced-motion: reduce) { .chip .dot { animation: none; } .bar > div { transition: none; } }
+
+      .hint {
+        margin-top: 10px; padding: 9px 12px;
+        background: var(--accent-soft); border: 1px solid var(--accent);
+        border-radius: 10px; font-size: 13.5px; font-weight: 600;
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      }
+      .hint.warn { background: var(--red-soft); border-color: var(--red); }
+      .hint button {
+        margin-left: auto; border: 1px solid var(--line-strong); background: var(--surface);
+        color: var(--ink); border-radius: 8px; padding: 4px 12px; font-weight: 700; cursor: pointer; min-height: 36px;
+      }
+
+      /* ---------- sections ---------- */
+      section { margin-top: 20px; }
+      h2 {
+        font-size: 16px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 8px;
+      }
+      h2 .count { font-size: 12.5px; color: var(--ink-2); font-weight: 700; }
+      .section-note { font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
+      .empty-note {
+        border: 1.5px dashed var(--line-strong); border-radius: 12px;
+        padding: 14px; text-align: center; color: var(--ink-2); font-size: 13.5px; font-weight: 600;
+        background: var(--surface-2);
+      }
+
+      /* ---------- cards (shared) ---------- */
+      .card {
+        background: var(--surface); border: 1.5px solid var(--line-strong);
+        border-radius: 12px; box-shadow: var(--shadow);
+        padding: 9px 10px; display: flex; flex-direction: column; gap: 4px;
+        text-align: left; width: 100%;
+      }
+      .card .cname { font-weight: 800; font-size: 14.5px; line-height: 1.3; }
+      .card .ctext { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; flex: 1; }
+      .tag {
+        display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.03em;
+        padding: 1px 7px; border-radius: 99px; align-self: flex-start;
+      }
+      .tag-service { background: var(--accent-soft); color: var(--accent-strong); border: 1px solid var(--accent); }
+      .tag-manager { background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold); }
+      .tag-buyer { background: var(--teal-soft); color: var(--teal); border: 1px solid var(--teal); }
+      .tag-common { background: var(--gray-soft); color: var(--ink-2); border: 1px solid var(--line-strong); }
+      .tag-event { background: var(--red-soft); color: var(--red); border: 1px solid var(--red); }
+
+      /* ---------- market ---------- */
+      .market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .market-card { min-height: 168px; }
+      .market-card.targetable { outline: 3px solid var(--gold); outline-offset: 1px; cursor: pointer; }
+      .price-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 2px; }
+      .price { font-weight: 800; font-size: 13px; }
+      .price .off { color: var(--red); font-size: 11.5px; }
+      .buy-btn {
+        border: none; border-radius: 9px; cursor: pointer;
+        background: var(--accent); color: #fff; font-weight: 800; font-size: 13.5px;
+        padding: 7px 14px; min-height: 38px; white-space: nowrap;
+      }
+      .buy-btn:disabled { background: var(--gray-soft); color: var(--ink-2); cursor: not-allowed; }
+      .slot-empty {
+        border: 1.5px dashed var(--line-strong); border-radius: 12px; min-height: 168px;
+        display: flex; align-items: center; justify-content: center; color: var(--ink-2);
+        font-size: 13px; font-weight: 700; background: var(--surface-2); text-align: center; padding: 8px;
+      }
+
+      /* ---------- events ---------- */
+      .event-list { display: flex; flex-direction: column; gap: 8px; }
+      .event-card {
+        background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: 12px;
+        box-shadow: var(--shadow); padding: 10px 12px; cursor: pointer; width: 100%; text-align: left;
+        display: block; color: var(--ink); font: inherit;
+      }
+      .event-card.selected { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 0; }
+      .event-card.claim { border-color: var(--red); background: linear-gradient(0deg, var(--red-soft), var(--red-soft)) , var(--surface); }
+      .event-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .event-head .ename { font-weight: 800; font-size: 15px; }
+      .event-head .reward { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--gold); white-space: nowrap; }
+      .event-progress { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
+      .event-progress .bar { flex: 1; margin-top: 0; height: 11px; }
+      .event-progress .bar > div { background: var(--accent); }
+      .event-progress .pnum { font-weight: 800; font-size: 14px; white-space: nowrap; }
+      .event-detail { display: block; font-size: 12px; color: var(--ink-2); margin-top: 5px; font-weight: 600; }
+      .claim-note { color: var(--red); font-weight: 800; }
+
+      /* ---------- hand ---------- */
+      .hand-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      @media (min-width: 640px) { .hand-grid { grid-template-columns: repeat(4, 1fr); } }
+      button.hand-card { cursor: pointer; font: inherit; color: var(--ink); min-height: 118px; }
+      button.hand-card:hover { border-color: var(--accent); }
+      button.hand-card .play-hint { font-size: 11px; font-weight: 800; color: var(--accent-strong); }
+      .hand-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+      .draw-btn {
+        flex: 1; border: none; border-radius: 10px; cursor: pointer; min-height: 46px;
+        background: var(--accent); color: #fff; font-weight: 800; font-size: 15px; padding: 10px;
+      }
+      .draw-btn:disabled { background: var(--gray-soft); color: var(--ink-2); cursor: not-allowed; }
+      .deck-info { font-size: 13px; color: var(--ink-2); font-weight: 700; align-self: center; }
+
+      /* ---------- log ---------- */
+      .log {
+        background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px;
+        padding: 10px 12px; max-height: 220px; overflow-y: auto;
+        font-size: 13px; display: flex; flex-direction: column; gap: 4px;
+      }
+      .log p { margin: 0; }
+      .log .l-cpu { color: var(--teal); font-weight: 600; }
+      .log .l-good { color: var(--accent-strong); font-weight: 700; }
+      .log .l-bad { color: var(--red); font-weight: 700; }
+      .log .l-dim { color: var(--ink-2); }
+
+      details.rules { margin-top: 22px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 4px 14px 10px; }
+      details.rules summary { cursor: pointer; font-weight: 800; padding: 10px 0; min-height: 44px; display: flex; align-items: center; }
+      details.rules p, details.rules li { font-size: 13.5px; }
+      details.rules ul { padding-left: 20px; margin: 6px 0; }
+
+      .footer-actions { margin-top: 22px; text-align: center; }
+      .ghost-btn {
+        border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink-2);
+        border-radius: 9px; padding: 8px 18px; font-weight: 700; cursor: pointer; min-height: 40px;
+      }
+
+      /* ---------- overlays ---------- */
+      [hidden] { display: none !important; }
+      .overlay {
+        position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+        background: rgba(24, 18, 6, 0.55); display: flex; align-items: flex-start; justify-content: center;
+        padding: 18px 12px;
+      }
+      .sheet {
+        background: var(--bg); color: var(--ink); border-radius: 16px; box-shadow: var(--shadow-lg);
+        max-width: 640px; width: 100%; padding: 22px 18px 26px; margin: auto 0;
+        border: 2px solid var(--line-strong);
+      }
+      .sheet h1 { font-size: 24px; margin: 0 0 6px; line-height: 1.3; }
+      .sheet .lead { color: var(--ink-2); font-size: 14px; margin: 0 0 16px; }
+      .role-pick { display: flex; flex-direction: column; gap: 10px; }
+      .role-btn {
+        text-align: left; cursor: pointer; font: inherit; color: var(--ink);
+        background: var(--surface); border: 2px solid var(--line-strong); border-radius: 14px;
+        padding: 14px; display: block; width: 100%;
+      }
+      .role-btn:hover { border-color: var(--accent); }
+      .role-btn .rname { font-size: 17px; font-weight: 800; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .role-btn .rdesc { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+      .role-btn .rdeck { font-size: 12px; color: var(--ink-2); margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 6px; }
+      .result-big { font-size: 30px; font-weight: 900; text-align: center; margin: 8px 0 4px; }
+      .result-sub { text-align: center; color: var(--ink-2); font-weight: 700; margin: 0 0 14px; }
+      .result-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 20px; }
+      .result-stats div { background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; }
+      .result-stats b { display: block; font-size: 20px; }
+      .result-stats span { font-size: 12px; color: var(--ink-2); font-weight: 700; }
+      .primary-btn {
+        display: block; width: 100%; border: none; border-radius: 11px; cursor: pointer;
+        background: var(--accent); color: #fff; font-weight: 800; font-size: 16px; padding: 13px; min-height: 50px;
+      }
+      .peek-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 6px; }
+      .peek-grid .card { cursor: pointer; min-height: 140px; }
+      .peek-grid .card:hover { border-color: var(--gold); }
+      @media (max-width: 480px) {
+        .market-grid { gap: 6px; }
+        .market-card { min-height: 176px; padding: 7px 7px; }
+        .market-card .cname { font-size: 13px; }
+        .market-card .ctext { font-size: 11.5px; }
+        .buy-btn { padding: 7px 8px; font-size: 12px; }
+        .peek-grid { grid-template-columns: 1fr; }
+        .peek-grid .card { min-height: 0; }
+      }
+    </style>
+  </head>
+  <body>
+<style>.back-link{display:inline-block;margin:10px 12px 0;font-size:13px;color:#1e6b41;text-decoration:none;font-weight:700}</style>
+<a class="back-link" href="../">← 試作ゲームラボに戻る</a>
+    <main id="app" hidden>
+      <!-- status -->
+      <div class="status">
+        <div class="status-grid">
+          <div>
+            <div class="stat-label"><span>市場デッキ（お金＝残り時間）</span><span class="stat-value" id="st-deck">45<small> 枚</small></span></div>
+            <div class="bar bar-deck" id="bar-deck"><div style="width:100%"></div></div>
+          </div>
+          <div>
+            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 30</small></span></div>
+            <div class="bar bar-rep" id="bar-rep"><div style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="status-sub">
+          <span id="st-discard">共通の捨て札：0枚</span>
+          <span id="st-mydeck">自分の山札：0枚／捨て札：0枚</span>
+          <span id="st-perm"></span>
+        </div>
+        <div class="cpu-chips" id="cpu-chips"></div>
+        <div class="hint" id="hint" hidden></div>
+      </div>
+
+      <!-- events -->
+      <section>
+        <h2>イベント置き場 <span class="count" id="ev-count"></span></h2>
+        <p class="section-note">イベントをタップして選び、手札のパワーカードを置いていきます。合計が必要パワー以上で処理完了です。</p>
+        <div class="event-list" id="events"></div>
+      </section>
+
+      <!-- market -->
+      <section>
+        <h2>市場（問屋カタログ）</h2>
+        <p class="section-note">買うときは、価格のぶんだけ市場デッキの上から捨てて支払います。買ったカードは自分の捨て札に入ります。役割専用カードは、その役割の人だけが買えます。</p>
+        <div class="market-grid" id="market"></div>
+      </section>
+
+      <!-- hand -->
+      <section>
+        <h2>あなたの手札 <span class="count" id="hand-count"></span></h2>
+        <div class="hand-grid" id="hand"></div>
+        <div class="hand-actions">
+          <button class="draw-btn" id="draw-btn" type="button">手札を4枚まで引く</button>
+          <span class="deck-info" id="deck-info"></span>
+        </div>
+      </section>
+
+      <!-- log -->
+      <section>
+        <h2>店内の様子（ログ）</h2>
+        <div class="log" id="log"></div>
+      </section>
+
+      <details class="rules">
+        <summary>遊び方・ルール</summary>
+        <p>3人チームで1つのボードゲームショップを経営する協力ゲームです。あなたが1つの役割を担当し、残り2つの役割はCPU仲間が自動で動きます。</p>
+        <ul>
+          <li><b>市場デッキ（45枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
+          <li><b>勝敗</b>：閉店までに評判30以上で勝ち。評判が30に届いた時点で即クリアです。</li>
+          <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
+          <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
+          <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
+          <li><b>CPU仲間</b>：接客はイベントにパワーを置き、店長は収入や支援、仕入れは市場の入れ替えや安いカードの購入（あなたの捨て札に入ります）を自動で行います。</li>
+        </ul>
+      </details>
+
+      <div class="footer-actions">
+        <button class="ghost-btn" id="restart-btn" type="button">タイトルに戻る</button>
+      </div>
+    </main>
+
+    <!-- title / role select -->
+    <div class="overlay" id="title-overlay">
+      <div class="sheet">
+        <h1>ボドゲショップ物語（試作）</h1>
+        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判30を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
+        <div class="role-pick" id="role-pick"></div>
+      </div>
+    </div>
+
+    <!-- result -->
+    <div class="overlay" id="result-overlay" hidden>
+      <div class="sheet">
+        <div class="result-big" id="result-title">クリア！</div>
+        <p class="result-sub" id="result-sub"></p>
+        <div class="result-stats" id="result-stats"></div>
+        <button class="primary-btn" id="again-btn" type="button">もう一度遊ぶ（役割を選び直す）</button>
+      </div>
+    </div>
+
+    <!-- peek (掘り出し物) -->
+    <div class="overlay" id="peek-overlay" hidden>
+      <div class="sheet">
+        <h1 style="font-size:20px">掘り出し物</h1>
+        <p class="lead">市場デッキの上3枚です。市場へ出す1枚を選んでください（残りは山札の下へ戻ります）。</p>
+        <div class="peek-grid" id="peek-grid"></div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      /* ================= definitions ================= */
+      var ROLE_INFO = {
+        service: { name: "接客担当", tag: "tag-service", desc: "イベント処理が得意。パワーの高い接客カードでイベントをどんどん片づけます。" },
+        manager: { name: "店長", tag: "tag-manager", desc: "支援と資金繰りが得意。捨て札からカードを市場デッキへ戻して、店の寿命を延ばします。" },
+        buyer:   { name: "仕入れ担当", tag: "tag-buyer", desc: "購入と市場の入れ替えが得意。値引きと目利きで、欲しいカードを回します。" }
+      };
+
+      var BASIC_DECKS = {
+        service: [
+          { name: "笑顔の接客", type: "power", power: 1, text: "パワー1", n: 5 },
+          { name: "おすすめ紹介", type: "power", power: 2, text: "パワー2", n: 3 },
+          { name: "常連さん対応", type: "power", power: 1, draw: 1, text: "パワー1＋1枚引く", n: 2 }
+        ],
+        manager: [
+          { name: "声かけ", type: "power", power: 1, text: "パワー1", n: 4 },
+          { name: "シフト調整", type: "power", power: 1, boost: true, text: "パワー1。すでにパワーが置かれているイベントなら、さらに+1", n: 3 },
+          { name: "資金繰り", type: "action", act: "income", amount: 2, text: "共通の捨て札から2枚を市場デッキの下へ戻す", n: 3 }
+        ],
+        buyer: [
+          { name: "問屋まわり", type: "power", power: 1, text: "パワー1", n: 4 },
+          { name: "値引き交渉", type: "action", act: "negotiate", text: "次の自分の購入が2安い", n: 3 },
+          { name: "目利き", type: "action", act: "swap", amount: 1, text: "市場の1枚を入れ替える（捨てて、新しくめくる）", n: 3 }
+        ]
+      };
+
+      var MARKET_CARDS = [
+        { name: "名物店員", role: "service", price: 4, type: "power", power: 3, text: "パワー3" },
+        { name: "レジの達人", role: "service", price: 3, type: "power", power: 2, incomeOnPlay: 1, text: "パワー2＋収入1枚（捨て札から1枚を山札の下へ）" },
+        { name: "大会の司会", role: "service", price: 5, type: "power", power: 1, host: true, text: "パワー1＋置いたイベントの評判+1" },
+        { name: "試遊の案内", role: "service", price: 4, type: "power", power: 2, draw: 1, text: "パワー2＋1枚引く" },
+        { name: "大入り", role: "manager", price: 2, type: "action", act: "income", amount: 5, text: "共通の捨て札から5枚を市場デッキの下へ戻す" },
+        { name: "臨時スタッフ手配", role: "manager", price: 3, type: "power", power: 2, text: "パワー2（支援）" },
+        { name: "口コミの力", role: "manager", price: 5, type: "action", act: "rep", amount: 2, text: "評判+2（すぐ）" },
+        { name: "棚卸しの達人", role: "manager", price: 3, type: "action", act: "refresh", draw: 1, text: "市場を全部入れ替え＋1枚引く" },
+        { name: "問屋との太いパイプ", role: "buyer", price: 5, type: "perm", act: "pipe", text: "自分の購入がずっと1安い（重ねがけ可）" },
+        { name: "大量仕入れ", role: "buyer", price: 4, type: "action", act: "bulk", text: "次の自分の購入2回が、それぞれ2安い" },
+        { name: "掘り出し物", role: "buyer", price: 3, type: "action", act: "find", text: "市場デッキの上3枚から1枚を市場へ出す" },
+        { name: "問屋の新担当", role: "buyer", price: 2, type: "power", power: 1, swapAfter: 1, text: "パワー1＋市場の1枚を入れ替える" },
+        { name: "やる気スイッチ", role: null, price: 2, type: "power", power: 2, text: "パワー2" },
+        { name: "臨時スタッフ", role: null, price: 3, type: "power", power: 2, draw: 1, text: "パワー2＋1枚引く" },
+        { name: "ベテランバイト", role: null, price: 4, type: "power", power: 3, text: "パワー3" },
+        { name: "集中力", role: null, price: 3, type: "power", power: 1, draw: 2, text: "パワー1＋2枚引く" }
+      ];
+
+      var EVENT_DEFS = [
+        { name: "大口注文", need: 5, rep: 4, income: 2 },
+        { name: "大会を開きたい", need: 7, rep: 6, income: 3 },
+        { name: "新作の予約殺到", need: 6, rep: 4, income: 2 },
+        { name: "人気配信者が来店", need: 4, rep: 4, income: 0 },
+        { name: "新聞の取材", need: 5, rep: 5, income: 0 },
+        { name: "レジ故障", need: 3, rep: 0, income: 4 },
+        { name: "クレーム対応", need: 3, rep: 1, income: 0, claim: true },
+        { name: "棚が崩れた", need: 2, rep: 1, income: 1 },
+        { name: "常連さんの誕生日会", need: 4, rep: 3, income: 1 },
+        { name: "在庫チェック", need: 4, rep: 2, income: 2 }
+      ];
+
+      var DECK_SIZE = 45, TARGET = 30, EVENT_COUNT = 11;
+
+      /* ================= state ================= */
+      var S = null;
+      var cpuTimers = {};
+
+      function shuffle(a) {
+        for (var i = a.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+        return a;
+      }
+      function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+      function buildMarketDeck() {
+        var deck = [];
+        var i, def;
+        // events: 11 cards, guarantee at least one claim
+        var claimDef = EVENT_DEFS.filter(function (e) { return e.claim; })[0];
+        deck.push({ kind: "event", def: claimDef });
+        for (i = 1; i < EVENT_COUNT; i++) deck.push({ kind: "event", def: pick(EVENT_DEFS) });
+        for (i = 0; i < DECK_SIZE - EVENT_COUNT; i++) {
+          def = pick(MARKET_CARDS);
+          deck.push({ kind: "card", def: def });
+        }
+        return shuffle(deck);
+      }
+
+      function newGame(role) {
+        stopCpu();
+        S = {
+          phase: "playing",
+          role: role,
+          marketDeck: buildMarketDeck(),   // top = end of array
+          commonDiscard: [],
+          market: [null, null, null],
+          events: [],
+          playerDeck: [],
+          playerHand: [],
+          playerDiscard: [],
+          permanents: [],
+          rep: 0,
+          selectedEvent: -1,
+          pipeCount: 0,
+          negotiateNext: false,
+          bulkCount: 0,
+          pendingSwaps: 0,
+          findPick: null,
+          peek: null,
+          log: [],
+          stats: { bought: 0, eventsDone: 0, incomeTotal: 0, spentTotal: 0 }
+        };
+        BASIC_DECKS[role].forEach(function (d) {
+          for (var i = 0; i < d.n; i++) {
+            var clone = {}; for (var k in d) clone[k] = d[k];
+            clone.role = role;
+            S.playerDeck.push(clone);
+          }
+        });
+        shuffle(S.playerDeck);
+        refillMarket();
+        drawUpTo(4);
+        logMsg("開店しました。あなたは「" + ROLE_INFO[role].name + "」、仲間は " +
+          Object.keys(ROLE_INFO).filter(function (r) { return r !== role; })
+            .map(function (r) { return ROLE_INFO[r].name + "（CPU）"; }).join("と") + " です。", "good");
+        logMsg("市場デッキ45枚が店のお金＝残り時間です。評判" + TARGET + "を目指しましょう。", "");
+        startCpu();
+        render();
+      }
+
+      /* ================= log ================= */
+      function logMsg(text, cls) {
+        if (!S) return;
+        S.log.unshift({ text: text, cls: cls || "" });
+        if (S.log.length > 40) S.log.length = 40;
+      }
+
+      /* ================= core mechanics ================= */
+      // Income: move n cards from common discard to the bottom of the market deck.
+      function income(n, who) {
+        var moved = 0;
+        var back = [];
+        for (var i = 0; i < n && S.commonDiscard.length > 0; i++) {
+          var idx = Math.floor(Math.random() * S.commonDiscard.length);
+          back.push(S.commonDiscard.splice(idx, 1)[0]);
+          moved++;
+        }
+        if (moved > 0) {
+          S.marketDeck = back.concat(S.marketDeck); // bottom = start of array
+          S.stats.incomeTotal += moved;
+          logMsg((who || "収入") + "：捨て札から" + moved + "枚を市場デッキの下へ戻しました（残り" + S.marketDeck.length + "枚）。", "good");
+        }
+        return moved;
+      }
+
+      function payFromDeck(n) {
+        var paid = 0;
+        while (paid < n && S.marketDeck.length > 0) {
+          S.commonDiscard.push(S.marketDeck.pop());
+          paid++;
+        }
+        S.stats.spentTotal += paid;
+        return paid;
+      }
+
+      function addEvent(def) {
+        // claim penalty: an unresolved claim already on the field burns 1 extra card
+        var hasClaim = S.events.some(function (e) { return e.def.claim; });
+        S.events.push({ def: def, playerPower: 0, cpuPower: 0, playerCards: [], hostBonus: 0 });
+        logMsg("イベント「" + def.name + "」が発生（必要パワー" + def.need + "）。", def.claim ? "bad" : "");
+        if (hasClaim && S.marketDeck.length > 0) {
+          S.commonDiscard.push(S.marketDeck.pop());
+          logMsg("クレーム放置ペナルティ：市場デッキから追加で1枚捨てました。", "bad");
+        }
+        if (S.selectedEvent < 0) S.selectedEvent = S.events.length - 1;
+      }
+
+      function refillSlot(i) {
+        while (S.market[i] === null && S.marketDeck.length > 0) {
+          var c = S.marketDeck.pop();
+          if (c.kind === "event") { addEvent(c.def); }
+          else { S.market[i] = c.def; }
+        }
+      }
+      function refillMarket() { for (var i = 0; i < 3; i++) refillSlot(i); }
+
+      function eventTotal(ev) { return ev.playerPower + ev.cpuPower; }
+
+      function checkEventComplete(ev) {
+        if (eventTotal(ev) < ev.def.need) return false;
+        var idx = S.events.indexOf(ev);
+        if (idx < 0) return false;
+        S.events.splice(idx, 1);
+        var gained = ev.def.rep + ev.hostBonus;
+        S.rep += gained;
+        ev.playerCards.forEach(function (c) { S.playerDiscard.push(c); });
+        S.stats.eventsDone++;
+        logMsg("イベント「" + ev.def.name + "」を処理しました！ 評判+" + gained +
+          (ev.hostBonus ? "（司会ボーナス含む）" : "") + "（評判 " + S.rep + "/" + TARGET + "）", "good");
+        if (ev.def.income > 0) income(ev.def.income, "「" + ev.def.name + "」の収入");
+        if (S.selectedEvent >= S.events.length) S.selectedEvent = S.events.length - 1;
+        return true;
+      }
+
+      function drawCards(n) {
+        for (var i = 0; i < n; i++) {
+          if (S.playerDeck.length === 0) {
+            if (S.playerDiscard.length === 0) return;
+            S.playerDeck = shuffle(S.playerDiscard);
+            S.playerDiscard = [];
+            logMsg("自分の捨て札をシャッフルして山札にしました。", "dim");
+          }
+          S.playerHand.push(S.playerDeck.pop());
+        }
+      }
+      function drawUpTo(n) { while (S.playerHand.length < n) { var before = S.playerHand.length; drawCards(1); if (S.playerHand.length === before) break; } }
+
+      function effectivePrice(def) {
+        var p = def.price - S.pipeCount;
+        if (S.negotiateNext) p -= 2;
+        if (S.bulkCount > 0) p -= 2;
+        return Math.max(0, p);
+      }
+
+      function checkEnd() {
+        if (!S || S.phase !== "playing") return;
+        if (S.rep >= TARGET) { gameOver(true); return; }
+        if (S.marketDeck.length === 0) { gameOver(false); }
+      }
+
+      function gameOver(won) {
+        S.phase = "over";
+        stopCpu();
+        render();
+        document.getElementById("result-title").textContent = won ? "クリア！ お店は大繁盛です" : "閉店… あと一歩でした";
+        document.getElementById("result-sub").textContent = won
+          ? "市場デッキが尽きる前に、評判が目標の" + TARGET + "に届きました。"
+          : "市場デッキが尽きて閉店しました。評判は" + S.rep + "/" + TARGET + "でした。";
+        document.getElementById("result-stats").innerHTML =
+          statBox(S.rep + "点", "最終評判") +
+          statBox(S.stats.eventsDone + "件", "処理したイベント") +
+          statBox(S.stats.bought + "枚", "買ったカード") +
+          statBox(S.stats.incomeTotal + "枚", "収入で戻した枚数");
+        document.getElementById("result-overlay").hidden = false;
+      }
+      function statBox(v, l) { return "<div><b>" + v + "</b><span>" + l + "</span></div>"; }
+
+      /* ================= player actions ================= */
+      function selectEvent(i) {
+        if (!S || S.phase !== "playing") return;
+        S.selectedEvent = i;
+        render();
+      }
+
+      function playHandCard(handIdx) {
+        if (!S || S.phase !== "playing" || S.pendingSwaps > 0 || S.findPick) return;
+        var card = S.playerHand[handIdx];
+        if (!card) return;
+
+        if (card.type === "power") {
+          var ev = S.events[S.selectedEvent];
+          if (!ev) { logMsg("先にイベントを選んでください。", "bad"); render(); return; }
+          S.playerHand.splice(handIdx, 1);
+          var before = eventTotal(ev);
+          var add = card.power + (card.boost && before >= 1 ? 1 : 0);
+          ev.playerPower += add;
+          ev.playerCards.push(card);
+          logMsg("「" + ev.def.name + "」に「" + card.name + "」を置きました（パワー+" + add + "、合計 " + eventTotal(ev) + "/" + ev.def.need + "）。", "");
+          if (card.host) { ev.hostBonus += 1; logMsg("「大会の司会」：このイベントの評判が+1されます。", "dim"); }
+          if (card.incomeOnPlay) income(card.incomeOnPlay, "「" + card.name + "」の収入");
+          if (card.draw) drawCards(card.draw);
+          if (card.swapAfter) { S.pendingSwaps += card.swapAfter; }
+          checkEventComplete(ev);
+        } else if (card.type === "perm") {
+          S.playerHand.splice(handIdx, 1);
+          S.permanents.push(card);
+          S.pipeCount += 1;
+          logMsg("「" + card.name + "」が有効になりました。自分の購入がずっと1安くなります（現在 合計-" + S.pipeCount + "）。", "good");
+        } else if (card.type === "action") {
+          if (card.act === "find" && S.marketDeck.length === 0) { logMsg("市場デッキが空です。", "bad"); render(); return; }
+          S.playerHand.splice(handIdx, 1);
+          S.playerDiscard.push(card);
+          applyAction(card);
+        }
+        checkEnd();
+        render();
+      }
+
+      function applyAction(card) {
+        if (card.act === "income") {
+          income(card.amount, "「" + card.name + "」");
+        } else if (card.act === "rep") {
+          S.rep += card.amount;
+          logMsg("「" + card.name + "」：評判+" + card.amount + "（評判 " + S.rep + "/" + TARGET + "）。", "good");
+        } else if (card.act === "negotiate") {
+          S.negotiateNext = true;
+          logMsg("「値引き交渉」：次の自分の購入が2安くなります。", "good");
+        } else if (card.act === "bulk") {
+          S.bulkCount += 2;
+          logMsg("「大量仕入れ」：次の購入2回が、それぞれ2安くなります。", "good");
+        } else if (card.act === "swap") {
+          S.pendingSwaps += card.amount || 1;
+          logMsg("「" + card.name + "」：入れ替える市場のカードをタップしてください。", "good");
+        } else if (card.act === "refresh") {
+          for (var i = 0; i < 3; i++) {
+            if (S.market[i]) { S.commonDiscard.push({ kind: "card", def: S.market[i] }); S.market[i] = null; }
+          }
+          refillMarket();
+          logMsg("「棚卸しの達人」：市場を全部入れ替えました。", "good");
+          if (card.draw) drawCards(card.draw);
+        } else if (card.act === "find") {
+          var n = Math.min(3, S.marketDeck.length);
+          S.peek = [];
+          for (var k = 0; k < n; k++) S.peek.push(S.marketDeck.pop());
+          document.getElementById("peek-overlay").hidden = false;
+        }
+      }
+
+      function findPick(i) {
+        if (!S || !S.peek) return;
+        var chosen = S.peek[i];
+        var rest = S.peek.filter(function (_, j) { return j !== i; });
+        S.peek = null;
+        document.getElementById("peek-overlay").hidden = true;
+        // remaining cards go to the bottom of the deck
+        S.marketDeck = rest.concat(S.marketDeck);
+        if (chosen.kind === "event") {
+          addEvent(chosen.def);
+          logMsg("「掘り出し物」でイベント「" + chosen.def.name + "」が出てきました。", "");
+        } else {
+          S.findPick = chosen.def;
+          logMsg("「" + chosen.def.name + "」を出す市場の場所をタップしてください。", "good");
+        }
+        checkEnd();
+        render();
+      }
+
+      function clickMarketSlot(i) {
+        if (!S || S.phase !== "playing") return;
+        if (S.findPick) {
+          var old = S.market[i];
+          S.market[i] = S.findPick;
+          logMsg("市場に「" + S.findPick.name + "」を出しました。", "good");
+          if (old) S.marketDeck = [{ kind: "card", def: old }].concat(S.marketDeck); // swapped-out card to the bottom
+          S.findPick = null;
+          checkEnd(); render(); return;
+        }
+        if (S.pendingSwaps > 0) {
+          var cur = S.market[i];
+          if (!cur) return;
+          S.commonDiscard.push({ kind: "card", def: cur });
+          S.market[i] = null;
+          S.pendingSwaps--;
+          refillSlot(i);
+          logMsg("市場の「" + cur.name + "」を入れ替えました。", "");
+          checkEnd(); render(); return;
+        }
+      }
+
+      function cancelMode() {
+        if (!S) return;
+        if (S.findPick) {
+          S.marketDeck = [{ kind: "card", def: S.findPick }].concat(S.marketDeck);
+          logMsg("「" + S.findPick.name + "」を山札の下へ戻しました。", "dim");
+          S.findPick = null;
+        }
+        if (S.pendingSwaps > 0) { S.pendingSwaps = 0; logMsg("市場の入れ替えをやめました。", "dim"); }
+        render();
+      }
+
+      function buy(slot) {
+        if (!S || S.phase !== "playing" || S.pendingSwaps > 0 || S.findPick) return;
+        var def = S.market[slot];
+        if (!def) return;
+        if (def.role && def.role !== S.role) {
+          logMsg("「" + def.name + "」は" + ROLE_INFO[def.role].name + "専用です。あなたは買えません。", "bad");
+          render(); return;
+        }
+        var price = effectivePrice(def);
+        if (S.marketDeck.length < price) {
+          logMsg("支払いに必要な枚数が市場デッキに足りません。", "bad");
+          render(); return;
+        }
+        payFromDeck(price);
+        if (S.negotiateNext) S.negotiateNext = false;
+        if (S.bulkCount > 0) S.bulkCount--;
+        S.market[slot] = null;
+        S.playerDiscard.push(def);
+        S.stats.bought++;
+        logMsg("「" + def.name + "」を価格" + price + "で買いました（市場デッキから" + price + "枚支払い、残り" + S.marketDeck.length + "枚）。自分の捨て札に入ります。", "good");
+        refillSlot(slot);
+        checkEnd();
+        render();
+      }
+
+      function drawAction() {
+        if (!S || S.phase !== "playing") return;
+        drawUpTo(4);
+        render();
+      }
+
+      /* ================= CPU teammates ================= */
+      function startCpu() {
+        Object.keys(ROLE_INFO).forEach(function (r) {
+          if (r === S.role) return;
+          var base = r === "service" ? 5500 : r === "manager" ? 8500 : 11000;
+          var tick = function () {
+            if (!S || S.phase !== "playing") return;
+            cpuAct(r);
+            if (S && S.phase === "playing") {
+              checkEnd();
+              render();
+            }
+            cpuTimers[r] = setTimeout(tick, base * (0.75 + Math.random() * 0.6));
+          };
+          cpuTimers[r] = setTimeout(tick, base * (0.8 + Math.random() * 0.5));
+        });
+      }
+      function stopCpu() {
+        Object.keys(cpuTimers).forEach(function (k) { clearTimeout(cpuTimers[k]); });
+        cpuTimers = {};
+      }
+
+      function cpuAct(role) {
+        if (role === "service") {
+          if (S.events.length === 0) return;
+          var ev = S.events.slice().sort(function (a, b) {
+            return (a.def.need - eventTotal(a)) - (b.def.need - eventTotal(b));
+          })[0];
+          var p = Math.random() < 0.45 ? 2 : 1;
+          ev.cpuPower += p;
+          logMsg("仲間（接客）が「" + ev.def.name + "」にパワー+" + p + "（合計 " + eventTotal(ev) + "/" + ev.def.need + "）。", "cpu");
+          checkEventComplete(ev);
+        } else if (role === "manager") {
+          if (S.commonDiscard.length >= 2 && S.marketDeck.length <= 32) {
+            income(2, "仲間（店長）の資金繰り");
+          } else if (S.events.length > 0) {
+            var ev2 = pick(S.events);
+            ev2.cpuPower += 1;
+            logMsg("仲間（店長）の支援で「" + ev2.def.name + "」にパワー+1（合計 " + eventTotal(ev2) + "/" + ev2.def.need + "）。", "cpu");
+            checkEventComplete(ev2);
+          } else if (S.commonDiscard.length >= 2) {
+            income(2, "仲間（店長）の資金繰り");
+          }
+        } else if (role === "buyer") {
+          // try to buy a cheap usable card for the player; otherwise swap the market
+          var candidates = [];
+          S.market.forEach(function (def, i) {
+            if (def && (!def.role || def.role === S.role) && def.price <= 3 && S.marketDeck.length > def.price + 8) {
+              candidates.push({ def: def, slot: i });
+            }
+          });
+          if (candidates.length > 0 && Math.random() < 0.6) {
+            candidates.sort(function (a, b) { return a.def.price - b.def.price; });
+            var c = candidates[0];
+            payFromDeck(c.def.price);
+            S.market[c.slot] = null;
+            S.playerDiscard.push(c.def);
+            logMsg("仲間（仕入れ）が「" + c.def.name + "」を価格" + c.def.price + "で買って、あなたの捨て札に入れました。", "cpu");
+            refillSlot(c.slot);
+          } else {
+            var slots = [0, 1, 2].filter(function (i) { return S.market[i]; });
+            if (slots.length === 0) return;
+            var s = pick(slots);
+            var old = S.market[s];
+            S.commonDiscard.push({ kind: "card", def: old });
+            S.market[s] = null;
+            refillSlot(s);
+            logMsg("仲間（仕入れ）が市場の「" + old.name + "」を入れ替えました。", "cpu");
+          }
+        }
+      }
+
+      /* ================= rendering ================= */
+      function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+      function roleTag(role) {
+        if (!role) return '<span class="tag tag-common">共通</span>';
+        return '<span class="tag ' + ROLE_INFO[role].tag + '">' + ROLE_INFO[role].name + "専用</span>";
+      }
+      function rewardText(def) {
+        var parts = [];
+        if (def.rep > 0) parts.push("評判+" + def.rep);
+        if (def.income > 0) parts.push("収入" + def.income + "枚");
+        return parts.length ? parts.join("／") : "報酬なし";
+      }
+
+      function render() {
+        if (!S) return;
+        document.getElementById("app").hidden = false;
+        document.getElementById("title-overlay").hidden = true;
+        if (S.phase !== "over") document.getElementById("result-overlay").hidden = true;
+
+        // status
+        document.getElementById("st-deck").innerHTML = S.marketDeck.length + "<small> 枚</small>";
+        document.getElementById("st-rep").innerHTML = S.rep + "<small> / " + TARGET + "</small>";
+        var deckBar = document.getElementById("bar-deck");
+        deckBar.firstElementChild.style.width = (S.marketDeck.length / DECK_SIZE * 100) + "%";
+        deckBar.classList.toggle("low", S.marketDeck.length <= 10);
+        document.getElementById("bar-rep").firstElementChild.style.width = Math.min(100, S.rep / TARGET * 100) + "%";
+        document.getElementById("st-discard").textContent = "共通の捨て札：" + S.commonDiscard.length + "枚";
+        document.getElementById("st-mydeck").textContent = "自分の山札：" + S.playerDeck.length + "枚／捨て札：" + S.playerDiscard.length + "枚";
+        var permBits = [];
+        if (S.pipeCount > 0) permBits.push("購入ずっと-" + S.pipeCount);
+        if (S.negotiateNext) permBits.push("次の購入-2");
+        if (S.bulkCount > 0) permBits.push("購入-" + "2（あと" + S.bulkCount + "回）");
+        document.getElementById("st-perm").textContent = permBits.length ? "割引：" + permBits.join("、") : "";
+
+        // cpu chips
+        document.getElementById("cpu-chips").innerHTML =
+          '<span class="chip">あなた：' + ROLE_INFO[S.role].name + "</span>" +
+          Object.keys(ROLE_INFO).filter(function (r) { return r !== S.role; })
+            .map(function (r) { return '<span class="chip"><span class="dot"></span>CPU：' + ROLE_INFO[r].name + "</span>"; }).join("");
+
+        // hint
+        var hint = document.getElementById("hint");
+        var hintText = "", hintWarn = false, showCancel = false;
+        if (S.phase === "playing") {
+          if (S.findPick) { hintText = "「" + S.findPick.name + "」を出す市場の場所をタップしてください。"; showCancel = true; }
+          else if (S.pendingSwaps > 0) { hintText = "入れ替える市場のカードをタップしてください（あと" + S.pendingSwaps + "回）。"; showCancel = true; }
+          else if (S.events.length === 0) hintText = "イベントはまだ来ていません。市場でカードを買って備えましょう。市場の入れ替えや購入でもイベントが出てくることがあります。";
+          else if (S.selectedEvent < 0 || !S.events[S.selectedEvent]) hintText = "イベントをタップして選び、手札のパワーカードを置きましょう。";
+          else hintText = "「" + S.events[S.selectedEvent].def.name + "」にパワーカードを置けます（あと" + Math.max(0, S.events[S.selectedEvent].def.need - eventTotal(S.events[S.selectedEvent])) + "）。";
+          if (S.events.some(function (e) { return e.def.claim; })) { hintText += " クレーム対応が未処理です。新しいイベントが出るたびに追加で1枚捨てられます。"; hintWarn = true; }
+        }
+        hint.hidden = !hintText;
+        hint.className = "hint" + (hintWarn ? " warn" : "");
+        hint.innerHTML = esc(hintText) + (showCancel ? '<button type="button" id="hint-cancel">やめる</button>' : "");
+        if (showCancel) document.getElementById("hint-cancel").addEventListener("click", cancelMode);
+
+        // events
+        document.getElementById("ev-count").textContent = S.events.length ? S.events.length + "件 対応中" : "";
+        var evHtml = "";
+        if (S.events.length === 0) {
+          evHtml = '<div class="empty-note">いま対応中のイベントはありません</div>';
+        } else {
+          S.events.forEach(function (ev, i) {
+            var total = eventTotal(ev);
+            var pct = Math.min(100, total / ev.def.need * 100);
+            var detail = [];
+            if (ev.playerPower > 0) detail.push("あなたのカード " + ev.playerPower);
+            if (ev.cpuPower > 0) detail.push("仲間 " + ev.cpuPower);
+            if (ev.hostBonus > 0) detail.push("評判ボーナス +" + ev.hostBonus);
+            evHtml += '<button type="button" class="event-card' + (i === S.selectedEvent ? " selected" : "") + (ev.def.claim ? " claim" : "") + '" data-ev="' + i + '">' +
+              '<span class="event-head"><span class="ename">' + esc(ev.def.name) + '</span>' +
+              (ev.def.claim ? '<span class="tag tag-event">クレーム</span>' : '<span class="tag tag-event">イベント</span>') +
+              '<span class="reward">' + rewardText(ev.def) + '</span></span>' +
+              '<span class="event-progress"><span class="bar"><div style="width:' + pct + '%"></div></span>' +
+              '<span class="pnum">パワー ' + total + " / " + ev.def.need + "</span></span>" +
+              (detail.length ? '<span class="event-detail">' + esc(detail.join("、")) + "</span>" : "") +
+              (ev.def.claim ? '<span class="event-detail claim-note">放置中：新しいイベントが出るたびに市場デッキから追加で1枚捨てられます</span>' : "") +
+              "</button>";
+          });
+        }
+        document.getElementById("events").innerHTML = evHtml;
+        Array.prototype.forEach.call(document.querySelectorAll("[data-ev]"), function (el) {
+          el.addEventListener("click", function () { selectEvent(parseInt(el.getAttribute("data-ev"), 10)); });
+        });
+
+        // market
+        var targetable = S.pendingSwaps > 0 || !!S.findPick;
+        var mHtml = "";
+        S.market.forEach(function (def, i) {
+          if (!def) { mHtml += '<div class="slot-empty">空き<br>（山札切れ）</div>'; return; }
+          var price = effectivePrice(def);
+          var mine = !def.role || def.role === S.role;
+          var afford = S.marketDeck.length >= price;
+          var off = price < def.price ? ' <span class="off">（-' + (def.price - price) + "）</span>" : "";
+          mHtml += '<div class="card market-card' + (targetable ? " targetable" : "") + '" data-slot="' + i + '">' +
+            roleTag(def.role) +
+            '<span class="cname">' + esc(def.name) + "</span>" +
+            '<span class="ctext">' + esc(def.text) + "</span>" +
+            '<span class="price-row"><span class="price">価格 ' + price + off + "</span>" +
+            '<button type="button" class="buy-btn" data-buy="' + i + '"' + ((!mine || !afford || targetable) ? " disabled" : "") + ">" +
+            (mine ? "買う" : "買えない") + "</button></span></div>";
+        });
+        document.getElementById("market").innerHTML = mHtml;
+        Array.prototype.forEach.call(document.querySelectorAll("[data-buy]"), function (el) {
+          el.addEventListener("click", function (e) { e.stopPropagation(); buy(parseInt(el.getAttribute("data-buy"), 10)); });
+        });
+        Array.prototype.forEach.call(document.querySelectorAll("[data-slot]"), function (el) {
+          el.addEventListener("click", function () { clickMarketSlot(parseInt(el.getAttribute("data-slot"), 10)); });
+        });
+
+        // hand
+        document.getElementById("hand-count").textContent = S.playerHand.length + "枚";
+        var hHtml = "";
+        if (S.playerHand.length === 0) hHtml = '<div class="empty-note" style="grid-column:1/-1">手札がありません。下のボタンで引きましょう</div>';
+        S.playerHand.forEach(function (card, i) {
+          var hintLine = card.type === "power" ? "タップで選んだイベントへ" : card.type === "perm" ? "タップで有効化" : "タップで使う";
+          hHtml += '<button type="button" class="card hand-card" data-hand="' + i + '">' +
+            roleTag(card.role) +
+            '<span class="cname">' + esc(card.name) + "</span>" +
+            '<span class="ctext">' + esc(card.text) + "</span>" +
+            '<span class="play-hint">' + hintLine + "</span></button>";
+        });
+        document.getElementById("hand").innerHTML = hHtml;
+        Array.prototype.forEach.call(document.querySelectorAll("[data-hand]"), function (el) {
+          el.addEventListener("click", function () { playHandCard(parseInt(el.getAttribute("data-hand"), 10)); });
+        });
+        var drawBtn = document.getElementById("draw-btn");
+        drawBtn.disabled = S.playerHand.length >= 4 || (S.playerDeck.length === 0 && S.playerDiscard.length === 0);
+        document.getElementById("deck-info").textContent = "自分の山札 " + S.playerDeck.length + "枚／捨て札 " + S.playerDiscard.length + "枚";
+
+        // peek grid
+        if (S.peek) {
+          document.getElementById("peek-grid").innerHTML = S.peek.map(function (c, i) {
+            if (c.kind === "event") {
+              return '<div class="card" data-peek="' + i + '"><span class="tag tag-event">イベント</span>' +
+                '<span class="cname">' + esc(c.def.name) + "</span>" +
+                '<span class="ctext">必要パワー' + c.def.need + "／" + rewardText(c.def) + "</span></div>";
+            }
+            return '<div class="card" data-peek="' + i + '">' + roleTag(c.def.role) +
+              '<span class="cname">' + esc(c.def.name) + "</span>" +
+              '<span class="ctext">' + esc(c.def.text) + "</span></div>";
+          }).join("");
+          Array.prototype.forEach.call(document.querySelectorAll("[data-peek]"), function (el) {
+            el.addEventListener("click", function () { findPick(parseInt(el.getAttribute("data-peek"), 10)); });
+          });
+        }
+
+        // log
+        document.getElementById("log").innerHTML = S.log.map(function (l) {
+          return '<p class="' + (l.cls ? "l-" + l.cls : "") + '">' + esc(l.text) + "</p>";
+        }).join("");
+      }
+
+      /* ================= wiring ================= */
+      document.getElementById("draw-btn").addEventListener("click", drawAction);
+      document.getElementById("restart-btn").addEventListener("click", function () {
+        stopCpu(); S = null;
+        document.getElementById("app").hidden = true;
+        document.getElementById("result-overlay").hidden = true;
+        document.getElementById("title-overlay").hidden = false;
+      });
+      document.getElementById("again-btn").addEventListener("click", function () {
+        stopCpu(); S = null;
+        document.getElementById("app").hidden = true;
+        document.getElementById("result-overlay").hidden = true;
+        document.getElementById("title-overlay").hidden = false;
+      });
+
+      // role select buttons
+      document.getElementById("role-pick").innerHTML = Object.keys(ROLE_INFO).map(function (r) {
+        var info = ROLE_INFO[r];
+        var deckText = BASIC_DECKS[r].map(function (d) { return d.name + " ×" + d.n; }).join("／");
+        var cpuText = Object.keys(ROLE_INFO).filter(function (x) { return x !== r; })
+          .map(function (x) { return ROLE_INFO[x].name; }).join("・");
+        return '<button type="button" class="role-btn" data-role="' + r + '">' +
+          '<span class="rname">' + info.name + ' <span class="tag ' + info.tag + '">あなた</span></span>' +
+          '<span class="rdesc">' + info.desc + "</span>" +
+          '<span class="rdeck">初期デッキ：' + deckText + "<br>CPU仲間：" + cpuText + "</span></button>";
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll("[data-role]"), function (el) {
+        el.addEventListener("click", function () { newGame(el.getAttribute("data-role")); });
+      });
+    </script>
+  </body>
+</html>

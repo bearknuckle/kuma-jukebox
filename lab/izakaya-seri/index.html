@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="居酒屋せり市｜試作ゲームラボ">
-<meta property="og:description" content="居酒屋のせり市でおつまみを競り落とす。同時に金額を出して、一番高い人がゲット。同点なら流札。同じ種類を3つ集めればセットボーナス、5種類そろえばさらにボーナス。4ラウンド目はハッピーアワーで落札額が半額、最終ラウンドは点数2倍。8ラウンドで勝負。">
+<meta property="og:description" content="居酒屋のせり市でおつまみを競り落とす。同時に金額を出して、一番高い人がゲット。同点なら流札で、次の回に持ち越し（落札者がまとめてもらえる）。同じ種類を3つ集めればセットボーナス、5種類そろえばさらにボーナス。4ラウンド目はハッピーアワーで落札額が半額、最終ラウンドは点数2倍。8ラウンドで勝負。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/izakaya-seri/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -62,6 +62,8 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
 .opp .nm{font-weight:900;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .opp .coins{margin-left:auto;font-weight:900;color:var(--amber2);font-size:15px;white-space:nowrap}
 .opp .pts{font-size:12px;opacity:.9;margin-top:4px}
+.opp .type{font-size:11px;font-weight:900;background:rgba(242,184,75,.2);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.carry{margin:10px auto 0;max-width:420px;background:rgba(0,0,0,.35);border:1.5px dashed var(--amber);border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700}
 .opp .bid{font-size:13px;font-weight:900;margin-top:4px;min-height:19px}
 .opp .bid.win{color:var(--amber2)}
 .opp .dishes{font-size:18px;margin-top:4px;min-height:24px;line-height:1.3}
@@ -118,7 +120,7 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
   <header>
     <h1>🔨 居酒屋せり市</h1>
   </header>
-  <p class="sub">おつまみを競り落とす、せりのゲーム。みんな同時に金額を出して、一番高い人がゲット。同点なら流札！</p>
+  <p class="sub">おつまみを競り落とす、せりのゲーム。みんな同時に金額を出して、一番高い人がゲット。同点なら流札で、次の回に持ち越し！</p>
 
   <!-- スタート画面 -->
   <div id="setup" class="panel">
@@ -126,7 +128,8 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     <div class="rules">
       ・全<b>8ラウンド</b>。毎回おつまみが1品出品されます。<br>
       ・みんな同時に<b>0〜10コイン</b>で入札。一番高い人が落札して、その金額を払います。<br>
-      ・一番高かった人が2人以上いたら<b>流札</b>（誰ももらえず、お金も払いません）。<br>
+      ・一番高かった人が2人以上いたら<b>流札</b>（誰ももらえず、お金も払いません）。流札した品は<b>次のラウンドに持ち越し</b>で、落札者がまとめてもらえます（最終ラウンドで流札したらそのまま終了）。<br>
+      ・CPUには入札の個性があります。<b>🔥強気</b>は高め、<b>🧮堅実</b>は値段相応、<b>👀様子見</b>は序盤は低めで終盤に動きます。<br>
       ・おつまみには種類（揚げ物・焼き物・刺身・〆もの・甘いもの）と点数があります。<br>
       ・同じ種類を<b>3つ</b>集めると <b>+6点</b>、5種類ぜんぶそろうとさらに <b>+10点</b>。<br>
       ・4ラウンド目は<b>ハッピーアワー</b>で落札額が半額、最終ラウンドは点数が<b>2倍</b>。<br>
@@ -176,7 +179,7 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     </div>
   </div>
 
-  <p class="foot"><a href="../">← 試作ゲームラボに戻る</a> ・ 居酒屋せり市 v0.1</p>
+  <p class="foot"><a href="../">← 試作ゲームラボに戻る</a> ・ 居酒屋せり市 v0.2</p>
 </div>
 
 <script>
@@ -202,7 +205,7 @@ const DISHES=[
 ];
 const CPU_NAMES=[{n:'マスター',e:'🧑‍🍳'},{n:'常連さん',e:'👴'},{n:'お客さん',e:'👩'}];
 const ROUNDS=8, START_COINS=20, MAX_BID=10;
-let players=[], deck=[], round=0, selBid=null, cpuCount=2, phase='setup';
+let players=[], deck=[], round=0, selBid=null, cpuCount=2, phase='setup', carry=[];
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function catOf(id){return CATS.find(c=>c.id===id);}
@@ -218,8 +221,9 @@ $('bidBtn').onclick=resolveRound;
 function startGame(){
   deck=shuffle(DISHES.slice()).slice(0,ROUNDS);
   players=[{name:'あなた',emoji:'😀',coins:START_COINS,dishes:[],isMe:true}];
-  for(let i=0;i<cpuCount;i++)players.push({name:CPU_NAMES[i].n,emoji:CPU_NAMES[i].e,coins:START_COINS,dishes:[],isMe:false});
-  round=0;$('log').innerHTML='';
+  const types=shuffle(['strong','steady','watch'].slice());
+  for(let i=0;i<cpuCount;i++)players.push({name:CPU_NAMES[i].n,emoji:CPU_NAMES[i].e,coins:START_COINS,dishes:[],isMe:false,type:types[i%types.length]});
+  round=0;carry=[];$('log').innerHTML='';
   $('setup').classList.add('hidden');$('result').classList.add('hidden');$('game').classList.remove('hidden');
   nextRound();
 }
@@ -235,6 +239,11 @@ function nextRound(){
     +'<div class="em">'+d.e+'</div><div class="nm">'+d.n+'</div>'
     +'<div class="cat">'+c.emoji+' '+c.label+'</div>'
     +'<div class="pt">'+dishPoints(d,round)+'点</div></div>';
+  if(carry.length){
+    const cb=document.createElement('div');cb.className='carry';
+    cb.textContent='🔁 持ち越し品：'+carry.map(x=>x.n).join('・')+'（落札者がまとめてもらえます）';
+    $('dishBox').appendChild(cb);
+  }
   $('msg').textContent='入札する金額をえらんでね';
   renderOpps(null);
   buildBidGrid();
@@ -262,10 +271,21 @@ function cpuBid(p,d,r){
   if(!counts[d.c])val+=1;                       // 新しい種類
   if(r===ROUNDS-1)val+=1.5;                     // 最終ラウンドは強気に
   if(p.coins<=6)val-=1.5;                       // お金が少ないと控えめに
-  let bid=Math.round(val+Math.random()*3-1);
-  if(Math.random()<0.12)bid=0;                  // たまに様子見
+  let bid, passRate=0.12;
+  if(p.type==='strong'){                        // 🔥強気：高めに出す
+    bid=Math.round(val+1.5+Math.random()*2); passRate=0.03;
+  }else if(p.type==='steady'){                  // 🧮堅実：値段相応に
+    bid=Math.round(val-0.5+Math.random()*1.5); passRate=0.08;
+  }else if(p.type==='watch'){                   // 👀様子見：序盤は低め、終盤に動く
+    if(r<4){ bid=Math.round(val*0.4+Math.random()*1.5); passRate=0.35; }
+    else{ bid=Math.round(val+0.5+Math.random()*2); passRate=0.06; }
+  }else{
+    bid=Math.round(val+Math.random()*3-1);
+  }
+  if(Math.random()<passRate)bid=0;              // たまに様子見（パス）
   return Math.max(0,Math.min(MAX_BID,p.coins,bid));
 }
+const TYPE_LABEL={strong:'🔥強気',steady:'🧮堅実',watch:'👀様子見'};
 
 function resolveRound(){
   if(phase!=='bid'||selBid===null)return;
@@ -280,7 +300,8 @@ function resolveRound(){
     msgHtml='みんなパス！ <b>'+d.n+'</b> は誰も落札しませんでした。';
   }else if(winners.length>1){
     const names=winners.map(i=>players[i].name).join('・');
-    msgHtml='<b>'+names+'</b> が '+top+'コインで同点！ <b>流札</b>です。';
+    carry.push(d);
+    msgHtml='<b>'+names+'</b> が '+top+'コインで同点！ <b>流札</b>です。<b>'+d.n+'</b> は'+(round===ROUNDS-1?'最終ラウンドなので、そのまま終了です。':'次のラウンドに<b>持ち越し</b>です。');
   }else{
     const w=players[winners[0]];
     let pay=bids[winners[0]];
@@ -289,12 +310,18 @@ function resolveRound(){
     d._pts=dishPoints(d,round);
     w.dishes.push(d);
     const pts=dishPoints(d,round);
-    msgHtml='<b>'+w.name+'</b> が '+bids[winners[0]]+'コイン'+(round===3?'（半額で'+pay+'コイン）':'')+'で <b>'+d.n+'</b> を落札！（'+pts+'点）';
+    let carryMsg='';
+    if(carry.length){
+      const got=carry.slice(); carry=[];
+      got.forEach(x=>{x._pts=dishPoints(x,round); w.dishes.push(x);});
+      carryMsg=' 持ち越しの <b>'+got.map(x=>x.n).join('・')+'</b> もまとめてゲット！';
+    }
+    msgHtml='<b>'+w.name+'</b> が '+bids[winners[0]]+'コイン'+(round===3?'（半額で'+pay+'コイン）':'')+'で <b>'+d.n+'</b> を落札！（'+pts+'点）'+carryMsg;
   }
   $('msg').innerHTML=msgHtml;
   renderOpps(bids,winners.length===1?winners[0]:-1);
   $('bidPanel').classList.add('hidden');
-  addLog('第'+(round+1)+'R「'+d.n+'」：'+players.map((p,i)=>p.name+' '+bids[i]+'🪙').join(' ／ ')+' → '+(top===0?'全員パス':winners.length>1?'流札':players[winners[0]].name+'が落札'));
+  addLog('第'+(round+1)+'R「'+d.n+'」：'+players.map((p,i)=>p.name+' '+bids[i]+'🪙').join(' ／ ')+' → '+(top===0?'全員パス':winners.length>1?'流札（持ち越し）':players[winners[0]].name+'が落札'));
   round++;
   setTimeout(()=>{
     if(round>=ROUNDS)showResult();
@@ -309,7 +336,7 @@ function renderOpps(bids,winIdx){
     const chips=CATS.map(c=>'<span title="'+c.label+'">'+c.emoji+(counts[c.id]?'×'+counts[c.id]:'')+'</span>').join(' ');
     const div=document.createElement('div');
     div.className='opp'+(p.isMe?' me':'');
-    div.innerHTML='<div class="top"><span class="av">'+p.emoji+'</span><span class="nm">'+p.name+'</span><span class="coins">🪙'+p.coins+'</span></div>'
+    div.innerHTML='<div class="top"><span class="av">'+p.emoji+'</span><span class="nm">'+p.name+'</span>'+(p.type?'<span class="type">'+TYPE_LABEL[p.type]+'</span>':'')+'<span class="coins">🪙'+p.coins+'</span></div>'
       +'<div class="pts">'+scoreOf(p).dish+'点（セット込み '+scoreOf(p).total+'点）</div>'
       +'<div class="bid'+(bids&&winIdx===i?' win':'')+'">'+(bids===null?'':(bids[i]===0?'パス':bids[i]+'コイン'+(winIdx===i?' 👑':'')))+'</div>'
       +'<div class="dishes">'+chips+'</div>';

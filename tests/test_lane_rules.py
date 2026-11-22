@@ -161,6 +161,25 @@ def test_leaving_during_place_choice_places_instead_of_taking(client):
 
 # ---- full game: no card is ever created or lost ----
 
+@pytest.mark.parametrize("players,size", [(2, 24), (3, 20), (4, 16), (5, 16),
+                                            (6, 16), (7, 12), (8, 12), (9, 8), (10, 8)])
+def test_personal_deck_size_by_player_count(client, players, size):
+    code_a = client.post("/api/rooms", json={"name": "A", "max_players": players}).get_json()
+    code, host = code_a["room"]["code"], code_a["player_id"]
+    client.post(f"/api/rooms/{code}/start", json={"player_id": host})
+    room = server.ROOMS[code]
+    game = room["game"]
+    for p in room["players"]:
+        # Each player was dealt `size` cards as their personal deck and
+        # drew 4 into hand. CPUs have already submitted one card.
+        held = len(game["hands"][p["id"]]) + (1 if p["id"] in game["submissions"] else 0)
+        assert held == 4
+        assert len(game["decks"][p["id"]]) == size - 4
+    # Five of the undealt cards seed the lanes; the rest are unused.
+    assert sum(len(lane) for lane in game["lanes"]) == 5
+    assert len(game["unused"]) == 110 - players * size - 5
+
+
 @pytest.mark.parametrize("players", [2, 5, 10])
 def test_full_cpu_game_conserves_cards(client, players):
     code_a = client.post("/api/rooms", json={"name": "A", "max_players": players}).get_json()
@@ -171,8 +190,8 @@ def test_full_cpu_game_conserves_cards(client, players):
     room = server.ROOMS[code]
     game = room["game"]
     # With no humans left, nothing triggers the next turn, so drive it here.
-    # Hands are always 4 cards, refilled from the deck, so a game lasts
-    # until all 110 cards have been played (up to ~53 turns for 2 players).
+    # Hands are always 4 cards, refilled from each player's own deck, so a
+    # game lasts as many turns as the personal deck size (24/16/8 here).
     for _ in range(200):
         if room["status"] != "playing":
             break
@@ -184,7 +203,8 @@ def test_full_cpu_game_conserves_cards(client, players):
         cards = [c for lane in game["lanes"] for c in lane]
         cards += [c for t in game["taken"].values() for c in t]
         cards += [c for h in game["hands"].values() for c in h]
-        cards += game.get("deck", [])
+        cards += [c for d in game["decks"].values() for c in d]
+        cards += game["unused"]
         return sorted(c["n"] for c in cards)
 
     assert len(all_cards()) == 110
@@ -201,10 +221,11 @@ def test_hands_stay_at_four_while_deck_remains(client):
     client.post(f"/api/rooms/{code}/leave", json={"player_id": host})
     room = server.ROOMS[code]
     game = room["game"]
-    # The deck starts at 110 - 5 lanes - 4 per player; the CPU handover
-    # on leave may already have resolved a turn (and drawn 4 more).
-    deck_before = len(game["deck"])
-    assert deck_before <= 110 - 5 - 4 * 4
+    # With 4 players each personal deck starts at 16 cards (12 after the
+    # opening draw of 4); the CPU handover on leave may already have
+    # resolved a turn (and drawn 1 more per player).
+    decks_before = {p["id"]: len(game["decks"][p["id"]]) for p in room["players"]}
+    assert all(n <= 16 - 4 for n in decks_before.values())
     for _ in range(10):
         server.submit_cpu_cards(room)
         server.resolve_online_turn(room)
@@ -213,6 +234,8 @@ def test_hands_stay_at_four_while_deck_remains(client):
         for p in room["players"]:
             held = len(game["hands"][p["id"]]) + (1 if p["id"] in game["submissions"] else 0)
             assert held == 4
-        # Each resolved turn draws exactly one card per player.
-        assert deck_before - len(game["deck"]) == 4
-        deck_before = len(game["deck"])
+        # Each resolved turn draws exactly one card per player,
+        # from that player's own deck.
+        for p in room["players"]:
+            assert decks_before[p["id"]] - len(game["decks"][p["id"]]) == 1
+        decks_before = {p["id"]: len(game["decks"][p["id"]]) for p in room["players"]}

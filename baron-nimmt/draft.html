@@ -79,7 +79,7 @@ nomatch:{rows:[[12,['red']],[28,['green']],[43,['yellow']],[67,['black']],[81,['
 function renderInteractive(type){
 const s=scenarios[type];selectedRow=null;selectedCard=false;
 stage.innerHTML=`<div class="gamebox"><b>中央の5列</b><p class="small">今回出すカードを確認し、置く列を選びます。</p><div class="rows">${s.rows.map((r,i)=>`<button class="rowcard" data-row="${i}"><span class="rowlabel">${i+1}列目</span><div class="stack">${card(r[0],r[1])}${type==='six'&&i===0?card(22,['red'])+card(31,['green'])+card(38,['yellow'])+card(49,['blue']):''}${type==='cows'&&i===2?card(47,['blue']):''}</div></button>`).join('')}</div></div>
-<div class="gamebox"><b>今回出すカード</b><div class="hand"><div class="playcard selected" aria-label="今回出すカード"><strong>${s.hand}</strong><span>🐂</span><div class="colors">${s.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>プレイするカード</small></div></div><p class="small">実際の手札は常に4枚です。カードを出したら、山札から4枚になるまで補充します。この練習では、手札全体を再現するのではなく、そこから選んだ1枚を使って配置ルールを確認します。</p></div>
+<div class="gamebox"><b>今回出すカード</b><div class="hand"><div class="playcard selected" aria-label="今回出すカード"><strong>${s.hand}</strong><span>🐂</span><div class="colors">${s.colors.map(c=>`<i class="dot c-${c}"></i>`).join('')}</div><small>プレイするカード</small></div></div><p class="small">実際の手札は常に4枚です。カードを出したら、自分の山札から4枚になるまで補充します。自分の山札の枚数は人数で決まります（2人：24枚／3人：20枚／4〜6人：16枚／7〜8人：12枚／9〜10人：8枚）。この練習では、手札全体を再現するのではなく、そこから選んだ1枚を使って配置ルールを確認します。</p></div>
 <div class="feedback" id="feedback">今回出すカードを確認し、置く列を選んでください。</div>
 <div class="gamebox" id="outcome" hidden><b>配置後の状態</b><div id="outcomeText" class="small" style="margin-top:8px"></div></div>
 <button class="btn" id="check" style="margin-top:12px">この列に置く</button>`;

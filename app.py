@@ -346,17 +346,34 @@ def game_public_state(room, player_id):
         "pending_player_name": next((p["name"] for p in room["players"] if pending and p["id"] == pending["player_id"]), None)
     }
 
+def deck_size_for_players(count):
+    """Cards dealt to each player as their personal deck, by player count:
+    2 players: 24, 3: 20, 4-6: 16, 7-8: 12, 9-10: 8."""
+    if count <= 2:
+        return 24
+    if count == 3:
+        return 20
+    if count <= 6:
+        return 16
+    if count <= 8:
+        return 12
+    return 8
+
 def start_baron_game(room):
     cards = load_baron_cards()
     import random
     random.SystemRandom().shuffle(cards)
-    hand_size = 4
+    size = deck_size_for_players(len(room["players"]))
     hands = {}
+    decks = {}
     for p in room["players"]:
-        hands[p["id"]] = sorted(cards[:hand_size], key=lambda c: c["n"])
-        del cards[:hand_size]
+        own = cards[:size]
+        del cards[:size]
+        hands[p["id"]] = sorted(own[:4], key=lambda c: c["n"])
+        decks[p["id"]] = own[4:]
     lanes = [[cards.pop()] for _ in range(5)]
-    room["game"] = {"turn": 0, "hands": hands, "lanes": lanes, "deck": cards,
+    room["game"] = {"turn": 0, "hands": hands, "lanes": lanes, "decks": decks,
+                    "unused": cards,
                     "taken": {p["id"]: [] for p in room["players"]},
                     "submissions": {}, "submission_lanes": {}, "last_log": [], "winner": None,
                     "resolution_queue": [], "pending_choice": None}
@@ -389,14 +406,15 @@ def submit_cpu_cards(room):
             game["submissions"][player["id"]] = card
 
 def draw_online_hands(room):
-    """Hands are always 4 cards: after each turn, draw back up to 4
-    from the deck until the deck runs out."""
+    """Hands are always 4 cards: after each turn, each player draws
+    back up to 4 from their own deck until it runs out."""
     game = room["game"]
-    deck = game.get("deck") or []
+    decks = game.get("decks") or {}
     for p in room["players"]:
         hand = game["hands"].setdefault(p["id"], [])
-        while len(hand) < 4 and deck:
-            hand.append(deck.pop())
+        own = decks.get(p["id"]) or []
+        while len(hand) < 4 and own:
+            hand.append(own.pop())
         hand.sort(key=lambda c: c["n"])
 
 def finish_online_game_if_needed(room):

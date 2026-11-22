@@ -13,7 +13,7 @@ body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spac
 </head><body>
 <header><div class="brand">BARON NIMMT · CPU MATCH <span class="version">v0.2.0</span></div><div class="head"><h1>CPUと対戦</h1><div class="nav"><a href="/baron-nimmt/online">オンライン対戦</a><a href="/baron-nimmt">トップへ戻る</a></div></div></header>
 <main>
-<section class="panel" id="setupPanel"><div class="setup"><div class="field"><label for="count">プレイ人数（あなたを含む）</label><select id="count"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div><button class="btn" id="start">対戦を始める</button></div><div class="status" id="setupNote">人数を選び、「対戦を始める」を押してください。手札枚数は2人:24枚／3人:20枚／4〜6人:16枚／7〜8人:12枚／9〜10人:8枚です。</div><p class="small">※実物カード110枚の番号・失点数・色別牛マークを登録したカードデータを使用しています。</p></section>
+<section class="panel" id="setupPanel"><div class="setup"><div class="field"><label for="count">プレイ人数（あなたを含む）</label><select id="count"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div><button class="btn" id="start">対戦を始める</button></div><div class="status" id="setupNote">人数を選び、「対戦を始める」を押してください。手札は常に4枚です。カードを出すたびに、山札から4枚になるまで補充します。</div><p class="small">※実物カード110枚の番号・失点数・色別牛マークを登録したカードデータを使用しています。</p></section>
 <section class="panel hidden" id="game"><div class="head"><h2 style="margin:0 0 10px;font-size:18px">場のカード列 <span class="tag" id="round">第1ターン</span></h2><button class="btn alt" id="restart" disabled>最初からやり直す</button></div><div class="board" id="board"></div><div class="result" id="message">手札からカードを1枚選んでください。</div><div class="current-play hidden" id="currentPlay"></div><div class="status" id="resolutionReveal"></div></section>
 <section class="panel hidden" id="handPanel"><h2 style="font-size:18px;margin:0">手札 <span class="tag" id="handCount"></span></h2><div class="hand" id="hand"></div><div class="actions"><button class="btn" id="play" disabled>このカードを出す</button></div><p class="small">手札からカードを1枚選び、「このカードを出す」を押してください。CPUもカードを選び、数字の小さい順に処理します。</p></section>
 <section class="panel hidden" id="scorePanel"><h2 style="font-size:18px;margin:0 0 10px">対戦状況</h2><div class="players" id="players"></div></section>
@@ -21,11 +21,11 @@ body{line-height:1.65;letter-spacing:.01em}h1,h2,h3{line-height:1.35;letter-spac
 </main>
 <script>
 const COLORS=['blue','red','green','yellow','black','white'];
-const HAND={2:24,3:20,4:16,5:16,6:16,7:12,8:12,9:8,10:8};
+const HAND_SIZE=4;
 let players=[],lanes=[],selected=null,selectedLane=null,turn=0,finished=false,deck=[],CARD_DATA=[],pendingMoves=[],pendingIndex=0,turnLogs=[];
 const $=id=>document.getElementById(id);
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-async function start(){let count=+$('count').value,handSize=HAND[count];$('start').disabled=true;$('restart').disabled=true;$('setupNote').textContent='正式カードデータを読み込んでいます…';try{if(!CARD_DATA.length){const response=await fetch('/baron-nimmt/cards.json',{cache:'no-store'});if(!response.ok)throw new Error('カードデータを読み込めませんでした');const raw=await response.json();CARD_DATA=raw.cards.map(([n,penalty,ids])=>({n,penalty,cs:ids.map(i=>raw.colors[i]),special:n===52||n===104}));}if(CARD_DATA.length!==110)throw new Error('カードデータが110枚ではありません');deck=shuffle(CARD_DATA.map(c=>({...c,cs:[...c.cs]})));}catch(e){$('setupNote').textContent=e.message;$('start').disabled=false;return;}finally{$('start').disabled=false;$('restart').disabled=false;}players=Array.from({length:count},(_,i)=>({name:i===0?'あなた':'CPU '+i,hand:deck.splice(0,handSize).sort((a,b)=>a.n-b.n),taken:[],isMe:i===0}));lanes=Array.from({length:5},()=>[deck.pop()]);turn=0;selected=null;selectedLane=null;finished=false;pendingMoves=[];pendingIndex=0;turnLogs=[];$('setupPanel').classList.add('hidden');$('game').classList.remove('hidden');$('handPanel').classList.remove('hidden');$('scorePanel').classList.remove('hidden');$('endPanel').classList.add('hidden');$('restart').disabled=false;render();$('message').textContent='手札からカードを1枚選んでください。';}
+async function start(){let count=+$('count').value,handSize=HAND_SIZE;$('start').disabled=true;$('restart').disabled=true;$('setupNote').textContent='正式カードデータを読み込んでいます…';try{if(!CARD_DATA.length){const response=await fetch('/baron-nimmt/cards.json',{cache:'no-store'});if(!response.ok)throw new Error('カードデータを読み込めませんでした');const raw=await response.json();CARD_DATA=raw.cards.map(([n,penalty,ids])=>({n,penalty,cs:ids.map(i=>raw.colors[i]),special:n===52||n===104}));}if(CARD_DATA.length!==110)throw new Error('カードデータが110枚ではありません');deck=shuffle(CARD_DATA.map(c=>({...c,cs:[...c.cs]})));}catch(e){$('setupNote').textContent=e.message;$('start').disabled=false;return;}finally{$('start').disabled=false;$('restart').disabled=false;}players=Array.from({length:count},(_,i)=>({name:i===0?'あなた':'CPU '+i,hand:deck.splice(0,handSize).sort((a,b)=>a.n-b.n),taken:[],isMe:i===0}));lanes=Array.from({length:5},()=>[deck.pop()]);turn=0;selected=null;selectedLane=null;finished=false;pendingMoves=[];pendingIndex=0;turnLogs=[];$('setupPanel').classList.add('hidden');$('game').classList.remove('hidden');$('handPanel').classList.remove('hidden');$('scorePanel').classList.remove('hidden');$('endPanel').classList.add('hidden');$('restart').disabled=false;render();$('message').textContent='手札からカードを1枚選んでください。';}
 function bullCount(card){return card.penalty}
 function scoreCards(cards){return cards.reduce((s,c)=>s+c.penalty,0)}
 function cardHTML(c){return '<div class="card"><b>'+c.n+'</b><span>🐂</span><div class="bulls">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join('')+'</div></div>'}
@@ -37,7 +37,7 @@ function render(){
  const taking=!!(active&&active.p.isMe&&matchingRows(active.c).length===0);
  $('board').innerHTML=lanes.map((l,i)=>'<div class="lane '+(eligible.includes(i)?'target':'')+(taking&&selectedLane===i?' chosen':'')+'" data-action="'+(taking?'ここを引き取る':'ここに置く')+'" data-lane="'+i+'"><h3>'+(i+1)+'列目 · '+l.length+'枚</h3><div class="cards">'+l.map(cardHTML).join('')+'</div></div>').join('');
  $('board').querySelectorAll('.target').forEach(el=>el.onclick=()=>{const lane=+el.dataset.lane;if(active&&active.p.isMe){const log=resolveCard(active.p,active.c,lane);turnLogs.push(log);pendingIndex++;selectedLane=null;continueTurn();}else{selectedLane=lane;render();}});
- $('handCount').textContent=players[0].hand.length+'枚';
+ $('handCount').textContent=players[0].hand.length+'枚（山札 残り'+deck.length+'枚）';
  $('hand').innerHTML=players[0].hand.map(c=>'<button class="handcard '+(selected===c.n?'selected':'')+'" data-n="'+c.n+'" '+(pendingMoves.length?'disabled':'')+'><b>'+c.n+'</b><span>🐂</span><div class="bulls">'+c.cs.map(x=>'<i class="dot '+x+'"></i>').join('')+'</div></button>').join('');
  $('hand').querySelectorAll('button').forEach(btn=>btn.onclick=()=>{selected=+btn.dataset.n;selectedLane=null;render();});
  $('play').disabled=selected===null||finished||pendingMoves.length>0;
@@ -58,7 +58,7 @@ function playTurn(){
  const chosen=players[0].hand.find(c=>c.n===selected);
  pendingMoves=[{p:players[0],c:chosen}];
  players[0].hand=players[0].hand.filter(c=>c.n!==selected);
- for(let i=1;i<players.length;i++){const c=chooseCpuCard(players[i]);players[i].hand=players[i].hand.filter(x=>x.n!==c.n);pendingMoves.push({p:players[i],c});}
+ for(let i=1;i<players.length;i++){if(!players[i].hand.length)continue;const c=chooseCpuCard(players[i]);players[i].hand=players[i].hand.filter(x=>x.n!==c.n);pendingMoves.push({p:players[i],c});}
  pendingMoves.sort((x,y)=>x.c.n-y.c.n);pendingIndex=0;turnLogs=[];selected=null;selectedLane=null;turn++;
  $('resolutionReveal').innerHTML='<b>公開カード・処理順</b><br>'+pendingMoves.map((m,i)=>(i+1)+'. '+m.p.name+'：<b>'+m.c.n+'</b>').join('　／　');
  continueTurn();
@@ -69,10 +69,11 @@ function continueTurn(){
   if(move.p.isMe){render();return;}
   turnLogs.push(resolveCard(move.p,move.c,null));pendingIndex++;
  }
- pendingMoves=[];pendingIndex=0;selectedLane=null;render();
+ pendingMoves=[];pendingIndex=0;selectedLane=null;drawHands();render();
  $('message').innerHTML='<b>今回の処理結果</b><br>'+turnLogs.join('<br>');
  if(players[0].hand.length===0){finished=true;showEnd();}
 }
+function drawHands(){for(const p of players){while(p.hand.length<HAND_SIZE&&deck.length)p.hand.push(deck.pop());p.hand.sort((a,b)=>a.n-b.n);}}
 function renderPlayers(){$('players').innerHTML=players.map(p=>'<div class="player '+(p.isMe?'me':'')+'"><strong>'+p.name+'</strong><p>手札：'+p.hand.length+'枚</p><p>獲得カード：'+p.taken.length+'枚</p><p>失点：'+scoreCards(p.taken)+'</p></div>').join('');}
 function showEnd(){ $('handPanel').classList.add('hidden');$('endPanel').classList.remove('hidden');let ranking=players.map(p=>({p,s:scoreCards(p.taken)})).sort((a,b)=>a.s-b.s);$('final').innerHTML='<div class="result">'+ranking.map((x,i)=>(i+1)+'位：'+x.p.name+' — '+x.s+'点').join('<br>')+'<br><br><b>'+(ranking[0].p.isMe?'あなたの勝ち！':ranking[0].p.name+'の勝ち！')+'</b></div>';renderPlayers();}
 $('start').onclick=start;$('restart').onclick=start;$('play').onclick=playTurn;$('again').onclick=start;

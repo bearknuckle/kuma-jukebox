@@ -171,7 +171,9 @@ def test_full_cpu_game_conserves_cards(client, players):
     room = server.ROOMS[code]
     game = room["game"]
     # With no humans left, nothing triggers the next turn, so drive it here.
-    for _ in range(30):
+    # Hands are always 4 cards, refilled from the deck, so a game lasts
+    # until all 110 cards have been played (up to ~53 turns for 2 players).
+    for _ in range(200):
         if room["status"] != "playing":
             break
         server.submit_cpu_cards(room)
@@ -182,10 +184,35 @@ def test_full_cpu_game_conserves_cards(client, players):
         cards = [c for lane in game["lanes"] for c in lane]
         cards += [c for t in game["taken"].values() for c in t]
         cards += [c for h in game["hands"].values() for c in h]
+        cards += game.get("deck", [])
         return sorted(c["n"] for c in cards)
 
-    hand_size = {2: 24, 5: 16, 10: 8}[players]
-    assert len(all_cards()) == players * hand_size + 5
+    assert len(all_cards()) == 110
     assert len(set(all_cards())) == len(all_cards())
     assert all(1 <= len(lane) <= 5 for lane in game["lanes"])
     assert game["winner"]
+
+
+def test_hands_stay_at_four_while_deck_remains(client):
+    code_a = client.post("/api/rooms", json={"name": "A", "max_players": 4}).get_json()
+    code, host = code_a["room"]["code"], code_a["player_id"]
+    client.post(f"/api/rooms/{code}/start", json={"player_id": host})
+    # Hand the human seat to a CPU so turns resolve automatically.
+    client.post(f"/api/rooms/{code}/leave", json={"player_id": host})
+    room = server.ROOMS[code]
+    game = room["game"]
+    # The deck starts at 110 - 5 lanes - 4 per player; the CPU handover
+    # on leave may already have resolved a turn (and drawn 4 more).
+    deck_before = len(game["deck"])
+    assert deck_before <= 110 - 5 - 4 * 4
+    for _ in range(10):
+        server.submit_cpu_cards(room)
+        server.resolve_online_turn(room)
+        # Hands are refilled to 4 after every turn. CPUs immediately
+        # submit one card for the next turn, so hand + submitted == 4.
+        for p in room["players"]:
+            held = len(game["hands"][p["id"]]) + (1 if p["id"] in game["submissions"] else 0)
+            assert held == 4
+        # Each resolved turn draws exactly one card per player.
+        assert deck_before - len(game["deck"]) == 4
+        deck_before = len(game["deck"])

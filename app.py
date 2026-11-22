@@ -233,7 +233,7 @@ def leave_room(code):
 
             if room.get("status") == "playing":
                 submit_cpu_cards(room)
-                if not game.get("pending_choice") and len(game["submissions"]) == len(room["players"]):
+                if not game.get("pending_choice") and all(p["id"] in game["submissions"] for p in room["players"] if game["hands"].get(p["id"])):
                     resolve_online_turn(room)
 
         room["updated"] = time.time()
@@ -350,14 +350,13 @@ def start_baron_game(room):
     cards = load_baron_cards()
     import random
     random.SystemRandom().shuffle(cards)
-    count = len(room["players"])
-    hand_size = {2:24, 3:20, 4:16, 5:16, 6:16, 7:12, 8:12, 9:8, 10:8}[count]
+    hand_size = 4
     hands = {}
     for p in room["players"]:
         hands[p["id"]] = sorted(cards[:hand_size], key=lambda c: c["n"])
         del cards[:hand_size]
     lanes = [[cards.pop()] for _ in range(5)]
-    room["game"] = {"turn": 0, "hands": hands, "lanes": lanes,
+    room["game"] = {"turn": 0, "hands": hands, "lanes": lanes, "deck": cards,
                     "taken": {p["id"]: [] for p in room["players"]},
                     "submissions": {}, "submission_lanes": {}, "last_log": [], "winner": None,
                     "resolution_queue": [], "pending_choice": None}
@@ -389,6 +388,17 @@ def submit_cpu_cards(room):
             game["hands"][player["id"]].remove(card)
             game["submissions"][player["id"]] = card
 
+def draw_online_hands(room):
+    """Hands are always 4 cards: after each turn, draw back up to 4
+    from the deck until the deck runs out."""
+    game = room["game"]
+    deck = game.get("deck") or []
+    for p in room["players"]:
+        hand = game["hands"].setdefault(p["id"], [])
+        while len(hand) < 4 and deck:
+            hand.append(deck.pop())
+        hand.sort(key=lambda c: c["n"])
+
 def finish_online_game_if_needed(room):
     game = room["game"]
     if all(not game["hands"].get(p["id"]) for p in room["players"]):
@@ -409,6 +419,7 @@ def continue_online_resolution(room):
         play_card_to_lane(game, player, card, cpu_lane_choice(game["lanes"], card))
         game["resolution_queue"].pop(0)
     game["pending_choice"] = None
+    draw_online_hands(room)
     finish_online_game_if_needed(room)
 
 def resolve_online_turn(room):
@@ -493,7 +504,7 @@ def submit_online_card(code):
         game["submissions"][player_id] = card
         game.setdefault("submission_lanes", {})[player_id] = None
         room["updated"] = time.time()
-        if len(game["submissions"]) == len(room["players"]):
+        if all(p["id"] in game["submissions"] for p in room["players"] if game["hands"].get(p["id"])):
             resolve_online_turn(room)
         return jsonify(game=game_public_state(room, player_id))
 

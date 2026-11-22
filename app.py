@@ -25,12 +25,15 @@ def clean_rooms():
     for code in expired:
         ROOMS.pop(code, None)
 
+VARIATIONS = ("none", "color", "cows")
+
 def public_room(room):
     return {
         "code": room["code"],
         "host_id": room["host_id"],
         "host_name": room["host_name"],
         "max_players": room["max_players"],
+        "variation": room.get("variation", "none"),
         "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"], "is_cpu": p.get("is_cpu", False)} for p in room["players"]],
         "status": room["status"],
         "created": room["created"]
@@ -129,6 +132,9 @@ def create_room():
         return jsonify(error="プレイヤー名を入力してください。"), 400
     if not 2 <= max_players <= 10:
         return jsonify(error="参加人数は2〜10人にしてください。"), 400
+    variation = str(data.get("variation", "none"))
+    if variation not in VARIATIONS:
+        return jsonify(error="バリエーションの指定が正しくありません。"), 400
     with ROOM_LOCK:
         clean_rooms()
         if len(ROOMS) >= MAX_ROOMS:
@@ -138,7 +144,7 @@ def create_room():
         now = time.time()
         room = {
             "code": code, "host_id": player_id, "host_name": name,
-            "max_players": max_players,
+            "max_players": max_players, "variation": variation,
             "players": [{"id": player_id, "name": name, "joined": now}],
             "status": "waiting", "created": now, "updated": now
         }
@@ -288,19 +294,31 @@ def play_card_to_lane(game, player, card, lane_index, chosen_by_player=False):
     """Apply card to lane_index and log the result.
 
     The caller must pass a matching lane when one exists; when no lane
-    matches, lane_index is the lane the player takes.
+    matches, lane_index is the lane the player takes. In the "cows"
+    variation a card with no matching lane instead goes to the bottom
+    of the player's own deck and lane_index is ignored.
     """
     lanes = game["lanes"]
     taken = game["taken"][player["id"]]
     lane = lanes[lane_index]
     label = player["name"] + "：" + str(lane_index + 1) + "列目"
     log = game["last_log"]
+    variation = game.get("variation", "none")
+    if not game["hands"].get(player["id"]) and not game.get("decks", {}).get(player["id"]):
+        # This card was the player's last one (hand and deck are empty
+        # now that it has been played). Used by the "cows" end rule.
+        game["last_card_played"] = True
     if not matching_lanes(lanes, card):
+        if variation == "cows":
+            deck = game.setdefault("decks", {}).setdefault(player["id"], [])
+            deck.insert(0, card)
+            log.append(player["name"] + "：置ける列がないため、カードを自分の山札の一番下へ")
+            return
         taken.extend(lane)
         lanes[lane_index] = [card]
         verb = "を選んで引き取り" if chosen_by_player else "を引き取り"
         log.append(player["name"] + "：置ける列がないため" + str(lane_index + 1) + "列目" + verb)
-    elif len(lane) >= 5:
+    elif len(lane) >= 5 and variation != "color":
         taken.extend(lane)
         lanes[lane_index] = [card]
         log.append(label + "を引き取り（6枚目）")
@@ -324,8 +342,10 @@ def game_public_state(room, player_id):
     pending_lanes = matching_lanes(game["lanes"], pending["card"]) if pending and pending["player_id"] == player_id and pending.get("mode") == "place" else []
     return {
         "turn": game["turn"],
+        "variation": game.get("variation", "none"),
         "players": [{"id": p["id"], "name": p["name"], "is_host": p["id"] == room["host_id"],
                      "hand_count": len(game["hands"].get(p["id"], [])),
+                     "deck_count": len(game.get("decks", {}).get(p["id"], [])),
                      "taken_count": len(game["taken"].get(p["id"], [])),
                      "score": sum(c["penalty"] for c in game["taken"].get(p["id"], [])),
                      "submitted": p["id"] in game["submissions"]} for p in room["players"]],
@@ -373,8 +393,9 @@ def start_baron_game(room):
         decks[p["id"]] = own[4:]
     lanes = [[cards.pop()] for _ in range(5)]
     room["game"] = {"turn": 0, "hands": hands, "lanes": lanes, "decks": decks,
-                    "unused": cards,
+                    "unused": cards, "variation": room.get("variation", "none"),
                     "taken": {p["id"]: [] for p in room["players"]},
+                    "last_card_played": False,
                     "submissions": {}, "submission_lanes": {}, "last_log": [], "winner": None,
                     "resolution_queue": [], "pending_choice": None}
     room["status"] = "playing"
@@ -406,12 +427,15 @@ def submit_cpu_cards(room):
             game["submissions"][player["id"]] = card
 
 def draw_online_hands(room):
-    """Hands are always 4 cards: after each turn, each player draws
-    back up to 4 from their own deck until it runs out."""
+    """Official refill rule: hands are NOT refilled at the end of a
+    round. Only a player who has played out their whole hand draws
+    4 new cards from their own deck, at the end of that round."""
     game = room["game"]
     decks = game.get("decks") or {}
     for p in room["players"]:
         hand = game["hands"].setdefault(p["id"], [])
+        if hand:
+            continue
         own = decks.get(p["id"]) or []
         while len(hand) < 4 and own:
             hand.append(own.pop())
@@ -419,9 +443,20 @@ def draw_online_hands(room):
 
 def finish_online_game_if_needed(room):
     game = room["game"]
-    if all(not game["hands"].get(p["id"]) for p in room["players"]):
+    decks = game.get("decks") or {}
+    out = {p["id"]: not game["hands"].get(p["id"]) and not decks.get(p["id"]) for p in room["players"]}
+    if game.get("variation", "none") == "cows":
+        # "Gather the cows": the game ends after the round in which at
+        # least one player played their last card; most marks win. (A
+        # card that went under the deck still counts as the last card
+        # having been played, so the flag -- not just the empty state --
+        # decides; otherwise such a card could cycle forever.)
+        finished = bool(game.get("last_card_played")) or any(out.values())
+    else:
+        finished = all(out.values())
+    if finished:
         scores = {p["id"]: sum(c["penalty"] for c in game["taken"][p["id"]]) for p in room["players"]}
-        best = min(scores.values())
+        best = max(scores.values()) if game.get("variation", "none") == "cows" else min(scores.values())
         game["winner"] = [p["name"] for p in room["players"] if scores[p["id"]] == best]
         room["status"] = "finished"
 
@@ -431,6 +466,11 @@ def continue_online_resolution(room):
         pid, card, _requested_lane = game["resolution_queue"][0]
         player = next(p for p in room["players"] if p["id"] == pid)
         if not player.get("is_cpu"):
+            if game.get("variation", "none") == "cows" and not matching_lanes(game["lanes"], card):
+                # No lane choice to make: the card goes under the deck.
+                play_card_to_lane(game, player, card, 0)
+                game["resolution_queue"].pop(0)
+                continue
             mode = "place" if matching_lanes(game["lanes"], card) else "take"
             game["pending_choice"] = {"player_id": pid, "card": card, "mode": mode}
             return

@@ -18,17 +18,18 @@ def card(n, colors, penalty=1):
     return {"n": n, "penalty": penalty, "cs": list(colors)}
 
 
-def make_room(lanes, players):
+def make_room(lanes, players, variation="none"):
     """players: list of (id, is_cpu). Builds a playing room with given lanes."""
     room = {
         "code": "TEST01", "host_id": players[0][0], "host_name": players[0][0],
-        "max_players": len(players), "status": "playing",
+        "max_players": len(players), "status": "playing", "variation": variation,
         "players": [{"id": pid, "name": pid, "is_cpu": cpu, "joined": 0} for pid, cpu in players],
         "created": 0, "updated": 0,
     }
     room["game"] = {
-        "turn": 1, "lanes": lanes,
+        "turn": 1, "lanes": lanes, "variation": variation,
         "hands": {pid: [card(200 + i, ["red"])] for i, (pid, _) in enumerate(players)},
+        "decks": {pid: [] for pid, _ in players}, "unused": [],
         "taken": {pid: [] for pid, _ in players},
         "submissions": {}, "submission_lanes": {}, "last_log": [], "winner": None,
         "resolution_queue": [], "pending_choice": None,
@@ -42,8 +43,8 @@ def filler_lanes():
     return [[card(150 + i, ["black"])] for i in range(4)]
 
 
-def resolve_by_cpu(lane0, played):
-    room = make_room([lane0] + filler_lanes(), [("cpu", True), ("h", False)])
+def resolve_by_cpu(lane0, played, variation="none"):
+    room = make_room([lane0] + filler_lanes(), [("cpu", True), ("h", False)], variation=variation)
     game = room["game"]
     game["resolution_queue"] = [("cpu", played, None)]
     server.continue_online_resolution(room)
@@ -190,8 +191,8 @@ def test_full_cpu_game_conserves_cards(client, players):
     room = server.ROOMS[code]
     game = room["game"]
     # With no humans left, nothing triggers the next turn, so drive it here.
-    # Hands are always 4 cards, refilled from each player's own deck, so a
-    # game lasts as many turns as the personal deck size (24/16/8 here).
+    # Each player plays one card per turn from a personal deck of
+    # 24/16/8 cards, so a game lasts that many turns.
     for _ in range(200):
         if room["status"] != "playing":
             break
@@ -213,29 +214,214 @@ def test_full_cpu_game_conserves_cards(client, players):
     assert game["winner"]
 
 
-def test_hands_stay_at_four_while_deck_remains(client):
-    code_a = client.post("/api/rooms", json={"name": "A", "max_players": 4}).get_json()
+def _started_all_cpu_game(client, players=4):
+    code_a = client.post("/api/rooms", json={"name": "A", "max_players": players}).get_json()
     code, host = code_a["room"]["code"], code_a["player_id"]
     client.post(f"/api/rooms/{code}/start", json={"player_id": host})
-    # Hand the human seat to a CPU so turns resolve automatically.
+    # Hand the human seat to a CPU so turns resolve automatically. The
+    # handover itself resolves the first turn.
+    client.post(f"/api/rooms/{code}/leave", json={"player_id": host})
+    return server.ROOMS[code]
+
+
+def _held(game, room):
+    return {p["id"]: len(game["hands"][p["id"]]) + (1 if p["id"] in game["submissions"] else 0)
+            for p in room["players"]}
+
+
+def test_no_refill_until_hand_is_played_out(client):
+    room = _started_all_cpu_game(client, players=4)
+    game = room["game"]
+    # Turn 1 is done: everyone played 1 of their 4 cards. Hands are NOT
+    # refilled and no deck card has been drawn.
+    assert all(n == 3 for n in _held(game, room).values())
+    assert all(len(game["decks"][p["id"]]) == 12 for p in room["players"])
+    # Turns 2 and 3: hands keep shrinking, decks stay untouched.
+    for expected in (2, 1):
+        server.submit_cpu_cards(room)
+        server.resolve_online_turn(room)
+        assert all(n == expected for n in _held(game, room).values())
+        assert all(len(game["decks"][p["id"]]) == 12 for p in room["players"])
+    # Turn 4 plays out the hand: only now does each player draw 4 new
+    # cards from their own deck.
+    server.submit_cpu_cards(room)
+    server.resolve_online_turn(room)
+    assert all(n == 4 for n in _held(game, room).values())
+    assert all(len(game["decks"][p["id"]]) == 8 for p in room["players"])
+
+
+def test_refill_only_touches_empty_hands():
+    room = make_room([[card(1, ["red"])]] + filler_lanes(), [("a", True), ("b", True)])
+    game = room["game"]
+    game["hands"]["a"] = []
+    game["decks"]["a"] = [card(11, ["red"]), card(12, ["red"]), card(13, ["red"]),
+                           card(14, ["red"]), card(15, ["red"])]
+    game["hands"]["b"] = [card(21, ["red"])]
+    game["decks"]["b"] = [card(22, ["red"]), card(23, ["red"])]
+    server.draw_online_hands(room)
+    assert len(game["hands"]["a"]) == 4
+    assert len(game["decks"]["a"]) == 1
+    # A hand that still holds cards is left alone.
+    assert nums(game["hands"]["b"]) == [21]
+    assert len(game["decks"]["b"]) == 2
+
+
+# ---- variation: color matters (no take on the 6th card) ----
+
+def sparse_five_lane():
+    # 5 cards, only the last one is red, so red marks stay below 6.
+    return [card(1, ["black"]), card(2, ["black"]), card(3, ["black"]),
+            card(4, ["black"]), card(5, ["red"])]
+
+
+def test_color_variation_sixth_card_does_not_take():
+    game = resolve_by_cpu(sparse_five_lane(), card(6, ["red"]), variation="color")
+    assert nums(game["lanes"][0]) == [1, 2, 3, 4, 5, 6]
+    assert game["taken"]["cpu"] == []
+
+
+def test_color_variation_still_takes_on_six_marks():
+    game = resolve_by_cpu(heavy_lane(), card(3, ["red"]), variation="color")
+    assert nums(game["taken"]["cpu"]) == [1, 2]
+    assert nums(game["lanes"][0]) == [3]
+
+
+def test_color_variation_no_match_still_takes_a_lane():
+    room = make_room([[card(1, ["red"], penalty=5)]] + filler_lanes(),
+                     [("cpu", True), ("h", False)], variation="color")
+    game = room["game"]
+    game["lanes"][3] = [card(160, ["black"], penalty=0)]
+    game["resolution_queue"] = [("cpu", card(9, ["blue"]), None)]
+    server.continue_online_resolution(room)
+    assert nums(game["taken"]["cpu"]) == [160]
+    assert nums(game["lanes"][3]) == [9]
+
+
+def test_base_sixth_card_takes_even_without_six_marks():
+    game = resolve_by_cpu(sparse_five_lane(), card(6, ["red"]))
+    assert nums(game["taken"]["cpu"]) == [1, 2, 3, 4, 5]
+    assert nums(game["lanes"][0]) == [6]
+
+
+# ---- variation: gather the cows ----
+
+def test_cows_no_match_goes_to_bottom_of_own_deck():
+    room = make_room([[card(1, ["red"])]] + filler_lanes(),
+                     [("cpu", True), ("h", False)], variation="cows")
+    game = room["game"]
+    game["decks"]["cpu"] = [card(50, ["black"]), card(51, ["black"])]
+    game["resolution_queue"] = [("cpu", card(9, ["blue"]), None)]
+    server.continue_online_resolution(room)
+    assert game["taken"]["cpu"] == []
+    # The played card is now at the bottom (front) of the player's deck.
+    assert nums(game["decks"]["cpu"]) == [9, 50, 51]
+    assert nums(game["lanes"][0]) == [1]
+
+
+def test_cows_human_no_match_needs_no_lane_choice(client):
+    room = make_room([[card(1, ["red"])]] + filler_lanes(),
+                     [("h", False), ("cpu", True)], variation="cows")
+    game = room["game"]
+    game["resolution_queue"] = [("h", card(9, ["blue"]), None)]
+    server.continue_online_resolution(room)
+    assert game["pending_choice"] is None
+    assert nums(game["decks"]["h"]) == [9]
+
+
+def test_cows_last_card_played_ends_game_even_if_it_goes_under_deck():
+    # Both players hold exactly one card and neither matches a lane, so
+    # both cards go under their decks. The round still counts as the
+    # round in which they played their last cards: the game must end
+    # instead of cycling the same two cards forever.
+    room = make_room([[card(1, ["red"])]] + filler_lanes(),
+                     [("a", True), ("b", True)], variation="cows")
+    game = room["game"]
+    game["hands"]["a"] = []
+    game["hands"]["b"] = []
+    game["resolution_queue"] = [("a", card(9, ["blue"]), None), ("b", card(10, ["blue"]), None)]
+    server.continue_online_resolution(room)
+    assert room["status"] == "finished"
+    assert sorted(game["winner"]) == ["a", "b"]  # no cows gathered: tie
+
+
+def test_cows_sixth_card_still_takes():
+    game = resolve_by_cpu([dict(c) for c in FIVE], card(6, ["red"]), variation="cows")
+    assert nums(game["taken"]["cpu"]) == [1, 2, 3, 4, 5]
+    assert nums(game["lanes"][0]) == [6]
+
+
+def test_cows_game_ends_when_one_player_runs_out_and_most_marks_win():
+    room = make_room([[card(1, ["red"])]] + filler_lanes(),
+                     [("a", True), ("b", True)], variation="cows")
+    game = room["game"]
+    game["hands"]["a"] = []
+    game["decks"]["a"] = []
+    game["hands"]["b"] = [card(30, ["red"])]
+    game["taken"]["a"] = [card(41, ["red"], penalty=7)]
+    game["taken"]["b"] = [card(42, ["red"], penalty=2)]
+    server.finish_online_game_if_needed(room)
+    assert room["status"] == "finished"
+    assert game["winner"] == ["a"]
+
+
+def test_base_game_ends_only_when_everyone_is_out_and_fewest_marks_win():
+    room = make_room([[card(1, ["red"])]] + filler_lanes(), [("a", True), ("b", True)])
+    game = room["game"]
+    game["hands"]["a"] = []
+    game["decks"]["a"] = []
+    game["hands"]["b"] = [card(30, ["red"])]
+    server.finish_online_game_if_needed(room)
+    assert room["status"] == "playing"
+    game["hands"]["b"] = []
+    game["taken"]["a"] = [card(41, ["red"], penalty=7)]
+    game["taken"]["b"] = [card(42, ["red"], penalty=2)]
+    server.finish_online_game_if_needed(room)
+    assert room["status"] == "finished"
+    assert game["winner"] == ["b"]
+
+
+@pytest.mark.parametrize("variation", ["none", "color", "cows"])
+@pytest.mark.parametrize("players", [2, 5, 10])
+def test_full_cpu_game_conserves_cards_with_variations(client, players, variation):
+    r = client.post("/api/rooms", json={"name": "A", "max_players": players, "variation": variation})
+    assert r.status_code == 200
+    code, host = r.get_json()["room"]["code"], r.get_json()["player_id"]
+    client.post(f"/api/rooms/{code}/start", json={"player_id": host})
     client.post(f"/api/rooms/{code}/leave", json={"player_id": host})
     room = server.ROOMS[code]
     game = room["game"]
-    # With 4 players each personal deck starts at 16 cards (12 after the
-    # opening draw of 4); the CPU handover on leave may already have
-    # resolved a turn (and drawn 1 more per player).
-    decks_before = {p["id"]: len(game["decks"][p["id"]]) for p in room["players"]}
-    assert all(n <= 16 - 4 for n in decks_before.values())
-    for _ in range(10):
+    for _ in range(400):
+        if room["status"] != "playing":
+            break
         server.submit_cpu_cards(room)
-        server.resolve_online_turn(room)
-        # Hands are refilled to 4 after every turn. CPUs immediately
-        # submit one card for the next turn, so hand + submitted == 4.
-        for p in room["players"]:
-            held = len(game["hands"][p["id"]]) + (1 if p["id"] in game["submissions"] else 0)
-            assert held == 4
-        # Each resolved turn draws exactly one card per player,
-        # from that player's own deck.
-        for p in room["players"]:
-            assert decks_before[p["id"]] - len(game["decks"][p["id"]]) == 1
-        decks_before = {p["id"]: len(game["decks"][p["id"]]) for p in room["players"]}
+        if game["resolution_queue"] or game.get("pending_choice"):
+            break
+        if all(p["id"] in game["submissions"] for p in room["players"] if game["hands"].get(p["id"])):
+            server.resolve_online_turn(room)
+        else:
+            break
+    if room["status"] != "finished":
+        # Only "cows" can stall: the last cards in circulation may share
+        # no color with any lane tail, so every played card goes under a
+        # deck forever. The official variation has no rule for this
+        # stalemate, so accept it only when no placement is possible.
+        assert variation == "cows"
+        circulating = [c for h in game["hands"].values() for c in h]
+        circulating += [c for d in game["decks"].values() for c in d]
+        circulating += list(game["submissions"].values())
+        assert circulating
+        assert all(not server.matching_lanes(game["lanes"], c) for c in circulating)
+    else:
+        assert game["winner"]
+
+    def all_cards():
+        cards = [c for lane in game["lanes"] for c in lane]
+        cards += [c for t in game["taken"].values() for c in t]
+        cards += [c for h in game["hands"].values() for c in h]
+        cards += [c for d in game["decks"].values() for c in d]
+        cards += list(game["submissions"].values())
+        cards += game["unused"]
+        return sorted(c["n"] for c in cards)
+
+    assert len(all_cards()) == 110
+    assert len(set(all_cards())) == len(all_cards())

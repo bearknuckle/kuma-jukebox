@@ -287,7 +287,7 @@
             <div class="bar bar-deck" id="bar-deck"><div style="width:100%"></div></div>
           </div>
           <div>
-            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 24</small></span></div>
+            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 32</small></span></div>
             <div class="bar bar-rep" id="bar-rep"><div style="width:0%"></div></div>
           </div>
         </div>
@@ -320,6 +320,7 @@
         <div class="hand-grid" id="hand"></div>
         <div class="hand-actions">
           <button class="draw-btn" id="draw-btn" type="button">手札を4枚まで引く</button>
+          <button class="draw-btn" id="rescue-btn" type="button" hidden>行き詰まったら：手札を捨てて引き直す</button>
           <span class="deck-info" id="deck-info"></span>
         </div>
       </section>
@@ -334,13 +335,14 @@
         <summary>遊び方・ルール</summary>
         <p>3人チームで1つのボードゲームショップを経営する協力ゲームです。あなたが1つの役割を担当し、残り2つの役割はCPU仲間が自動で動きます。</p>
         <ul>
-          <li><b>市場デッキ（45枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
-          <li><b>勝敗</b>：閉店までに評判24以上で勝ち。評判が24に届いた時点で即クリアです。</li>
+          <li><b>市場デッキ（40枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
+          <li><b>勝敗</b>：閉店までに評判32以上で勝ち。評判が32に届いた時点で即クリアです。</li>
           <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
           <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
           <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
           <li><b>CPU仲間</b>：接客はイベントにパワーを置き、店長は収入や支援、仕入れは市場の入れ替えや安いカードの購入（あなたの捨て札に入ります）を自動で行います。</li>
-          <li><b>全員の力が必要</b>：CPU仲間のパワーは、必要パワーの半分までしか入りません。残りはあなたの担当です。誰か1人でも止まると、クリアは難しくなります。</li>
+          <li><b>全員の力が必要</b>：CPU仲間のパワーは、必要パワーの約3分の1までしか入りません。残りはあなたの担当です。誰か1人でも止まると、クリアは難しくなります。</li>
+          <li><b>行き詰まったとき</b>：イベントがなく、手札がパワーカードだけで、市場にも買えるカードがないときは、救済ボタンが出ます。手札1枚を捨て、市場デッキからも1枚捨てて、1枚引き直せます。</li>
         </ul>
       </details>
 
@@ -353,7 +355,7 @@
     <div class="overlay" id="title-overlay">
       <div class="sheet">
         <h1>ボドゲショップ物語（試作）</h1>
-        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判24を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
+        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判32を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
         <div class="role-pick" id="role-pick"></div>
       </div>
     </div>
@@ -425,19 +427,19 @@
       ];
 
       var EVENT_DEFS = [
-        { name: "大口注文", need: 5, rep: 4, income: 2 },
-        { name: "大会を開きたい", need: 7, rep: 6, income: 3 },
-        { name: "新作の予約殺到", need: 6, rep: 4, income: 2 },
-        { name: "人気配信者が来店", need: 4, rep: 4, income: 0 },
-        { name: "新聞の取材", need: 5, rep: 5, income: 0 },
-        { name: "レジ故障", need: 3, rep: 1, income: 4 },
-        { name: "クレーム対応", need: 3, rep: 1, income: 0, claim: true },
-        { name: "棚が崩れた", need: 2, rep: 2, income: 1 },
-        { name: "常連さんの誕生日会", need: 4, rep: 3, income: 1 },
-        { name: "在庫チェック", need: 4, rep: 2, income: 2 }
+        { name: "大口注文", need: 6, rep: 4, income: 2 },
+        { name: "大会を開きたい", need: 9, rep: 6, income: 3 },
+        { name: "新作の予約殺到", need: 8, rep: 4, income: 2 },
+        { name: "人気配信者が来店", need: 5, rep: 4, income: 0 },
+        { name: "新聞の取材", need: 6, rep: 5, income: 0 },
+        { name: "レジ故障", need: 4, rep: 1, income: 4 },
+        { name: "クレーム対応", need: 4, rep: 1, income: 0, claim: true },
+        { name: "棚が崩れた", need: 3, rep: 2, income: 1 },
+        { name: "常連さんの誕生日会", need: 5, rep: 3, income: 1 },
+        { name: "在庫チェック", need: 5, rep: 2, income: 2 }
       ];
 
-      var DECK_SIZE = 45, TARGET = 24, EVENT_COUNT = 13;
+      var DECK_SIZE = 40, TARGET = 32, EVENT_COUNT = 13;
 
       /* ================= state ================= */
       var S = null;
@@ -503,7 +505,7 @@
         logMsg("開店しました。あなたは「" + ROLE_INFO[role].name + "」、仲間は " +
           Object.keys(ROLE_INFO).filter(function (r) { return r !== role; })
             .map(function (r) { return ROLE_INFO[r].name + "（CPU）"; }).join("と") + " です。", "good");
-        logMsg("市場デッキ45枚が店のお金＝残り時間です。評判" + TARGET + "を目指しましょう。", "");
+        logMsg("市場デッキ40枚が店のお金＝残り時間です。評判" + TARGET + "を目指しましょう。", "");
         startCpu();
         render();
       }
@@ -637,6 +639,18 @@
         var card = S.playerHand[handIdx];
         if (!card) return;
 
+        if (S.rescueMode) {
+          S.playerHand.splice(handIdx, 1);
+          S.playerDiscard.push(card);
+          S.rescueMode = false;
+          payFromDeck(1);
+          drawCards(1);
+          logMsg("行き詰まりの救済で「" + card.name + "」を捨てて、1枚引き直しました。", "good");
+          checkEnd();
+          render();
+          return;
+        }
+
         if (card.type === "power") {
           var ev = S.events[S.selectedEvent];
           if (!ev) { logMsg("先にイベントを選んでください。", "bad"); render(); return; }
@@ -745,6 +759,7 @@
           S.findPick = null;
         }
         if (S.pendingSwaps > 0) { S.pendingSwaps = 0; logMsg("市場の入れ替えをやめました。", "dim"); }
+        if (S.rescueMode) { S.rescueMode = false; logMsg("引き直しをやめました。", "dim"); }
         render();
       }
 
@@ -773,6 +788,14 @@
         render();
       }
 
+      function canRescue() {
+        if (!S || S.phase !== "playing" || S.rescueMode) return false;
+        if (S.events.length > 0 || S.playerHand.length === 0 || S.marketDeck.length === 0) return false;
+        for (var i = 0; i < S.playerHand.length; i++) if (S.playerHand[i].type !== "power") return false;
+        for (var j = 0; j < 3; j++) { var d = S.market[j]; if (d && (!d.role || d.role === S.role)) return false; }
+        return true;
+      }
+
       function drawAction() {
         if (!S || S.phase !== "playing") return;
         drawUpTo(4);
@@ -783,7 +806,7 @@
       function startCpu() {
         Object.keys(ROLE_INFO).forEach(function (r) {
           if (r === S.role) return;
-          var base = r === "service" ? 4800 : r === "manager" ? 8500 : 11000;
+          var base = r === "service" ? 8160 : r === "manager" ? 14450 : 18700;
           var tick = function () {
             if (!S || S.phase !== "playing") return;
             cpuAct(r);
@@ -801,8 +824,8 @@
         cpuTimers = {};
       }
 
-      // CPU仲間のパワーは、必要パワーの半分までしか入らない（残りはプレイヤーの担当）
-      function cpuRoom(ev) { return Math.floor(ev.def.need / 2) - ev.cpuPower; }
+      // CPU仲間のパワーは、必要パワーの約3分の1までしか入らない（残りはプレイヤーの担当）
+      function cpuRoom(ev) { return Math.floor(ev.def.need * 0.35) - ev.cpuPower; }
 
       function cpuAct(role) {
         if (role === "service") {
@@ -885,6 +908,7 @@
         document.getElementById("bar-rep").firstElementChild.style.width = Math.min(100, S.rep / TARGET * 100) + "%";
         document.getElementById("st-discard").textContent = "共通の捨て札：" + S.commonDiscard.length + "枚";
         document.getElementById("st-mydeck").textContent = "自分の山札：" + S.playerDeck.length + "枚／捨て札：" + S.playerDiscard.length + "枚";
+        document.getElementById("rescue-btn").hidden = !canRescue();
         var permBits = [];
         if (S.pipeCount > 0) permBits.push("購入ずっと-" + S.pipeCount);
         if (S.negotiateNext) permBits.push("次の購入-2");
@@ -1012,6 +1036,12 @@
 
       /* ================= wiring ================= */
       document.getElementById("draw-btn").addEventListener("click", drawAction);
+      document.getElementById("rescue-btn").addEventListener("click", function () {
+        if (!canRescue()) return;
+        S.rescueMode = true;
+        logMsg("行き詰まりの救済：捨てる手札を1枚タップしてください（市場デッキからも1枚捨てます）。", "good");
+        render();
+      });
       document.getElementById("restart-btn").addEventListener("click", function () {
         stopCpu(); S = null;
         document.getElementById("app").hidden = true;

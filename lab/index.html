@@ -58,6 +58,13 @@ h2.cat:first-child{margin-top:4px}
 #reset{background:none;border:none;color:var(--dim);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;margin-top:6px}
 .catnote{font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.6}
 footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
+.theme{margin:0 0 20px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.theme h2{font-size:16px;margin:0 0 4px}
+.theme .song{font-size:14px;margin:0 0 10px;color:#d9d4e6}
+.theme .song b{color:var(--text)}
+.theme .credit{color:var(--dim);font-size:12px}
+.theme .movie{position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000}
+.theme iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 </style>
 </head>
 <body>
@@ -66,6 +73,11 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
     <h1><img src="icon.svg" alt="" class="logo"> 試作ゲームラボ</h1>
     <p class="lead">ブラウザですぐ遊べる試作ゲームの置き場です。スマホでもそのまま遊べます。</p>
   </header>
+  <section class="theme">
+    <h2>🎵 公式テーマソング</h2>
+    <p class="song">「<b>試作ゲームラボ</b>」 <span class="credit">KUMA MUSIC</span></p>
+    <div class="movie"><iframe src="https://www.youtube-nocookie.com/embed/lgTnmh8T2oc" title="試作ゲームラボ｜試作ゲームラボ公式テーマソング" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>
+  </section>
   <div id="updates"></div>
   <div class="filters" id="filters"></div>
   <div class="grid" id="grid"></div>
@@ -74,6 +86,11 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 <script>
 // ゲームを増やすときはここに1件追加する
 const GAMES=[
+  {
+    id:'dnup', name:'dnup（ディナップ）ルール確認', icon:'🔄', color:'#b45a12',
+    desc:'カードゲーム『dnup（ディナップ）』のファン製ルール確認アプリ。出したカードは裏返すと数字が変わり、同じ枚数のセット同士で強さを競う。手札を全部出し切って1位2点・2位1点、4点先取で優勝。遊び方の解説、ルールクイズ、CPU対戦（2〜5人）で遊びながらルールを覚えられる。非公式のファンページです。',
+    players:'1人（CPU 1〜4人）', time:'5〜15分', genre:'ボドゲ', added:'2026-11-23', version:'0.1', updated:'2026-11-23', isNew:true
+  },
   {
     id:'ipo-rush', name:'IPOラッシュ', icon:'🚀', color:'#1565c0',
     desc:'新規上場（IPO）株を買うゲーム。公募価格で買って、成長度はヒミツ。毎ラウンドの相場イベントで株価が動く。5社上場したら全株を売って、いちばんお金を持っている人の勝ち。',
@@ -179,6 +196,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-23', id:'dnup', version:'0.1', text:'新しく登場：dnup（ディナップ）のファン製ルール確認アプリ（遊び方・クイズ・CPU対戦）'},
   {date:'2026-11-22', id:'ipo-rush', version:'0.1', text:'新しく登場：上場したての株を買って、成長にかけるゲーム'},
   {date:'2026-11-22', id:'bodoge-shop-story', version:'0.4', text:'大量の自動テストプレイでバランスを最適化：山札40枚・評判の目標32、イベントの必要パワーを引き上げ、CPUをゆっくりに。仕入れ役の詰みを救う「引き直し」も追加'},
   {date:'2026-11-22', id:'hit-chart',        version:'0.3', text:'最初の1か月だけ遊べる「おためしモード」を追加。まず流れをつかんでから通常モード（6か月）へ'},

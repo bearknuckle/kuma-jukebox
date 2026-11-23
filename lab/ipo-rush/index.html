@@ -80,6 +80,9 @@ button{font-family:inherit;cursor:pointer;border:none}
 .co-name{font-weight:800;font-size:16px}
 .own{font-size:12px;color:var(--sub)}
 .own b{color:var(--ink);font-size:14px}
+.cpu-hold{font-size:12px;color:var(--sub)}
+.cpu-hold b{color:var(--accent);font-size:14px}
+.cpu-hold .hot{color:var(--up);font-weight:800}
 .co-s{grid-area:s;font-size:12px;color:var(--sub);text-align:right}
 .co-p{grid-area:p;text-align:right;min-width:62px}
 .price{font-size:28px;font-weight:800;line-height:1}
@@ -133,6 +136,7 @@ table.stats th:first-child,table.stats td:first-child{text-align:left}
       <li>毎ラウンド、新しい会社が1社上場する（公募価格つき）</li>
       <li>その会社の株を <b>0〜3株</b> まで買う。持っている株は今の値段で売ることもできる</li>
       <li>相場イベントが1枚めくれて、株価が動く（上場している株に効く）</li>
+      <li>CPUが買った株もぜんぶ見える。買いが集まっている会社を読もう</li>
       <li>会社の成長度★はヒミツ。5ラウンド終わったら決算！</li>
     </ol>
     <p style="font-size:13px;color:var(--sub);margin-top:8px">決算の株価 ＝ 公募価格 ＋ イベントの動き ＋ 成長度★×2。全株を売って、所持金がいちばん多い人の勝ち。</p>
@@ -373,8 +377,10 @@ function render(){
   document.getElementById('market').innerHTML=S.listed.map(l=>{
     const n=me.sh[l.co.id]||0;
     const d=l.adj;
+    const cpuTot=S.players.slice(1).reduce((t,p)=>t+(p.sh[l.co.id]||0),0);
+    const cpuHolds=S.players.slice(1).filter(p=>p.sh[l.co.id]).map(p=>`${p.icon}×${p.sh[l.co.id]}`).join(' ');
     return `<div class="co ${l.co.id===co.id?'is-new':''}">
-      <div class="co-n"><div class="co-name">${l.co.emo} ${l.co.name}</div><div class="own">あなたの持ち株 <b>${n}株</b>・公募${l.co.ipo}</div></div>
+      <div class="co-n"><div class="co-name">${l.co.emo} ${l.co.name}</div><div class="own">あなたの持ち株 <b>${n}株</b>・公募${l.co.ipo}</div><div class="cpu-hold">CPUの持ち株 <b>${cpuTot}株</b>${cpuHolds?' '+cpuHolds:'（まだ買っていない）'}${cpuTot>=4?' <span class="hot">🔥買い集中</span>':''}</div></div>
       <div class="co-s">${l.co.sector}<br>成長 ${S.phase==='done'?'★'.repeat(l.co.growth):'？'}</div>
       <div class="co-p"><span class="price">${curPrice(l)}<small>コイン</small></span>${d?`<span class="delta ${d>0?'up':'down'}">${d>0?'▲+':'▼'}${d}</span>`:''}</div>
       <div class="co-b"><button class="sell" ${S.phase==='buy'&&n>0?'':'disabled'} onclick="sellOne('${l.co.id}')">売る（1株 ${curPrice(l)}コイン）</button></div>

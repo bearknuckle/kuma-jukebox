@@ -7,8 +7,8 @@
 <!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
-<meta property="og:title" content="dnup（ディナップ）ルール確認｜試作ゲームラボ">
-<meta property="og:description" content="カードを裏返すと数字が変わるカードゲーム『dnup（ディナップ）』のファン製ルール確認アプリ。遊び方・クイズ・CPU対戦でルールを確認できます。">
+<meta property="og:title" content="dnup（ダウン・アップ）ルール確認｜試作ゲームラボ">
+<meta property="og:description" content="カードを裏返すと数字が変わるカードゲーム『dnup（ダウン・アップ）』のファン製ルール確認アプリ。遊び方・クイズ・CPU対戦でルールを確認できます。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/dnup/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -16,7 +16,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<title>dnup（ディナップ） ルール確認</title>
+<title>dnup（ダウン・アップ） ルール確認</title>
 <style>
   button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.75rem; }
   :root{
@@ -182,8 +182,8 @@
 <body>
 <header>
   <div class="headwrap">
-    <div class="brand">dnup（ディナップ） · ルール確認</div>
-    <h1>🔄 dnup（ディナップ）</h1>
+    <div class="brand">dnup（ダウン・アップ） · ルール確認</div>
+    <h1>🔄 dnup（ダウン・アップ）</h1>
     <p>カードを裏返すと数字が変わるカードゲーム。手札を全部出し切ることを目指し、ラウンドの順位で点を取り、最初に合計4点を取った人が優勝です。</p>
     <div class="badges">
       <span class="badge">🃏 手札は <strong>6枚</strong>（2〜3人では <strong>7枚</strong>）</span>
@@ -208,7 +208,7 @@
   <div id="viewRules">
     <section class="panel">
       <h2>ゲームの概要</h2>
-      <p style="margin:0;font-size:14px;line-height:1.8">dnup（ディナップ）は、<strong>カードを裏返す（180度回転させる）ことで数字が変わる</strong>カードゲームです。各プレイヤーは<strong>手札を全部出し切る</strong>ことを目指します。手札が0枚になったプレイヤーは、順位に応じて<strong>1位が2点、2位が1点</strong>を獲得します。<strong>最初に合計4点を取った人が優勝</strong>で、ゲームは終了します。</p>
+      <p style="margin:0;font-size:14px;line-height:1.8">dnup（ダウン・アップ）は、<strong>カードを裏返す（180度回転させる）ことで数字が変わる</strong>カードゲームです。各プレイヤーは<strong>手札を全部出し切る</strong>ことを目指します。手札が0枚になったプレイヤーは、順位に応じて<strong>1位が2点、2位が1点</strong>を獲得します。<strong>最初に合計4点を取った人が優勝</strong>で、ゲームは終了します。</p>
       <div class="carddemo">
         <div class="dcard" aria-label="カードの例：上は3、下は8">
           <span class="top">3</span>
@@ -261,7 +261,7 @@
 
     <section class="panel">
       <h2>『リヴォルヴ！（Revolve!）』と dnup の違い</h2>
-      <p style="margin:0;font-size:14px;line-height:1.8">dnup（ディナップ）は、梶野桂さんのカードゲーム<strong>『リヴォルヴ！（Revolve!）』</strong>を、アスモデが世界向けにリメイクした作品です。<strong>核となるルールは共通</strong>で、上下で数字が変わるカード、4つのアクション（出す／足す／取る／手札を反転）、同じ枚数なら大きい数字を出す決まり、1位2点・2位1点で最初に4点を取った人が優勝、という骨組みはどちらも同じです。違うのは次の3点です。</p>
+      <p style="margin:0;font-size:14px;line-height:1.8">dnup（ダウン・アップ）は、梶野桂さんのカードゲーム<strong>『リヴォルヴ！（Revolve!）』</strong>を、アスモデが世界向けにリメイクした作品です。<strong>核となるルールは共通</strong>で、上下で数字が変わるカード、4つのアクション（出す／足す／取る／手札を反転）、同じ枚数なら大きい数字を出す決まり、1位2点・2位1点で最初に4点を取った人が優勝、という骨組みはどちらも同じです。違うのは次の3点です。</p>
       <div class="rulegrid">
         <div class="rule"><span class="no">人</span><b>プレイ人数</b><p><strong>リヴォルヴ！は3〜4人</strong>、<strong>dnupは2〜5人</strong>です。2人プレイで1人が2つの場を持つ特殊ルールは、dnup側で追加されたものです。</p></div>
         <div class="rule"><span class="no">向</span><b>最初の手札の向き</b><p><strong>リヴォルヴ！</strong>は、配られた手札を見て、<strong>全部まとめてなら最初に1回だけ</strong>上下を変えられます。<strong>dnup</strong>は配られた向きのまま固定で、最初に変えることはできません。</p></div>
@@ -336,7 +336,7 @@
   </div>
 <p style="text-align:center;margin:16px 0 0"><a href="../" style="color:var(--accent);font-size:13px">← 試作ゲームラボに戻る</a></p>
 </main>
-<footer>dnup（ディナップ） ルール確認 ／ このページはファンが個人的に作った非公式のファンページです。ゲームの発売元・出版社・公式サービスとは関係ありません。<br>出典：<a href="https://ja.boardgamearena.com/gamepanel?game=dnup" target="_blank" rel="noopener">BGA（Board Game Arena）「dnup」ゲームページ</a></footer>
+<footer>dnup（ダウン・アップ） ルール確認 ／ このページはファンが個人的に作った非公式のファンページです。ゲームの発売元・出版社・公式サービスとは関係ありません。<br>出典：<a href="https://ja.boardgamearena.com/gamepanel?game=dnup" target="_blank" rel="noopener">BGA（Board Game Arena）「dnup」ゲームページ</a></footer>
 
 <script>
 "use strict";
@@ -390,7 +390,7 @@ Array.prototype.forEach.call(document.querySelectorAll(".quiz .opt"), function(b
       var n=QUIZ.filter(function(x,i){ return quizState[i]===x.c; }).length;
       var r=$("quizResult");
       r.classList.remove("hidden");
-      r.innerHTML="<b>結果："+n+" / "+QUIZ.length+" 問正解</b><br>"+(n===QUIZ.length ? "全問正解！dnup（ディナップ）のルールはバッチリです。" : "間違えた問題の解説を読み返して、もう一度タップしてみてください。");
+      r.innerHTML="<b>結果："+n+" / "+QUIZ.length+" 問正解</b><br>"+(n===QUIZ.length ? "全問正解！dnup（ダウン・アップ）のルールはバッチリです。" : "間違えた問題の解説を読み返して、もう一度タップしてみてください。");
     }
   };
 });

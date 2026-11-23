@@ -287,7 +287,7 @@
             <div class="bar bar-deck" id="bar-deck"><div style="width:100%"></div></div>
           </div>
           <div>
-            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 32</small></span></div>
+            <div class="stat-label"><span>評判</span><span class="stat-value" id="st-rep">0<small> / 36</small></span></div>
             <div class="bar bar-rep" id="bar-rep"><div style="width:0%"></div></div>
           </div>
         </div>
@@ -335,8 +335,8 @@
         <summary>遊び方・ルール</summary>
         <p>3人チームで1つのボードゲームショップを経営する協力ゲームです。あなたが1つの役割を担当し、残り2つの役割はCPU仲間が自動で動きます。</p>
         <ul>
-          <li><b>市場デッキ（40枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
-          <li><b>勝敗</b>：閉店までに評判32以上で勝ち。評判が32に届いた時点で即クリアです。</li>
+          <li><b>市場デッキ（44枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
+          <li><b>勝敗</b>：閉店までに評判36以上で勝ち。評判が36に届いた時点で即クリアです。</li>
           <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。イベントには担当役職（接客／店長／仕入れ）があり、担当役職のパワーは2倍で数えます。共通カードと担当外の役職のパワーもそのまま（等倍）で数えるので、誰のパワーでも進められますが、担当役職が動くと効率よく進みます。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
           <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
           <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
@@ -355,7 +355,7 @@
     <div class="overlay" id="title-overlay">
       <div class="sheet">
         <h1>ボドゲショップ物語</h1>
-        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判32を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
+        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判36を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
         <div class="role-pick" id="role-pick"></div>
       </div>
     </div>
@@ -427,19 +427,19 @@
       ];
 
       var EVENT_DEFS = [
-        { name: "大口注文", role: "buyer", need: 6, rep: 4, income: 2 },
-        { name: "大会を開きたい", role: "service", need: 9, rep: 6, income: 3 },
-        { name: "新作の予約殺到", role: "buyer", need: 8, rep: 4, income: 2 },
-        { name: "人気配信者が来店", role: "service", need: 5, rep: 4, income: 0 },
-        { name: "新聞の取材", role: "manager", need: 6, rep: 5, income: 0 },
-        { name: "レジ故障", role: "manager", need: 4, rep: 1, income: 4 },
-        { name: "クレーム対応", role: "service", need: 4, rep: 1, income: 0, claim: true },
-        { name: "棚が崩れた", role: "buyer", need: 3, rep: 2, income: 1 },
-        { name: "常連さんの誕生日会", role: "service", need: 5, rep: 3, income: 1 },
-        { name: "在庫チェック", role: "buyer", need: 5, rep: 2, income: 2 }
+        { name: "大口注文", role: "buyer", need: 3, rep: 4, income: 2 },
+        { name: "大会を開きたい", role: "service", need: 14, rep: 4, income: 3 },
+        { name: "新作の予約殺到", role: "buyer", need: 5, rep: 4, income: 2 },
+        { name: "人気配信者が来店", role: "service", need: 10, rep: 2, income: 0 },
+        { name: "新聞の取材", role: "manager", need: 7, rep: 5, income: 0 },
+        { name: "レジ故障", role: "manager", need: 5, rep: 1, income: 4 },
+        { name: "クレーム対応", role: "service", need: 5, rep: 0, income: 0, claim: true },
+        { name: "棚が崩れた", role: "buyer", need: 1, rep: 2, income: 1 },
+        { name: "常連さんの誕生日会", role: "service", need: 10, rep: 1, income: 1 },
+        { name: "在庫チェック", role: "buyer", need: 2, rep: 2, income: 2 }
       ];
 
-      var DECK_SIZE = 40, TARGET = 32, EVENT_COUNT = 13;
+      var DECK_SIZE = 44, TARGET = 36, EVENT_COUNT = 16;
 
       /* ================= state ================= */
       var S = null;
@@ -457,7 +457,7 @@
       function buildMarketDeck() {
         var deck = [];
         var i, def;
-        // events: 11 cards, guarantee at least one claim
+        // events: 16 cards, guarantee at least one claim
         var claimDef = EVENT_DEFS.filter(function (e) { return e.claim; })[0];
         deck.push({ kind: "event", def: claimDef });
         for (i = 1; i < EVENT_COUNT; i++) deck.push({ kind: "event", def: pick(EVENT_DEFS) });
@@ -505,7 +505,7 @@
         logMsg("開店しました。あなたは「" + ROLE_INFO[role].name + "」、仲間は " +
           Object.keys(ROLE_INFO).filter(function (r) { return r !== role; })
             .map(function (r) { return ROLE_INFO[r].name + "（CPU）"; }).join("と") + " です。", "good");
-        logMsg("市場デッキ40枚が店のお金＝残り時間です。評判" + TARGET + "を目指しましょう。", "");
+        logMsg("市場デッキ44枚が店のお金＝残り時間です。評判" + TARGET + "を目指しましょう。", "");
         startCpu();
         render();
       }

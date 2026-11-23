@@ -58,11 +58,14 @@ h2.cat:first-child{margin-top:4px}
 #reset{background:none;border:none;color:var(--dim);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;margin-top:6px}
 .catnote{font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.6}
 footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
-.theme{margin:0 0 20px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.theme{margin:20px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
 .theme h2{font-size:16px;margin:0 0 4px}
 .theme .song{font-size:14px;margin:0 0 10px;color:#d9d4e6}
 .theme .song b{color:var(--text)}
 .theme .credit{color:var(--dim);font-size:12px}
+.theme .movies{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:600px){.theme .movies{grid-template-columns:1fr}}
+.theme .mv h3{font-size:14px;margin:0 0 8px}
 .theme .movie{position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000}
 .theme iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 </style>
@@ -73,15 +76,24 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
     <h1><img src="icon.svg" alt="" class="logo"> 試作ゲームラボ</h1>
     <p class="lead">ブラウザですぐ遊べる試作ゲームの置き場です。スマホでもそのまま遊べます。</p>
   </header>
-  <section class="theme">
-    <h2>🎵 公式テーマソング</h2>
-    <p class="song">「<b>試作ゲームラボ</b>」 <span class="credit">KUMA MUSIC</span></p>
-    <div class="movie"><iframe src="https://www.youtube-nocookie.com/embed/lgTnmh8T2oc?loop=1&amp;playlist=lgTnmh8T2oc" title="試作ゲームラボ｜試作ゲームラボ公式テーマソング" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>
-  </section>
   <div id="updates"></div>
   <div class="filters" id="filters"></div>
   <div class="grid" id="grid"></div>
   <footer>ゲームは随時追加予定<br><button id="reset">遊んだ記録をリセット</button></footer>
+  <section class="theme">
+    <h2>🎵 公式テーマソング</h2>
+    <p class="song">「<b>試作ゲームラボ</b>」 <span class="credit">KUMA MUSIC</span></p>
+    <div class="movies">
+      <div class="mv">
+        <h3>🎬 MV</h3>
+        <div class="movie"><iframe src="https://www.youtube-nocookie.com/embed/vLygKV_YQ8o" title="試作ゲームラボ MV" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>
+      </div>
+      <div class="mv">
+        <h3>🎵 テーマソング</h3>
+        <div class="movie"><iframe src="https://www.youtube-nocookie.com/embed/lgTnmh8T2oc?loop=1&amp;playlist=lgTnmh8T2oc" title="試作ゲームラボ｜試作ゲームラボ公式テーマソング" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>
+      </div>
+    </div>
+  </section>
 </main>
 <script>
 // ゲームを増やすときはここに1件追加する
@@ -93,8 +105,8 @@ const GAMES=[
   },
   {
     id:'kakusu-dice', name:'画数ダイス', icon:'🎲', color:'#2f5d8a',
-    desc:'場の3枚の漢字カードから1枚を選んでサイコロを振り、出た目の合計がその漢字の画数とぴったり合えばカードを獲得。画数はヒントだけが表示され、字を数えるのがコツ。獲得したカードは1枚1点の得点であり通貨（1枚1金）でもあり、市場でダイスを買ったり、場のカードを入れ替えたりできる。ただし支払ったカードの得点は失われる。13画以上のカードには特典ダイスが付いていて、取るとダイスももらえる。激レアのネタ枠『鬱』（29画）『龘』（48画）も1枚ずつ潜んでいて、ネタ枠ルールONでサイコロで取ればその場で即勝利。どのダイスの組み合わせで振るかが勝負どころ。CPUと10ラウンド（または山札が尽きるまで）の得点勝負。',
-    players:'1人（CPU 1人）', time:'5〜10分', genre:'ボドゲ', added:'2026-11-23', version:'0.8', updated:'2026-11-23', isNew:true
+    desc:'場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が画数と合えば獲得。取ったカードは1枚1点＝1金で、13画以上のカードは特典ダイスつき。ネタ枠『鬱』『龘』を取れば即勝利。CPUと10ラウンドの得点勝負。',
+    players:'1人（CPU 1人）', time:'5〜10分', genre:'ボドゲ', added:'2026-11-23', version:'0.9', updated:'2026-11-23', isNew:true
   },
   {
     id:'sakagura-sugoroku', name:'銘柄サイコロ', icon:'🍶', color:'#1c2b4a',
@@ -212,6 +224,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-23', id:'kakusu-dice', version:'0.9', text:'遊び方の説明をシンプルに短くした'},
   {date:'2026-11-23', id:'onpu-karuta',     version:'0.6', text:'「れんしゅうモード」を追加。札に音名が表示され、まちがえてもお手つきにならない'},
   {date:'2026-11-23', id:'onechord',        version:'0.6', text:'自分の番に、出せるコードが光って「出せる」と表示されるように'},
   {date:'2026-11-23', id:'izakaya-seri',    version:'0.3', text:'「短縮モード（4ラウンド）」を追加。ハッピーアワーは2ラウンド目、最終ラウンドの点数2倍はそのまま'},

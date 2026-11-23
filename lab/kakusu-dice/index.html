@@ -68,7 +68,6 @@
   .wonlist{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
   .wonlist span{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:1px 7px;font-size:13px}
   .wonlist span small{color:var(--muted);font-size:11px}
-  .wonlist span.initc{border-color:var(--gold);background:var(--goldbg)}
   .settings{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:13.5px}
   .settings select{font-size:14px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
   .settings label{cursor:pointer}
@@ -222,13 +221,13 @@
     <h2>遊び方</h2>
     <ul>
       <li>場の3枚の漢字カードから挑戦する1枚を選び、持っているサイコロから振る組み合わせを選んで振ります。合計が画数とぴったり合えば獲得、外れたらそのカードは捨てられます（画数はヒントだけ表示。字をよく見て数えるのがコツ）。振るダイスは全部でなくても大丈夫です。</li>
-      <li>得点は、獲得したカードの画数の合計です。取ったカードはお金（1枚＝1金）にもなり、支払いに使っても得点は減りません。ただし最初の初期資金2枚は得点に入りません。</li>
+      <li>得点は、獲得したカードの画数の合計です。取ったカードはお金（1枚＝1金）にもなり、支払いに使っても得点は減りません。</li>
       <li>🔁マークの付いたカード（11画以上）に挑戦するときは、外れても、振ったダイスの一部（全部でも可）を1回だけ振り直せます。</li>
       <li>11画以上のカードを取ると特典ダイスが付きます（11〜16画→12面、17〜20画→20面）。所持ダイスが上限（5個）のときは、いちばん小さいダイスと入れ替わります。</li>
       <li>リフレッシュ（場の3枚を全入れ替え）と6面ダイスの購入はボタンで、どちらも1金。支払いは画数の小さいカードから。ダイスの所持は5個までです。</li>
       <li>✨ネタ枠『鬱』（29画）『龘』（48画）：ネタ枠ルールONでサイコロで取れば即勝利（人間が取るときは「家に6面ダイスはありますか？」の確認つき）。</li>
       <li>🔀 ヴァリアント「振ってから選ぶ」：先にダイスを振ってから、合計と画数が合うカードを選んで獲得します。🔁マークのカードを選んで合わなかったときは、そのカードに対して1回だけ振り直せます。合わないカードを選ぶとそのカードは捨てられ、選ばずにパスもできます。</li>
-      <li>手番の順番はラウンドごとに1つずつずれます。スタートは6面ダイス2個と初期資金2枚。ラウンド数は人数で変わり（2人10／3人8／4人7／5人6／6人5）、山札が尽きたらそのラウンドで終了。得点が一番多い人の勝ちです。</li>
+      <li>手番の順番はラウンドごとに1つずつずれます。スタートは6面ダイス2個だけ（所持カードは0枚）。ラウンド数は人数で変わり（2人10／3人8／4人7／5人6／6人5）、山札が尽きたらそのラウンドで終了。得点が一番多い人の勝ちです。</li>
     </ul>
   </section>
 
@@ -273,7 +272,6 @@ const MAX_DICE = 5;
 const ROUNDS_BY_PLAYERS = {2:10, 3:8, 4:7, 5:6, 6:5};
 const FIELD_SIZE = 3;
 const REFRESH_COST = 1;
-const INITIAL_FUNDS = 2;
 
 function makeDeck(rng){
   const d = DECK.map(([k,s])=>{
@@ -288,7 +286,7 @@ function makeDeck(rng){
   }
   return d;
 }
-/* ネタ枠の即勝利が成立するか（サイコロで獲得したときだけ。初期資金で引いただけでは成立しない） */
+/* ネタ枠の即勝利が成立するか（サイコロで獲得したときだけ） */
 function isJokeWin(card, jokeRule){
   return !!(card && card.joke && jokeRule);
 }
@@ -299,7 +297,7 @@ function newPlayer(){
 function goldOf(player){
   return player.won.length;
 }
-/* 得点は「ゲーム中に獲得したカード」の画数の累計。初期資金のカードは含まず、支払いでも減らない */
+/* 得点は「ゲーム中に獲得したカード」の画数の累計。支払いでも減らない */
 function scoreOf(player){
   return player.score;
 }
@@ -486,18 +484,6 @@ function refillField(state){
     state.field.push(card);
   }
 }
-/* 初期資金：山札から n 枚引いて所持カードとして持つ（得点には入らない） */
-function dealInitialFunds(player, state, n){
-  const got = [];
-  for(let i=0;i<n;i++){
-    const card = drawCard(state);
-    if(!card) break;
-    card.init = true;
-    player.won.push(card);
-    got.push(card);
-  }
-  return got;
-}
 /* リフレッシュ：1金を払い、場の3枚すべてを捨てて引き直す。支払ったカードを返す（使えなければ null） */
 function refreshField(player, state){
   if(goldOf(player) < REFRESH_COST) return null;
@@ -580,16 +566,14 @@ function turnOrder(round, numPlayers){
   for(let k=0;k<numPlayers;k++) order.push((start + k) % numPlayers);
   return order;
 }
-/* ゲーム初期化：全員に初期資金を配り、場に3枚並べる */
+/* ゲーム初期化：全員 所持カード0枚・6面ダイス2個から開始し、場に3枚並べる */
 function newGame(rng, opts){
   const o = opts || {};
   const numPlayers = o.numPlayers || 2;
   const state = newGameState(rng, o.deckOverride || null);
   const players = [];
   for(let i=0;i<numPlayers;i++){
-    const pl = newPlayer();
-    dealInitialFunds(pl, state, INITIAL_FUNDS);
-    players.push(pl);
+    players.push(newPlayer());
   }
   refillField(state);
   return {state, players, roundsTotal: ROUNDS_BY_PLAYERS[numPlayers] || 10};
@@ -729,7 +713,7 @@ function diceLabel(f){ return f+'面'; }
 function cardLabel(c){ return '『'+c.kanji+'』（'+c.strokes+'画）'; }
 function paidLabel(paid){ return paid.map(cardLabel).join('・'); }
 function wonChip(c){
-  return '<span'+(c.init?' class="initc"':'')+'>'+c.kanji+'<small> '+c.strokes+'画'+(c.init?'・初期':'')+(c.reroll?'・🔁':'')+'</small></span>';
+  return '<span>'+c.kanji+'<small> '+c.strokes+'画'+(c.reroll?'・🔁':'')+'</small></span>';
 }
 
 function renderPlayers(){
@@ -1366,10 +1350,6 @@ function init(){
   $('rerollBox').style.display = 'none';
   $('log').innerHTML = '';
   log('対戦開始（'+numPlayers+'人・全'+S.roundsTotal+'ラウンド'+(S.variant?'・ヴァリアント「振ってから選ぶ」':'')+(S.jokeRule?'':'・ネタ枠ルールOFF')+'）');
-  S.players.forEach((pl, i)=>{
-    const fmt = pl.won.filter(c=>c.init).map(cardLabel).join('・');
-    log(playerName(i)+'の初期資金は '+fmt+'（'+INITIAL_FUNDS+'金・得点には入らない）');
-  });
   log('場の3枚から挑戦するカードを選び、ダイスを選んで振ろう');
   startRound();
 }

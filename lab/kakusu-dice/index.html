@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="画数ダイス｜試作ゲームラボ">
-<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が漢字の画数とぴったり合えばカードを獲得。獲得カードは得点でもあり通貨（1枚1金）でもある。市場でいろんな面のダイスを買って、大きな画数を狙うゲーム。">
+<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が漢字の画数とぴったり合えばカードを獲得。獲得カードは1枚1点の得点であり通貨（1枚1金）でもある。カードを取ると特典ダイスももらえる。市場でいろんな面のダイスを買って、大きな画数を狙うゲーム。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/kakusu-dice/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -74,6 +74,7 @@
   .fcard .kanji{font-size:56px;line-height:1.15;font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:700}
   .fcard .strokes{margin-top:4px;font-size:13px;font-weight:700;color:#8a6d3b}
   .fcard .band{margin-top:4px;font-size:11.5px;font-weight:700;color:#8a6d3b;background:rgba(255,255,255,.6);border-radius:999px;padding:1px 8px}
+  .fcard .bonus{margin-top:5px;font-size:12px;font-weight:800;color:#fff;background:var(--accent);border-radius:999px;padding:2px 9px}
   .fcard.pickable{cursor:pointer}
   .fcard.pickable:hover{outline:2px solid var(--accent)}
   .fcard.sel{outline:3px solid var(--accent);outline-offset:1px}
@@ -119,7 +120,7 @@
   <div class="headwrap">
     <div class="brand">試作ゲームラボ</div>
     <h1>🎲 画数ダイス</h1>
-    <p>場に並んだ3枚の漢字カードから1枚を選んでサイコロを振り、出た目の合計がその漢字の「画数」とぴったり合えばカードを獲得。獲得したカードは得点になると同時に通貨（1枚＝1金）にもなります。市場で8面・10面・20面などのダイスを買ったり、場のカードを入れ替えたりするときに支払えますが、支払ったカードの得点は失われるので、使うかどうかが駆け引き。CPUと10ラウンド（または山札が尽きるまで）の得点勝負です。</p>
+    <p>場に並んだ3枚の漢字カードから1枚を選んでサイコロを振り、出た目の合計がその漢字の「画数」とぴったり合えばカードを獲得。獲得したカードは1枚＝1点の得点になると同時に通貨（1枚＝1金）にもなります。さらに、カードを獲得すると特典としてダイスも1個もらえます（画数が大きいカードほど大きいダイス）。市場でダイスを買ったり場のカードを入れ替えたりするときにもカードで支払えますが、支払ったカードの得点は失われるので、買うかどうかが駆け引き。CPUと10ラウンド（または山札が尽きるまで）の得点勝負です。</p>
     <div class="badges">
       <span class="badge">人数 <strong>1人（CPU 1人）</strong></span>
       <span class="badge">時間 <strong>5〜10分</strong></span>
@@ -173,7 +174,7 @@
   <section class="panel" id="marketPanel">
     <h2>🛒 ダイス市場（自分の手番・振る前に買えます／所持は5個まで）</h2>
     <div class="market" id="market"></div>
-    <div class="paynote">支払いは獲得カードで。画数の小さいカードから自動で選ばれ、支払ったカードとその得点は失われます。</div>
+    <div class="paynote">支払いは獲得カードで。画数の小さいカードから自動で選ばれ、支払ったカード（1枚＝1点・1金）は失われます。買うと得点が減るので、たいていは買わないのが得な「罠」。どうしても届かないときだけ検討しよう。</div>
   </section>
 
   <section class="panel" id="resultPanel" style="display:none">
@@ -202,9 +203,10 @@
       <li>場には漢字カードが常に3枚並んでいます。手番では挑戦する1枚を選びます。画数は伏せてあり、ヒント（6画以下／7〜12画／13画以上）だけが出ます。字をよく見て画数を数えるのがコツです。</li>
       <li>持っているサイコロから振る組み合わせを選び、「出せる合計の範囲」を見てから振ります。</li>
       <li>サイコロの合計が画数とぴったり一致すればカードを獲得。外れたらそのカードは捨てられます。どちらでも、場には新しいカードが補充されます（山札が足りないときは、ある分だけ並びます）。</li>
-      <li>獲得したカードは得点（＝画数）になると同時に通貨（1枚＝1金）です。ダイスの購入やリフレッシュの支払いに使うと、そのカードと得点は失われます。支払いは画数の小さいカードから自動で選ばれます。</li>
+      <li>獲得したカードは得点（1枚＝1点）になると同時に通貨（1枚＝1金）です。ダイスの購入やリフレッシュの支払いに使うと、そのカードと得点は失われます。支払いは画数の小さいカードから自動で選ばれます。</li>
+      <li>カードには特典ダイスが付いています（1〜6画→4面／7〜9画→8面／10〜12画→10面／13〜16画→12面／17〜20画→20面）。カードを獲得すると、特典ダイスも一緒にもらえます。ダイスを5個持っているときは、特典ダイスの方が大きければ一番小さいダイスと入れ替わります（大きくなければ獲得なし）。ただし、初期資金として引いたカードでは特典は発動しません。</li>
       <li>スタート時は6面ダイス2個と、初期資金として山札から引いた漢字カード<span id="ruleFunds">2</span>枚（＝<span id="ruleFunds2">2</span>金）。引いたカードも、持っていれば終了時に得点になります。CPUも同じ枚数を引きます。</li>
-      <li>市場では4面（1金）・8面（1金）・10面（2金）・12面（2金）・20面（3金）のダイスが買えます（所持は5個まで）。買うのは自分の手番の、振る前だけです。</li>
+      <li>市場では4面（1金）・6面（1金）・8面（1金）・10面（2金）・12面（2金）・20面（3金）のダイスが買えます（所持は5個まで）。買うのは自分の手番の、振る前だけです。買うと得点が減るので、基本的には「買えるけど買わない方がいい」罠です。</li>
       <li>リフレッシュ（1金）：自分の手番の振る前に、場の3枚をすべて捨てて新しい3枚にできます。1手番に何回でも使えます。</li>
       <li>山札の残り枚数は画面の上に常時表示されます。残りが少なくなったら、終わりが近い合図です。</li>
       <li>小さい画数には小さいダイス、大きい画数には大きいダイスや複数の組み合わせが有利。ダイスを増やすと最小の合計も増えるので、組み合わせ選びが大切です。</li>
@@ -242,11 +244,20 @@ const DECK = [
 /* 価格は「金」＝獲得カードの枚数 */
 const MARKET = [
   {faces:4,  price:1},
+  {faces:6,  price:1},
   {faces:8,  price:1},
   {faces:10, price:2},
   {faces:12, price:2},
   {faces:20, price:3}
 ];
+/* 特典ダイス：画数帯への対応（1〜6画→4面／7〜9画→8面／10〜12画→10面／13〜16画→12面／17〜20画→20面） */
+function bonusDieFor(strokes){
+  if(strokes<=6) return 4;
+  if(strokes<=9) return 8;
+  if(strokes<=12) return 10;
+  if(strokes<=16) return 12;
+  return 20;
+}
 const MAX_DICE = 5;
 const ROUNDS = 10;
 const FIELD_SIZE = 3;
@@ -254,7 +265,7 @@ const REFRESH_COST = 1;
 const INITIAL_FUNDS = 2;
 
 function makeDeck(rng){
-  const d = DECK.map(([k,s])=>({kanji:k, strokes:s}));
+  const d = DECK.map(([k,s])=>({kanji:k, strokes:s, bonusDie:bonusDieFor(s)}));
   for(let i=d.length-1;i>0;i--){
     const j = Math.floor(rng()*(i+1));
     [d[i],d[j]]=[d[j],d[i]];
@@ -268,9 +279,9 @@ function newPlayer(){
 function goldOf(player){
   return player.won.length;
 }
-/* 得点は「いま持っているカード」の画数の合計 */
+/* 得点は「いま持っているカード」の枚数（1枚＝1点）。通貨（1枚＝1金）と常に同数 */
 function scoreOf(player){
-  return player.won.reduce((a,c)=>a+c.strokes,0);
+  return player.won.length;
 }
 function sumRange(facesList){
   if(!facesList.length) return null;
@@ -328,6 +339,23 @@ function payCards(player, n){
   const paySet = new Set(pay);
   player.won = player.won.filter(c=>!paySet.has(c));
   return pay;
+}
+/* 特典ダイスの付与：カード獲得時に、カードに指定されたダイスが手に入る。
+   上限（5個）のときは、特典ダイスの方が大きければ一番小さいダイスと入れ替える。
+   戻り値 {faces, mode:'add'|'swap'|'blocked', removed} 。特典がなければ null */
+function grantBonusDie(player, card){
+  const faces = card && card.bonusDie;
+  if(!faces) return null;
+  if(player.dice.length < MAX_DICE){
+    player.dice.push(faces);
+    return {faces, mode:'add', removed:null};
+  }
+  const minF = Math.min(...player.dice);
+  if(faces > minF){
+    player.dice[player.dice.indexOf(minF)] = faces;
+    return {faces, mode:'swap', removed:minF};
+  }
+  return {faces, mode:'blocked', removed:null};
 }
 /* ダイス購入。成功したら支払いに使ったカードの配列、失敗したら null */
 function buyDie(player, faces){
@@ -416,19 +444,24 @@ function bestFieldChoice(player, field){
   });
   return best;
 }
-/* 素直な購入判断：場のどのカードにも届かない／外れが続いたら、買える範囲で大きめのダイスを買う */
+/* 慎重な購入判断：場の3枚すべてに今のダイスで届かないときだけ、
+   買える範囲で「一番安くて、届くようになる」ダイスを1個買う。届くカードがあるうちは買わない */
 function strategyMaybeBuy(player, state){
   if(!state.field.length) return null;
   if(player.dice.length>=MAX_DICE) return null;
   const choice = bestFieldChoice(player, state.field);
-  const unreachable = !choice || choice.prob===0;
-  if(!unreachable && player.missStreak<2) return null;
+  if(!choice || choice.prob>0) return null;
   const affordable = MARKET.filter(m=>m.price<=goldOf(player))
-                          .sort((a,b)=>b.faces-a.faces);
-  if(!affordable.length) return null;
-  const pick = affordable[0];
-  const paid = buyDie(player, pick.faces);
-  return paid ? {faces:pick.faces, paid} : null;
+                          .sort((a,b)=>a.price-b.price || a.faces-b.faces);
+  for(const item of affordable){
+    const trial = player.dice.concat(item.faces);
+    const helps = state.field.some(card=>bestCombo(trial, card.strokes).prob>0);
+    if(helps){
+      const paid = buyDie(player, item.faces);
+      return paid ? {faces:item.faces, paid} : null;
+    }
+  }
+  return null;
 }
 /* ゲーム初期化：両者に初期資金を配り、場に3枚並べる */
 function newGame(rng, initialFunds, deckOverride){
@@ -445,6 +478,7 @@ function simulateGame(rng, opts){
   const initialFunds = (o.initialFunds!=null) ? o.initialFunds : INITIAL_FUNDS;
   const {state, p, c} = newGame(rng, initialFunds, o.deckOverride || null);
   let purchases = 0, turns = 0, endReason = 'rounds', roundsPlayed = 0;
+  let grants = 0, swaps = 0, blocked = 0;
   for(let round=1; round<=ROUNDS; round++){
     roundsPlayed = round;
     for(const pl of [p, c]){
@@ -454,14 +488,19 @@ function simulateGame(rng, opts){
         const card = state.field[choice.index];
         const res = resolveTurn(pl, card, choice.combo, rng);
         state.field.splice(choice.index, 1);
-        if(!res.hit) state.discard.push(card);
+        if(res.hit){
+          const g = grantBonusDie(pl, card);
+          if(g){ if(g.mode==='add') grants++; else if(g.mode==='swap') swaps++; else blocked++; }
+        }else{
+          state.discard.push(card);
+        }
         refillField(state);
       }
       turns++;
     }
     if(state.deckOut){ endReason = 'deck'; break; }
   }
-  return {p, c, purchases, turns, endReason, roundsPlayed,
+  return {p, c, purchases, turns, endReason, roundsPlayed, grants, swaps, blocked,
           fieldSize: state.field.length, deckLeft: state.deck.length};
 }
 </script>
@@ -478,6 +517,13 @@ function log(text){
   el.prepend(div);
 }
 function diceLabel(f){ return f+'面'; }
+/* 特典付与の結果を伝える文 */
+function bonusLabel(g, who){
+  if(!g) return '';
+  if(g.mode==='add') return '🎲特典：'+who+'は'+g.faces+'面ダイスを獲得！';
+  if(g.mode==='swap') return '🎲特典：'+who+'は'+g.faces+'面ダイスを獲得（'+g.removed+'面と入れ替え）';
+  return '🎲特典の'+g.faces+'面ダイスは、所持ダイスの方が大きいため獲得なし';
+}
 function cardLabel(c){ return '『'+c.kanji+'』（'+c.strokes+'画）'; }
 function paidLabel(paid){ return paid.map(cardLabel).join('・'); }
 
@@ -520,7 +566,8 @@ function renderField(){
     const revealed = (S.revealIdx===i);
     div.innerHTML = '<div class="kanji">'+card.kanji+'</div>'
       + '<div class="strokes">'+(revealed ? card.strokes+'画' : '画数は ？')+'</div>'
-      + '<div class="band">ヒント：'+hintBand(card.strokes)+'</div>';
+      + '<div class="band">ヒント：'+hintBand(card.strokes)+'</div>'
+      + (card.bonusDie ? '<div class="bonus">🎲 '+card.bonusDie+'面ダイス獲得</div>' : '');
     if(pickable){
       div.addEventListener('click', ()=>{
         S.selCard = i;
@@ -673,9 +720,11 @@ function playerRoll(){
       showRolls(cont, res.rolls, res.sum);
       S.revealIdx = idx;
       if(res.hit){
+        const g = grantBonusDie(S.p, card);
         $('msg').textContent = '🎉 ぴったり！'+cardLabel(card)+'を獲得！';
         $('msg').className = 'msg good';
         log('✅ あなた：'+cardLabel(card)+'に合計'+res.sum+'で的中。獲得！（'+goldOf(S.p)+'金）');
+        if(g) log(bonusLabel(g, 'あなた'));
       }else{
         $('msg').textContent = '💦 合計'+res.sum+'、'+cardLabel(card)+'でした';
         $('msg').className = 'msg bad';
@@ -722,9 +771,11 @@ function cpuTurn(){
     showRolls($('cpuRoll'), res.rolls, res.sum);
     S.revealIdx = idx;
     if(res.hit){
+      const g = grantBonusDie(S.c, card);
       $('msg').textContent = 'CPUが'+cardLabel(card)+'を合計'+res.sum+'で獲得';
       $('msg').className = 'msg bad';
       log('✅ CPU：'+cardLabel(card)+'に合計'+res.sum+'で的中。獲得');
+      if(g) log(bonusLabel(g, 'CPU'));
     }else{
       $('msg').textContent = 'CPUは合計'+res.sum+'で外れ（'+cardLabel(card)+'）';
       $('msg').className = 'msg good';

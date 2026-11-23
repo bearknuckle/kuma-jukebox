@@ -56,6 +56,7 @@
   .turn.cpu{background:var(--goldbg)}
   .deckinfo{font-size:13.5px;font-weight:700;padding:4px 12px;border-radius:999px;background:var(--soft)}
   .deckinfo.low{background:var(--goldbg);color:var(--red)}
+  .roundsleft{font-size:19px;font-weight:800;color:#fff;background:var(--accent);padding:5px 16px;border-radius:999px}
   .players{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width:640px){.players{grid-template-columns:1fr}}
   .pcard{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--soft)}
@@ -126,6 +127,7 @@
     <div class="statusbar">
       <div class="round" id="roundLabel">ラウンド 1 / 10</div>
       <div class="deckinfo" id="deckInfo">🂠 山札 残り <span id="deckCount">–</span>枚</div>
+      <div class="roundsleft" id="roundsLeft">あと 10 ラウンド</div>
       <div class="turn" id="turnLabel">あなたの手番</div>
     </div>
     <div class="players" style="margin-top:12px">
@@ -557,6 +559,8 @@ function renderAll(){
   renderPlayer(S.p,'pScore','pGold','pGold2','pDice','pWon');
   renderPlayer(S.c,'cScore','cGold','cGold2','cDice','cWon');
   $('roundLabel').textContent = 'ラウンド ' + Math.min(S.round, ROUNDS) + ' / ' + ROUNDS;
+  const roundsLeft = S.over ? 0 : (S.state.deckOut ? 1 : ROUNDS - Math.min(S.round, ROUNDS) + 1);
+  $('roundsLeft').textContent = 'あと ' + roundsLeft + ' ラウンド';
   const isP = S.turn==='player';
   $('turnLabel').textContent = S.over ? '対戦終了' : (isP ? 'あなたの手番' : 'CPUの手番');
   $('turnLabel').className = 'turn' + (isP ? '' : ' cpu');

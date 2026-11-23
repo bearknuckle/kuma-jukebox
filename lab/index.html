@@ -105,7 +105,7 @@ const GAMES=[
   {
     id:'bodoge-shop-story', name:'ボドゲショップ物語', icon:'🏪', color:'#1e6b41',
     desc:'みんなで1つのボドゲショップを経営する協力デッキ構築。接客・店長・仕入れで役割ごとにデッキが違い、共通の市場デッキがお金と残り時間を兼ねる。買うたび山札が減り、尽きたら閉店。イベントを処理して評判を目標まで上げれば勝ち。試作は役割を1つ選んで、残りはCPU仲間が担当。',
-    players:'1人（CPU仲間2人）', time:'10〜15分', genre:'ボドゲ', added:'2026-11-22', version:'0.7', updated:'2026-11-23', isNew:true
+    players:'1人（CPU仲間2人）', time:'10〜15分', genre:'ボドゲ', added:'2026-11-22', version:'0.8', updated:'2026-11-23', isNew:true
   },
   {
     id:'izakaya-seri', name:'居酒屋せり市', icon:'🔨', color:'#8a6d3b',
@@ -202,6 +202,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-23', id:'bodoge-shop-story', version:'0.8', text:'カードの種類が増加：イベント6種と、助っ人スタッフや段取り上手など効果つきの市場カード7種を追加。評判目標は41に'},
   {date:'2026-11-23', id:'sakagura-sugoroku', version:'0.2', text:'不具合修正：サイコロを振ってもコマが進まなかった問題を直しました'},
   {date:'2026-11-23', id:'bodoge-shop-story', version:'0.7', text:'バランス調整：上手いプレイでクリア率が50%くらいになるよう、評判目標を36・市場デッキを44枚・イベントを16枚にし、イベントごとの必要パワーと報酬を見直し'},
   {date:'2026-11-23', id:'bpm-relay',       version:'0.3', text:'ヒント表示で、手札の各カードに「出せる／✨キー合う」と、出せないカードには理由（BPMあと○／○○だけ／2枚目は曲だけ）を表示するように'},

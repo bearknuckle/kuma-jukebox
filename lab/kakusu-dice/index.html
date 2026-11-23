@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="画数ダイス｜試作ゲームラボ">
-<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が画数と合えば獲得。得点は取ったカードの画数の合計で、取ったカードはお金にもなります（払っても点は減りません）。11画以上を取ると振り直しがもらえ、ネタ枠『鬱』『龘』を取れば即勝利。2〜6人で遊べます。">
+<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が画数と合えば獲得。得点は取ったカードの画数の合計で、取ったカードはお金にもなります（払っても点は減りません）。11画以上のカードへの挑戦では振り直しができ、取ると特典ダイスも付きます。ネタ枠『鬱』『龘』を取れば即勝利。2〜6人で遊べます。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/kakusu-dice/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -126,7 +126,7 @@
   <div class="headwrap">
     <div class="brand">試作ゲームラボ</div>
     <h1>🎲 画数ダイス</h1>
-    <p>場の3枚の漢字カードから1枚を選んでサイコロを振り、合計がその漢字の画数とぴったり合えば獲得（外れたらそのカードは捨てられます）。得点は取ったカードの画数の合計。取ったカードはお金にもなり、支払いに使っても得点は減りません。11画以上のカードを取ると「振り直し」がもらえて、激レアのネタ枠『鬱』『龘』を取れば即勝利。2〜6人（あなた＋CPU）で遊べます。</p>
+    <p>場の3枚の漢字カードから1枚を選んでサイコロを振り、合計がその漢字の画数とぴったり合えば獲得（外れたらそのカードは捨てられます）。得点は取ったカードの画数の合計。取ったカードはお金にもなり、支払いに使っても得点は減りません。11画以上のカードへの挑戦では「振り直し」ができ、取ると特典ダイスも付きます。激レアのネタ枠『鬱』『龘』を取れば即勝利。2〜6人（あなた＋CPU）で遊べます。</p>
     <div class="badges">
       <span class="badge">人数 <strong>2〜6人（あなた＋CPU）</strong></span>
       <span class="badge">時間 <strong>5〜10分</strong></span>
@@ -223,10 +223,11 @@
     <ul>
       <li>場の3枚の漢字カードから挑戦する1枚を選び、持っているサイコロから振る組み合わせを選んで振ります。合計が画数とぴったり合えば獲得、外れたらそのカードは捨てられます（画数はヒントだけ表示。字をよく見て数えるのがコツ）。振るダイスは全部でなくても大丈夫です。</li>
       <li>得点は、獲得したカードの画数の合計です。取ったカードはお金（1枚＝1金）にもなり、支払いに使っても得点は減りません。ただし最初の初期資金2枚は得点に入りません。</li>
-      <li>11画以上のカードを取ると「振り直し」が1回もらえます。外れたときに使えて、振ったダイスの一部（全部でも可）を1回だけ振り直せます。</li>
+      <li>🔁マークの付いたカード（11画以上）に挑戦するときは、外れても、振ったダイスの一部（全部でも可）を1回だけ振り直せます。</li>
+      <li>11画以上のカードを取ると特典ダイスが付きます（11〜16画→12面、17〜20画→20面）。所持ダイスが上限（5個）のときは、いちばん小さいダイスと入れ替わります。</li>
       <li>リフレッシュ（場の3枚を全入れ替え）と6面ダイスの購入はボタンで、どちらも1金。支払いは画数の小さいカードから。ダイスの所持は5個までです。</li>
       <li>✨ネタ枠『鬱』（29画）『龘』（48画）：ネタ枠ルールONでサイコロで取れば即勝利（人間が取るときは「家に6面ダイスはありますか？」の確認つき）。</li>
-      <li>🔀 ヴァリアント「振ってから選ぶ」：先にダイスを振ってから、合計と画数が合うカードを選んで獲得します。合わないカードを選ぶとそのカードは捨てられ、選ばずにパスもできます。</li>
+      <li>🔀 ヴァリアント「振ってから選ぶ」：先にダイスを振ってから、合計と画数が合うカードを選んで獲得します。🔁マークのカードを選んで合わなかったときは、そのカードに対して1回だけ振り直せます。合わないカードを選ぶとそのカードは捨てられ、選ばずにパスもできます。</li>
       <li>手番の順番はラウンドごとに1つずつずれます。スタートは6面ダイス2個と初期資金2枚。ラウンド数は人数で変わり（2人10／3人8／4人7／5人6／6人5）、山札が尽きたらそのラウンドで終了。得点が一番多い人の勝ちです。</li>
     </ul>
   </section>
@@ -263,8 +264,10 @@ const JOKE_KANJI = new Set(['鬱','龘']);
 const MARKET = [
   {faces:6,  price:1}
 ];
-/* 振り直し：この画数以上の（ネタ枠を除く）カードに付き、獲得すると使い切りの振り直しが1回もらえる */
+/* 振り直し（B方式）：この画数以上の（ネタ枠を除く）カードに「挑戦するとき」、外れたら1回だけ振り直せる。
+   特典ダイス：同じ範囲のカードを「獲得すると」付く（11〜16画→12面、17〜20画→20面） */
 const REROLL_MIN_STROKES = 11;
+function bonusDieFor(strokes){ return strokes >= 17 ? 20 : 12; }
 const MAX_DICE = 5;
 /* 人数ごとのラウンド数（2〜6人） */
 const ROUNDS_BY_PLAYERS = {2:10, 3:8, 4:7, 5:6, 6:5};
@@ -275,8 +278,8 @@ const INITIAL_FUNDS = 2;
 function makeDeck(rng){
   const d = DECK.map(([k,s])=>{
     const c = {kanji:k, strokes:s};
-    if(JOKE_KANJI.has(k)) c.joke = true;                 /* ネタ枠には振り直しを付けない */
-    else if(s >= REROLL_MIN_STROKES) c.reroll = true;
+    if(JOKE_KANJI.has(k)) c.joke = true;                 /* ネタ枠には振り直し・特典ダイスを付けない */
+    else if(s >= REROLL_MIN_STROKES){ c.reroll = true; c.bonusDie = bonusDieFor(s); }
     return c;
   });
   for(let i=d.length-1;i>0;i--){
@@ -290,7 +293,7 @@ function isJokeWin(card, jokeRule){
   return !!(card && card.joke && jokeRule);
 }
 function newPlayer(){
-  return {dice:[6,6], won:[], score:0, rerolls:0, missStreak:0};
+  return {dice:[6,6], won:[], score:0, missStreak:0};
 }
 /* 通貨は所持カードそのもの：1枚＝1金 */
 function goldOf(player){
@@ -374,66 +377,79 @@ function payCards(player, n){
   player.won = player.won.filter(c=>!paySet.has(c));
   return pay;
 }
-/* カード獲得：所持に加え、画数を得点に加算する。振り直しマークつきならトークンを1つ得る。
-   戻り値 {rerollGained} */
+/* 特典ダイスの付与：所持が上限未満なら追加、上限のときは特典の方が大きければ最小のダイスと入れ替える。
+   戻り値 {gained, swapped}（swapped は入れ替えで外れたダイスの面数、なければ null） */
+function grantBonusDie(player, faces){
+  if(player.dice.length < MAX_DICE){
+    player.dice.push(faces);
+    return {gained:true, swapped:null};
+  }
+  const min = Math.min(...player.dice);
+  if(faces > min){
+    player.dice[player.dice.indexOf(min)] = faces;
+    return {gained:true, swapped:min};
+  }
+  return {gained:false, swapped:null};
+}
+/* カード獲得：所持に加え、画数を得点に加算する。特典ダイスつきなら手持ちに加える。
+   戻り値 {bonusDie}（付いた特典ダイスの面数、付かなければ 0） */
 function acquireCard(player, card){
   player.won.push(card);
   player.score += card.strokes;
-  let rerollGained = false;
-  if(card.reroll){
-    player.rerolls += 1;
-    rerollGained = true;
+  let bonusDie = 0;
+  if(card.bonusDie){
+    const g = grantBonusDie(player, card.bonusDie);
+    if(g.gained) bonusDie = card.bonusDie;
   }
-  return {rerollGained};
+  return {bonusDie};
 }
-/* 獲得の取り消し（ネタ枠のジョーク確認で「ない」と答えたとき）：得点とトークンを戻す */
+/* 獲得の取り消し（ネタ枠のジョーク確認で「ない」と答えたとき）：得点を戻す */
 function revokeAcquire(player, card){
   const i = player.won.indexOf(card);
   if(i >= 0) player.won.splice(i, 1);
   player.score -= card.strokes;
-  if(card.reroll && player.rerolls > 0) player.rerolls -= 1;
 }
-/* 振り直しの適用：選んだインデックスのダイスを振り直し、トークンを1つ消費する。
+/* 振り直しの適用：選んだインデックスのダイスを振り直す。
    戻り値 {rolls, sum}（使えなければ null） */
-function applyReroll(player, combo, rolls, indices, rng){
-  if(player.rerolls<=0 || !indices || !indices.length) return null;
-  player.rerolls -= 1;
+function applyReroll(combo, rolls, indices, rng){
+  if(!indices || !indices.length) return null;
   const nr = rolls.slice();
   for(const ix of indices) nr[ix] = 1 + Math.floor(rng()*combo[ix]);
   return {rolls:nr, sum:nr.reduce((a,b)=>a+b,0)};
 }
-/* CPU判断の振り直し：的中確率が上がる最善のサブセットがあるときだけ使う。
+/* CPU判断の振り直し（B方式）：マーク付きカードへの挑戦で外れたとき、
+   的中確率が上がる最善のサブセットがあるときだけ使う。
    戻り値 {rolls, sum, hit, indices}（使わなければ null） */
-function tryReroll(player, combo, rolls, target, rng){
-  if(player.rerolls<=0) return null;
-  const best = bestRerollSubset(combo, rolls, target);
+function tryReroll(card, combo, rolls, rng){
+  if(!card.reroll) return null;
+  const best = bestRerollSubset(combo, rolls, card.strokes);
   if(!best || best.prob<=0) return null;
-  const applied = applyReroll(player, combo, rolls, best.indices, rng);
+  const applied = applyReroll(combo, rolls, best.indices, rng);
   if(!applied) return null;
-  return {rolls:applied.rolls, sum:applied.sum, hit: applied.sum===target, indices: best.indices};
+  return {rolls:applied.rolls, sum:applied.sum, hit: applied.sum===card.strokes, indices: best.indices};
 }
-/* 1回の挑戦の解決（CPU・シミュレーション用）：振る→外れたら方針で振り直し→当たれば獲得。
-   戻り値 {firstRolls, firstSum, rolls, sum, hit, rerollUsed, rerollIndices, rerollGained} */
+/* 1回の挑戦の解決（CPU・シミュレーション用）：振る→マーク付きカードなら外れたら方針で振り直し→当たれば獲得。
+   戻り値 {firstRolls, firstSum, rolls, sum, hit, rerollUsed, rerollIndices, bonusDie} */
 function resolveChallenge(player, card, combo, rng){
   const firstRolls = rollDice(combo, rng);
   const firstSum = firstRolls.reduce((a,b)=>a+b,0);
   let rolls = firstRolls, sum = firstSum, hit = (sum===card.strokes);
   let rerollUsed = false, rerollIndices = null;
   if(!hit){
-    const rr = tryReroll(player, combo, rolls, card.strokes, rng);
+    const rr = tryReroll(card, combo, rolls, rng);
     if(rr){
       rerollUsed = true; rerollIndices = rr.indices;
       rolls = rr.rolls; sum = rr.sum; hit = rr.hit;
     }
   }
-  let rerollGained = false;
+  let bonusDie = 0;
   if(hit){
-    rerollGained = acquireCard(player, card).rerollGained;
+    bonusDie = acquireCard(player, card).bonusDie;
     player.missStreak = 0;
   }else{
     player.missStreak += 1;
   }
-  return {firstRolls, firstSum, rolls, sum, hit, rerollUsed, rerollIndices, rerollGained};
+  return {firstRolls, firstSum, rolls, sum, hit, rerollUsed, rerollIndices, bonusDie};
 }
 /* ダイス購入。成功したら支払いに使ったカードの配列、失敗したら null */
 function buyDie(player, faces){
@@ -589,14 +605,16 @@ function simulateGame(rng, opts){
   let purchases = 0, refreshes = 0, turns = 0, endReason = 'rounds', roundsPlayed = 0;
   let jokeWinnerIdx = null;
   const acquisitions = players.map(()=>0), acqStrokes = players.map(()=>0);
-  const rrGained = players.map(()=>0), rrUsed = players.map(()=>0), rrSaved = players.map(()=>0);
+  const rrUsed = players.map(()=>0), rrSaved = players.map(()=>0);
+  const bonusGained = players.map(()=>0), acqMarked = players.map(()=>0);
   outer:
   for(let round=1; round<=roundsTotal; round++){
     roundsPlayed = round;
     for(const seat of turnOrder(round, numPlayers)){
       const pl = players[seat];
       if(variant){
-        /* ヴァリアント「振ってから選ぶ」：購入は振る前に通常どおり。振り直しは獲得のみ（使用しない） */
+        /* ヴァリアント「振ってから選ぶ」：購入は振る前に通常どおり。
+           合うカードがなければ、マーク付きカードへ振り直し挑戦ができる（B方式） */
         if(variantMaybeBuy(pl, state)) purchases++;
         if(state.field.length){
           const combo = bestCoverageCombo(pl.dice, state.field).combo;
@@ -609,7 +627,8 @@ function simulateGame(rng, opts){
             const idx = matchIdxs[0];
             const card = state.field[idx];
             const acq = acquireCard(pl, card);
-            if(acq.rerollGained) rrGained[seat]++;
+            if(acq.bonusDie) bonusGained[seat]++;
+            if(card.reroll) acqMarked[seat]++;
             acquisitions[seat]++;
             acqStrokes[seat] += card.strokes;
             pl.missStreak = 0;
@@ -617,7 +636,34 @@ function simulateGame(rng, opts){
             if(isJokeWin(card, jokeRule)) jokeWinnerIdx = seat;
             refillField(state);
           }else{
-            pl.missStreak += 1;
+            /* マーク付きカードのうち、振り直しで最も当たりやすいものへ挑戦する */
+            let bestM = null;
+            state.field.forEach((c, i)=>{
+              if(!c.reroll) return;
+              const b = bestRerollSubset(combo, rolls, c.strokes);
+              if(b && (!bestM || b.prob > bestM.prob)) bestM = {i, prob: b.prob, indices: b.indices};
+            });
+            if(bestM){
+              rrUsed[seat]++;
+              const card = state.field[bestM.i];
+              const applied = applyReroll(combo, rolls, bestM.indices, rng);
+              state.field.splice(bestM.i, 1);
+              if(applied && applied.sum === card.strokes){
+                rrSaved[seat]++;
+                const acq = acquireCard(pl, card);
+                if(acq.bonusDie) bonusGained[seat]++;
+                acqMarked[seat]++;
+                acquisitions[seat]++;
+                acqStrokes[seat] += card.strokes;
+                pl.missStreak = 0;
+              }else{
+                state.discard.push(card);
+                pl.missStreak += 1;
+              }
+              refillField(state);
+            }else{
+              pl.missStreak += 1;
+            }
           }
         }
         turns++;
@@ -638,7 +684,8 @@ function simulateGame(rng, opts){
         if(res.hit){
           acquisitions[seat]++;
           acqStrokes[seat] += card.strokes;
-          if(res.rerollGained) rrGained[seat]++;
+          if(res.bonusDie) bonusGained[seat]++;
+          if(card.reroll) acqMarked[seat]++;
           if(isJokeWin(card, jokeRule)) jokeWinnerIdx = seat;
         }else{
           state.discard.push(card);
@@ -660,7 +707,7 @@ function simulateGame(rng, opts){
     winners = scores.map((s,i)=>s===mx?i:-1).filter(i=>i>=0);
   }
   return {players, scores, winners, jokeWinnerIdx,
-          purchases, refreshes, rrGained, rrUsed, rrSaved,
+          purchases, refreshes, rrUsed, rrSaved, bonusGained, acqMarked,
           acquisitions, acqStrokes, turns, endReason, roundsPlayed,
           fieldSize: state.field.length, deckLeft: state.deck.length};
 }
@@ -695,7 +742,6 @@ function renderPlayers(){
       '<div class="who"><span>'+playerName(i)+'</span><span class="score">'+scoreOf(pl)+'点</span></div>'
       + '<div class="meta">🃏 所持カード '+goldOf(pl)+'枚（＝'+goldOf(pl)+'金）</div>'
       + '<div class="diceown">所持ダイス：'+pl.dice.map(diceLabel).join('・')+'</div>'
-      + '<div class="diceown">🔁 振り直し：×'+pl.rerolls+'</div>'
       + '<div class="wonlist">'+pl.won.map(wonChip).join('')+'</div>';
     grid.appendChild(div);
   });
@@ -739,7 +785,8 @@ function renderField(){
       + (card.joke
           ? '<div class="band">✨ ネタ枠 ✨</div>'
           : '<div class="band">ヒント：'+hintBand(card.strokes)+'</div>')
-      + (card.reroll ? '<div class="bonus">🔁 取ると振り直し+1</div>' : '')
+      + (card.reroll ? '<div class="bonus">🔁 挑戦時に振り直し可</div>' : '')
+      + (card.bonusDie ? '<div class="bonus">🎲 取ると'+card.bonusDie+'面ダイス</div>' : '')
       + (card.joke && S.jokeRule ? '<div class="bonus">✨ 取れば即勝利！</div>' : '');
     if(pickable){
       div.addEventListener('click', ()=>{
@@ -939,19 +986,18 @@ function playerRoll(){
       showRolls(cont, rolls, sum);
       if(S.variant){
         S.pending = {combo, rolls, sum};
-        S.phase = 'variantPick';
-        $('msg').textContent = '合計 '+sum+'。画数が '+sum+' のカードを選んでください（パスもできます）';
-        $('msg').className = 'msg';
         log('🎲 あなた：ダイスを振って合計 '+sum);
-        renderAll();
+        enterVariantPick();
         return;
       }
       S.pending = {idx, card, combo, rolls, sum};
       S.revealIdx = idx;
       if(sum===card.strokes){
         finishHumanHit();
-      }else if(pl.rerolls>0){
+      }else if(card.reroll){
         S.phase = 'reroll';
+        $('msg').textContent = '💦 合計'+sum+'で外れ…でもこのカードは「振り直し」が使えます';
+        $('msg').className = 'msg bad';
         renderAll();
         showRerollBox();
       }else{
@@ -962,13 +1008,19 @@ function playerRoll(){
 }
 /* 振り直しボックス：振り直すダイスを選んで実行／確定 */
 function showRerollBox(){
-  const pl = S.players[0];
   const {card, combo, rolls} = S.pending;
-  $('rerollText').textContent = '💦 合計'+S.pending.sum+'で外れ…でも「振り直し」が使えます（残り'+pl.rerolls+'回）';
+  $('rerollText').textContent = '💦 合計'+S.pending.sum+'で外れ…でもこのカードは「振り直し」が使えます';
   const best = bestRerollSubset(combo, rolls, card.strokes);
   S.rrSel = rolls.map((_,i)=> best ? best.indices.includes(i) : false);
   renderRerollDice();
   $('rerollBox').style.display = '';
+}
+/* ヴァリアント：カードを選ぶフェーズへ（S.pending の合計を使う） */
+function enterVariantPick(){
+  S.phase = 'variantPick';
+  $('msg').textContent = '合計 '+S.pending.sum+'。画数が '+S.pending.sum+' のカードを選んでください（パスもできます）';
+  $('msg').className = 'msg';
+  renderAll();
 }
 function renderRerollDice(){
   const wrap = $('rerollDice');
@@ -987,15 +1039,14 @@ function renderRerollDice(){
 }
 function playerRerollExec(){
   if(S.phase!=='reroll' || !S.pending) return;
-  const pl = S.players[0];
   const indices = S.pending.rolls.map((_,i)=>i).filter(i=>S.rrSel[i]);
-  const applied = applyReroll(pl, S.pending.combo, S.pending.rolls, indices, Math.random);
+  const applied = applyReroll(S.pending.combo, S.pending.rolls, indices, Math.random);
   if(!applied) return;
   $('rerollBox').style.display = 'none';
   S.pending.rolls = applied.rolls;
   S.pending.sum = applied.sum;
   showRolls($('rollResult'), applied.rolls, applied.sum);
-  log('🔁 あなたは振り直しを使った（'+cardLabel(S.pending.card)+'狙い／振り直し残り '+pl.rerolls+'回）');
+  log('🔁 あなたは振り直しを使った（'+cardLabel(S.pending.card)+'狙い）');
   S.phase = 'rolling';
   renderAll();
   if(applied.sum===S.pending.card.strokes) finishHumanHit();
@@ -1025,7 +1076,7 @@ function finishHumanHit(){
   $('msg').textContent = '🎉 ぴったり！'+cardLabel(card)+'を獲得！（+'+card.strokes+'点）';
   $('msg').className = 'msg good';
   log('✅ あなた：'+cardLabel(card)+'に合計'+S.pending.sum+'で的中。獲得！（得点 '+scoreOf(pl)+'点／所持 '+goldOf(pl)+'金）');
-  if(acq.rerollGained) log('🔁 振り直しを1回もらった（残り '+pl.rerolls+'回）');
+  if(acq.bonusDie) log('🎲 特典ダイス（'+acq.bonusDie+'面）を手に入れた！（所持ダイス：'+pl.dice.map(diceLabel).join('・')+'）');
   S.pending = null;
   renderAll();
   setTimeout(()=>{
@@ -1084,6 +1135,14 @@ function variantPickCard(i){
   if(card.strokes===sum){
     S.pending = {idx:i, card, sum};
     finishHumanHit();
+  }else if(card.reroll){
+    /* B方式：マーク付きカードを選んで合わなかったら、そのカードに対して1回だけ振り直せる */
+    S.pending = {idx:i, card, combo:S.pending.combo, rolls:S.pending.rolls, sum};
+    S.phase = 'reroll';
+    $('msg').textContent = '💦 合計'+sum+'、'+cardLabel(card)+'ではない…でもこのカードは「振り直し」が使えます';
+    $('msg').className = 'msg bad';
+    renderAll();
+    showRerollBox();
   }else{
     $('msg').textContent = '💦 それは'+cardLabel(card)+'でした（合計'+sum+'ではない）';
     $('msg').className = 'msg bad';
@@ -1137,7 +1196,7 @@ function cpuTurn(seat){
         $('msg').textContent = name+'が'+cardLabel(card)+'を合計'+res.sum+'で獲得';
         $('msg').className = 'msg bad';
         log('✅ '+name+'：'+cardLabel(card)+'に合計'+res.sum+'で的中。獲得（+'+card.strokes+'点）');
-        if(res.rerollGained) log('🔁 '+name+'は振り直しを1回もらった（残り '+pl.rerolls+'回）');
+        if(res.bonusDie) log('🎲 '+name+'は特典ダイス（'+res.bonusDie+'面）を手に入れた！');
       }else{
         $('msg').textContent = name+'は合計'+res.sum+'で外れ（'+cardLabel(card)+'）';
         $('msg').className = 'msg good';
@@ -1155,7 +1214,7 @@ function cpuTurn(seat){
       setTimeout(()=>{
         $('cpuNote').textContent = name+'は 🔁 振り直しを使った！';
         showRolls($('cpuRoll'), res.rolls, res.sum);
-        log('🔁 '+name+'は振り直しを使った（'+cardLabel(card)+'狙い／残り '+pl.rerolls+'回）');
+        log('🔁 '+name+'は振り直しを使った（'+cardLabel(card)+'狙い）');
         renderAll();
         setTimeout(proceed, 700);
       }, 1000);
@@ -1199,7 +1258,7 @@ function cpuTurnVariant(seat){
         $('msg').textContent = name+'が合計'+sum+'で'+cardLabel(card)+'を獲得';
         $('msg').className = 'msg bad';
         log('✅ '+name+'：合計'+sum+'で'+cardLabel(card)+'を獲得（+'+card.strokes+'点）');
-        if(acq.rerollGained) log('🔁 '+name+'は振り直しを1回もらった（残り '+pl.rerolls+'回）');
+        if(acq.bonusDie) log('🎲 '+name+'は特典ダイス（'+acq.bonusDie+'面）を手に入れた！');
       }
       renderAll();
       setTimeout(()=>{
@@ -1209,11 +1268,50 @@ function cpuTurnVariant(seat){
         else afterTurn();
       }, 1400);
     }else{
-      $('msg').textContent = name+'は合計'+sum+'、合うカードがなくパス';
-      $('msg').className = 'msg good';
-      log('⏭️ '+name+'：合計'+sum+'で合うカードがなくパス');
-      renderAll();
-      setTimeout(afterTurn, 1200);
+      /* 合うカードなし：マーク付きカードがあれば、そのカードへ振り直し挑戦（B方式） */
+      let bestM = null;
+      S.state.field.forEach((c, i)=>{
+        if(!c.reroll) return;
+        const b = bestRerollSubset(combo, rolls, c.strokes);
+        if(b && (!bestM || b.prob > bestM.prob)) bestM = {i, prob: b.prob, indices: b.indices};
+      });
+      if(bestM){
+        const idx = bestM.i;
+        const card = S.state.field[idx];
+        S.selCard = idx;
+        S.revealIdx = idx;
+        $('cpuNote').textContent = name+'は '+card.kanji+' へ 🔁 振り直しで挑戦！';
+        renderAll();
+        setTimeout(()=>{
+          const applied = applyReroll(combo, rolls, bestM.indices, Math.random);
+          showRolls($('cpuRoll'), applied.rolls, applied.sum);
+          log('🔁 '+name+'は振り直しを使った（'+cardLabel(card)+'狙い）');
+          const hit = applied.sum === card.strokes;
+          if(hit){
+            const acq = acquireCard(pl, card);
+            $('msg').textContent = name+'が振り直して'+cardLabel(card)+'を合計'+applied.sum+'で獲得';
+            $('msg').className = 'msg bad';
+            log('✅ '+name+'：振り直して'+cardLabel(card)+'に合計'+applied.sum+'で的中。獲得（+'+card.strokes+'点）');
+            if(acq.bonusDie) log('🎲 '+name+'は特典ダイス（'+acq.bonusDie+'面）を手に入れた！');
+          }else{
+            $('msg').textContent = name+'は振り直しても合計'+applied.sum+'で外れ（'+cardLabel(card)+'）';
+            $('msg').className = 'msg good';
+            log('❌ '+name+'：振り直しても'+cardLabel(card)+'に合計'+applied.sum+'で外れ');
+          }
+          renderAll();
+          setTimeout(()=>{
+            commitField(idx, hit, card);
+            renderAll();
+            afterTurn();
+          }, 1300);
+        }, 1000);
+      }else{
+        $('msg').textContent = name+'は合計'+sum+'、合うカードがなくパス';
+        $('msg').className = 'msg good';
+        log('⏭️ '+name+'：合計'+sum+'で合うカードがなくパス');
+        renderAll();
+        setTimeout(afterTurn, 1200);
+      }
     }
   }, 900);
 }

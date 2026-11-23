@@ -336,9 +336,12 @@
         <p>3人チームで1つのボードゲームショップを経営する協力ゲームです。あなたが1つの役割を担当し、残り2つの役割はCPU仲間が自動で動きます。</p>
         <ul>
           <li><b>市場デッキ（44枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
-          <li><b>勝敗</b>：閉店までに評判36以上で勝ち。評判が36に届いた時点で即クリアです。</li>
+          <li><b>勝敗</b>：閉店までに評判41以上で勝ち。評判が41に届いた時点で即クリアです。</li>
           <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。イベントには担当役職（接客／店長／仕入れ）があり、担当役職のパワーは2倍で数えます。共通カードと担当外の役職のパワーもそのまま（等倍）で数えるので、誰のパワーでも進められますが、担当役職が動くと効率よく進みます。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
           <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
+          <li><b>デッキは買い足して育てる</b>：市場で買ったカードは自分のデッキに加わります。担当役職と相性のいいカードや、効果の組み合わせ（例：「段取り上手」で次のパワーを+2してから大きなパワーカードを置く、「大会の司会」「大会の実況担当」の評判ボーナスを重ねる）を考えて買い足すと、終盤ほど自分仕様のデッキになります。ただし、支払いで山札の上から捨てられるカードの中には、欲しかったカードが混ざっていることもあります。</li>
+          <li><b>新しいカード</b>：「助っ人スタッフ」はどのイベントでも担当役職として数えます（パワー2倍）。「大会の実況担当」は、そのカードでイベントを処理できたら評判+1。「ベテラン店長代理」と「やる気の連鎖」は、すでにパワーが置かれているイベントでさらに+1。「段取り上手」は次に置く自分のパワーカードのパワー+2。「休憩のコーヒー」はカードを2枚引けます。「ベテランバイヤー」は市場デッキの上4枚から1枚を市場へ出せます。</li>
+          <li><b>新しいイベント</b>：ボドゲ大会の決勝、常連さんの貸し切り、棚卸しセール、新作体験会、修理依頼が殺到、限定品の入荷が加わりました。イベントは全部で16種類です。</li>
           <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
           <li><b>CPU仲間</b>：接客は接客イベントを中心にパワーを置き、店長は収入や支援（店長イベントでは支援がそのまま効きます）、仕入れは仕入れイベントにパワーを置くほか、市場の入れ替えや安いカードの購入（あなたの捨て札に入ります）を自動で行います。</li>
           <li><b>全員の力が必要</b>：CPU仲間のパワーは、必要パワーの約3分の1までしか入りません。残りはあなたの担当です。誰か1人でも止まると、クリアは難しくなります。</li>
@@ -355,7 +358,7 @@
     <div class="overlay" id="title-overlay">
       <div class="sheet">
         <h1>ボドゲショップ物語</h1>
-        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判36を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
+        <p class="lead">3人チームでボードゲームショップを経営する協力型デッキ構築ゲーム。市場デッキは「お金＝残り時間」そのもの。山札が尽きる前に、評判41を目指しましょう。まず、あなたの役割を選んでください（残り2つはCPU仲間が担当します）。</p>
         <div class="role-pick" id="role-pick"></div>
       </div>
     </div>
@@ -374,7 +377,7 @@
     <div class="overlay" id="peek-overlay" hidden>
       <div class="sheet">
         <h1 style="font-size:20px">掘り出し物</h1>
-        <p class="lead">市場デッキの上3枚です。市場へ出す1枚を選んでください（残りは山札の下へ戻ります）。</p>
+        <p class="lead">市場デッキの上のカードです。市場へ出す1枚を選んでください（残りは山札の下へ戻ります）。</p>
         <div class="peek-grid" id="peek-grid"></div>
       </div>
     </div>
@@ -423,23 +426,36 @@
         { name: "やる気スイッチ", role: null, price: 2, type: "power", power: 2, text: "パワー2" },
         { name: "臨時スタッフ", role: null, price: 3, type: "power", power: 2, draw: 1, text: "パワー2＋1枚引く" },
         { name: "ベテランバイト", role: null, price: 4, type: "power", power: 3, text: "パワー3" },
-        { name: "集中力", role: null, price: 3, type: "power", power: 1, draw: 2, text: "パワー1＋2枚引く" }
+        { name: "集中力", role: null, price: 3, type: "power", power: 1, draw: 2, text: "パワー1＋2枚引く" },
+        { name: "大会の実況担当", role: "service", price: 5, type: "power", power: 2, finish: true, text: "パワー2＋このカードでイベントを処理できたら評判+1" },
+        { name: "ベテラン店長代理", role: "manager", price: 4, type: "power", power: 2, boost: true, text: "パワー2。すでにパワーが置かれているイベントなら、さらに+1" },
+        { name: "段取り上手", role: "manager", price: 3, type: "action", act: "prep", amount: 2, text: "次に置く自分のパワーカードのパワー+2" },
+        { name: "ベテランバイヤー", role: "buyer", price: 5, type: "action", act: "find", amount: 4, text: "市場デッキの上4枚から1枚を市場へ出す" },
+        { name: "助っ人スタッフ", role: null, price: 4, type: "power", power: 1, wild: true, text: "パワー1。どのイベントでも担当役職として数える（パワー2倍）" },
+        { name: "やる気の連鎖", role: null, price: 3, type: "power", power: 1, boost: true, text: "パワー1。すでにパワーが置かれているイベントなら、さらに+1" },
+        { name: "休憩のコーヒー", role: null, price: 2, type: "action", act: "drawact", amount: 2, text: "カードを2枚引く" }
       ];
 
       var EVENT_DEFS = [
-        { name: "大口注文", role: "buyer", need: 3, rep: 4, income: 2 },
-        { name: "大会を開きたい", role: "service", need: 14, rep: 4, income: 3 },
-        { name: "新作の予約殺到", role: "buyer", need: 5, rep: 4, income: 2 },
-        { name: "人気配信者が来店", role: "service", need: 10, rep: 2, income: 0 },
-        { name: "新聞の取材", role: "manager", need: 7, rep: 5, income: 0 },
+        { name: "大口注文", role: "buyer", need: 4, rep: 4, income: 2 },
+        { name: "大会を開きたい", role: "service", need: 18, rep: 3, income: 3 },
+        { name: "新作の予約殺到", role: "buyer", need: 7, rep: 4, income: 2 },
+        { name: "人気配信者が来店", role: "service", need: 15, rep: 2, income: 0 },
+        { name: "新聞の取材", role: "manager", need: 8, rep: 5, income: 0 },
         { name: "レジ故障", role: "manager", need: 5, rep: 1, income: 4 },
         { name: "クレーム対応", role: "service", need: 5, rep: 0, income: 0, claim: true },
-        { name: "棚が崩れた", role: "buyer", need: 1, rep: 2, income: 1 },
-        { name: "常連さんの誕生日会", role: "service", need: 10, rep: 1, income: 1 },
-        { name: "在庫チェック", role: "buyer", need: 2, rep: 2, income: 2 }
+        { name: "棚が崩れた", role: "buyer", need: 2, rep: 2, income: 1 },
+        { name: "常連さんの誕生日会", role: "service", need: 15, rep: 1, income: 1 },
+        { name: "在庫チェック", role: "buyer", need: 3, rep: 2, income: 2 },
+        { name: "ボドゲ大会の決勝", role: "service", need: 18, rep: 5, income: 0 },
+        { name: "常連さんの貸し切り", role: "service", need: 13, rep: 2, income: 2 },
+        { name: "棚卸しセール", role: "manager", need: 7, rep: 3, income: 3 },
+        { name: "新作体験会", role: "manager", need: 10, rep: 5, income: 1 },
+        { name: "修理依頼が殺到", role: "buyer", need: 6, rep: 2, income: 3 },
+        { name: "限定品の入荷", role: "buyer", need: 9, rep: 4, income: 1 }
       ];
 
-      var DECK_SIZE = 44, TARGET = 36, EVENT_COUNT = 16;
+      var DECK_SIZE = 44, TARGET = 41, EVENT_COUNT = 16;
 
       /* ================= state ================= */
       var S = null;
@@ -486,6 +502,7 @@
           pipeCount: 0,
           negotiateNext: false,
           bulkCount: 0,
+          nextPowBuff: 0,
           pendingSwaps: 0,
           findPick: null,
           peek: null,
@@ -675,11 +692,16 @@
           S.playerHand.splice(handIdx, 1);
           var before = ev.playerPower + ev.cpuPower;
           var add = card.power + (card.boost && before >= 1 ? 1 : 0);
-          addPowerToEvent(ev, card.role, add, false);
+          var buffUsed = 0;
+          if (S.nextPowBuff > 0) { buffUsed = S.nextPowBuff; add += buffUsed; S.nextPowBuff = 0; }
+          var effRole = card.wild ? ev.def.role : card.role;
+          addPowerToEvent(ev, effRole, add, false);
           ev.playerCards.push(card);
           logMsg("「" + ev.def.name + "」に「" + card.name + "」を置きました（パワー+" + add + "、合計 " + eventTotal(ev) + "/" + ev.def.need + "）。" +
-            (card.role === ev.def.role ? "担当役職のカードなので、パワー2倍で数えます。" : (card.role ? "担当は" + ROLE_INFO[ev.def.role].name + "ですが、このカードもそのまま数えます。" : "")), "");
+            (card.wild ? "助っ人：担当役職として数えるので、パワー2倍で数えます。" : (effRole === ev.def.role ? "担当役職のカードなので、パワー2倍で数えます。" : (card.role ? "担当は" + ROLE_INFO[ev.def.role].name + "ですが、このカードもそのまま数えます。" : ""))) +
+            (buffUsed ? "段取りボーナス+" + buffUsed + "。" : ""), "");
           if (card.host) { ev.hostBonus += 1; logMsg("「大会の司会」：このイベントの評判が+1されます。", "dim"); }
+          if (card.finish && eventTotal(ev) >= ev.def.need) { ev.hostBonus += 1; logMsg("「" + card.name + "」の決め手！ このイベントの評判が+1されます。", "dim"); }
           if (card.incomeOnPlay) income(card.incomeOnPlay, "「" + card.name + "」の収入");
           if (card.draw) drawCards(card.draw);
           if (card.swapAfter) { S.pendingSwaps += card.swapAfter; }
@@ -708,6 +730,12 @@
         } else if (card.act === "negotiate") {
           S.negotiateNext = true;
           logMsg("「値引き交渉」：次の自分の購入が2安くなります。", "good");
+        } else if (card.act === "prep") {
+          S.nextPowBuff += card.amount;
+          logMsg("「" + card.name + "」：次に置く自分のパワーカードのパワー+" + card.amount + "（現在 合計+" + S.nextPowBuff + "）。", "good");
+        } else if (card.act === "drawact") {
+          drawCards(card.amount);
+          logMsg("「" + card.name + "」：カードを" + card.amount + "枚引きました。", "good");
         } else if (card.act === "bulk") {
           S.bulkCount += 2;
           logMsg("「大量仕入れ」：次の購入2回が、それぞれ2安くなります。", "good");
@@ -722,7 +750,7 @@
           logMsg("「棚卸しの達人」：市場を全部入れ替えました。", "good");
           if (card.draw) drawCards(card.draw);
         } else if (card.act === "find") {
-          var n = Math.min(3, S.marketDeck.length);
+          var n = Math.min(card.amount || 3, S.marketDeck.length);
           S.peek = [];
           for (var k = 0; k < n; k++) S.peek.push(S.marketDeck.pop());
           document.getElementById("peek-overlay").hidden = false;
@@ -946,7 +974,9 @@
         if (S.pipeCount > 0) permBits.push("購入ずっと-" + S.pipeCount);
         if (S.negotiateNext) permBits.push("次の購入-2");
         if (S.bulkCount > 0) permBits.push("購入-" + "2（あと" + S.bulkCount + "回）");
-        document.getElementById("st-perm").textContent = permBits.length ? "割引：" + permBits.join("、") : "";
+        var permText = permBits.length ? "割引：" + permBits.join("、") : "";
+        if (S.nextPowBuff > 0) permText += (permText ? "／" : "") + "次のパワー+" + S.nextPowBuff;
+        document.getElementById("st-perm").textContent = permText;
 
         // cpu chips
         document.getElementById("cpu-chips").innerHTML =

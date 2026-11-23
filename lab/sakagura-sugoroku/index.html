@@ -67,8 +67,10 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
   display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
 .bowl::after{content:"🍶";position:absolute;bottom:-14px;right:6px;font-size:22px;opacity:.85}
 .die{width:56px;height:56px;border-radius:12px;background:#fffdf6;color:var(--ink);
-  font-size:38px;font-weight:900;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 8px rgba(0,0,0,.35);font-family:"Dela Gothic One",sans-serif}
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 4px 8px rgba(0,0,0,.35)}
+.die .face{font-size:30px;font-weight:900;line-height:1.05;font-family:"Dela Gothic One",sans-serif}
+.die .kj{font-size:14px;font-weight:900;line-height:1.1;color:var(--red)}
 .die.roll{animation:shake .12s infinite}
 .die.out{position:absolute;right:-38px;top:6px;transform:rotate(28deg);background:#dfe9f2}
 @keyframes shake{0%{transform:rotate(-9deg) translateY(-2px)}50%{transform:rotate(9deg) translateY(2px)}100%{transform:rotate(-9deg) translateY(-2px)}}
@@ -123,7 +125,15 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
       <li>親がヒフミ・ションベン・目なしのときは、子は振らずに全員勝ち。</li>
       <li>親が全員に2回ずつ回ったら終わり。おちょこが0になった人は酔いつぶれで脱落。最後まで残るか、一番多く持っていた人の勝ち。</li>
       <li>役がそろうと、その強さに応じた「変わった銘柄」が登場。勝つとその銘柄をコレクションできます（勝敗には影響しない、集める楽しみ）。</li>
+      <li>サイコロの面には漢字も書かれています。組み合わせで実在の銘柄がそろうと、その勝負に勝ったとき銘柄コレクション入り＋1杯ボーナス。</li>
     </ul>
+    <div class="lbl">漢字コンボ（サイコロの漢字でそろう銘柄）</div>
+    <div class="hands">
+      <div><b>死＋神</b>：死神</div>
+      <div><b>納＋豆</b>：川口納豆</div>
+      <div><b>猫＋正＋宗</b>：ねこ正宗</div>
+      <div><b>三＋芳＋菊</b>：三芳菊</div>
+    </div>
     <div class="lbl">銘柄図鑑（強い役ほど珍しい銘柄）</div>
     <div class="hands">
       <div><b>ピンゾロ</b>：死神／川口納豆</div>
@@ -154,9 +164,9 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     <div class="board-top" id="scoreboard"></div>
     <div class="bowl-wrap">
       <div class="bowl" id="bowl">
-        <div class="die" id="die0">🎲</div>
-        <div class="die" id="die1">🎲</div>
-        <div class="die" id="die2">🎲</div>
+        <div class="die" id="die0"><span class="face">🎲</span><span class="kj"></span></div>
+        <div class="die" id="die1"><span class="face">🎲</span><span class="kj"></span></div>
+        <div class="die" id="die2"><span class="face">🎲</span><span class="kj"></span></div>
       </div>
       <div class="handname" id="handName"></div>
       <div class="handcmt" id="handCmt"></div>
@@ -186,7 +196,7 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     </div>
   </div>
 
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵チンチロ v0.3</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵チンチロ v0.4</div>
 </div>
 
 <div class="modal" id="endModal" hidden>
@@ -239,6 +249,25 @@ function brandFor(h){
   else if(h.cls==='me' && h.point>=3) list = BRANDS.meMid;
   else if(h.cls==='me') list = BRANDS.meLo;
   return list ? list[rand(list.length)] : null;
+}
+// サイコロごとの面の漢字（目1〜6）。組み合わせで実在の銘柄がそろう
+const KANJI = [
+  {1:'死',2:'猫',3:'三',4:'酒',5:'納',6:'米'},
+  {1:'神',2:'正',3:'芳',4:'蔵',5:'豆',6:'番'},
+  {1:'宗',2:'菊',3:'水',4:'色',5:'男',6:'出'},
+];
+const KANJI_COMBOS = [
+  {need:['猫','正','宗'], brand:'ねこ正宗'},
+  {need:['三','芳','菊'], brand:'三芳菊'},
+  {need:['死','神'], brand:'死神'},
+  {need:['納','豆'], brand:'川口納豆'},
+];
+function kanjiOf(dice){ return dice.map((v,i)=>KANJI[i][v]); }
+function comboOf(kj){
+  for(const c of KANJI_COMBOS){
+    if(c.need.every(k=>kj.includes(k))) return c.brand;
+  }
+  return null;
 }
 
 let G = null;
@@ -306,7 +335,8 @@ function showDice(dice, outIdx){
   for(let i=0;i<3;i++){
     const el = $('die'+i);
     el.classList.remove('out');
-    el.textContent = dice ? FACES[dice[i]-1] : '🎲';
+    el.querySelector('.face').textContent = dice ? FACES[dice[i]-1] : '🎲';
+    el.querySelector('.kj').textContent = dice ? KANJI[i][dice[i]] : '';
   }
   if(outIdx !== null && outIdx !== undefined){
     $('die'+outIdx).classList.add('out');
@@ -315,7 +345,10 @@ function showDice(dice, outIdx){
 function showHand(h){
   $('handName').textContent = h ? h.name : '';
   $('handCmt').textContent = h ? h.cmt : '';
-  $('handBrand').textContent = h && h.brand ? `🍶 銘柄登場：「${h.brand}」` : '';
+  const parts = [];
+  if(h && h.brand) parts.push(`🍶 銘柄登場：「${h.brand}」`);
+  if(h && h.kanjiBrand) parts.push(`✨ 漢字で「${h.kanjiBrand}」がそろった！`);
+  $('handBrand').innerHTML = parts.join('<br>');
 }
 function hideButtons(){
   $('rollBtn').hidden = true;
@@ -341,7 +374,11 @@ async function animateRoll(){
   const els = [$('die0'), $('die1'), $('die2')];
   els.forEach(el=>{ el.classList.remove('out'); el.classList.add('roll'); });
   for(let i=0;i<7;i++){
-    els.forEach(el=>{ el.textContent = FACES[rand(6)]; });
+    els.forEach((el,di)=>{
+      const v = rand(6)+1;
+      el.querySelector('.face').textContent = FACES[v-1];
+      el.querySelector('.kj').textContent = KANJI[di][v];
+    });
     await sleep(70);
   }
   els.forEach(el=>el.classList.remove('roll'));
@@ -383,8 +420,9 @@ async function takeRollTurn(p){
     }
     hand = evaluate(r.dice);
     hand.brand = brandFor(hand);
+    hand.kanjiBrand = comboOf(kanjiOf(r.dice));
     showHand(hand);
-    addLog(`<b>${p.name}</b>： ${r.dice.join('・')} → <b>${hand.name}</b>${hand.brand ? ` 🍶銘柄「${hand.brand}」` : ''}`);
+    addLog(`<b>${p.name}</b>： ${r.dice.join('・')}（${kanjiOf(r.dice).join('・')}） → <b>${hand.name}</b>${hand.brand ? ` 🍶銘柄「${hand.brand}」` : ''}${hand.kanjiBrand ? ` ✨漢字で「${hand.kanjiBrand}」！` : ''}`);
     await sleep(500);
     if(hand.cls==='hifumi') return hand;
     if(hand.cls==='pinzoro' || hand.cls==='arashi' || hand.cls==='shigoro') return hand;
@@ -419,27 +457,35 @@ function transfer(from, to, amount, why){
   addLog(`${why} ${from.name} から ${to.name} へ 🍶${amt}杯`);
   renderScore();
 }
-function collectBrand(winner, hand){
-  if(!hand || !hand.brand) return;
-  if(winner.brands.includes(hand.brand)) return;
-  winner.brands.push(hand.brand);
-  addLog(`🏷️ <b>${winner.name}</b>は銘柄「${hand.brand}」をコレクションした！（${winner.brands.length}種目）`);
+function collectBrand(winner, brand){
+  if(!brand) return;
+  if(winner.brands.includes(brand)) return;
+  winner.brands.push(brand);
+  addLog(`🏷️ <b>${winner.name}</b>は銘柄「${brand}」をコレクションした！（${winner.brands.length}種目）`);
   renderScore();
+}
+function kanjiBonus(winner, loser, hand){
+  if(!hand || !hand.kanjiBrand) return;
+  transfer(loser, winner, 1, `✨ 漢字で「${hand.kanjiBrand}」がそろったご褒美！`);
+  collectBrand(winner, hand.kanjiBrand);
 }
 function settle(dealer, dHand, child, cHand){
   // 子 vs 親 の1対1
   if(isLoseClass(cHand)){
     const mult = Math.max(dHand.mult, cHand.cls==='hifumi' ? 2 : 1);
     transfer(child, dealer, BASE_BET*mult, `<b>${child.name}</b>の${cHand.name}で負け。`);
-    collectBrand(dealer, dHand);
+    collectBrand(dealer, dHand.brand);
+    kanjiBonus(dealer, child, dHand);
     return;
   }
   if(cHand.rank > dHand.rank){
     transfer(dealer, child, BASE_BET*cHand.mult, `<b>${child.name}</b>の${cHand.name}が親の${dHand.name}に勝ち！`);
-    collectBrand(child, cHand);
+    collectBrand(child, cHand.brand);
+    kanjiBonus(child, dealer, cHand);
   } else if(cHand.rank < dHand.rank){
     transfer(child, dealer, BASE_BET*dHand.mult, `<b>${child.name}</b>の${cHand.name}は親の${dHand.name}に届かず。`);
-    collectBrand(dealer, dHand);
+    collectBrand(dealer, dHand.brand);
+    kanjiBonus(dealer, child, dHand);
   } else {
     addLog(`<b>${child.name}</b>と親は同じ${cHand.name}。あいこ、やり取りなし。`);
   }

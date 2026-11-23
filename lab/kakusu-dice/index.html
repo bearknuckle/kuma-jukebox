@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="画数ダイス｜試作ゲームラボ">
-<meta property="og:description" content="漢字カードをめくってサイコロを振り、合計が漢字の画数とぴったり合えばカードを獲得。市場でいろんな面のダイスを買って、大きな画数を狙うゲーム。">
+<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が漢字の画数とぴったり合えばカードを獲得。獲得カードは得点でもあり通貨（1枚1金）でもある。市場でいろんな面のダイスを買って、大きな画数を狙うゲーム。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/kakusu-dice/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -54,6 +54,8 @@
   .round{font-size:18px;font-weight:800}
   .turn{font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;background:var(--soft2)}
   .turn.cpu{background:var(--goldbg)}
+  .deckinfo{font-size:13.5px;font-weight:700;padding:4px 12px;border-radius:999px;background:var(--soft)}
+  .deckinfo.low{background:var(--goldbg);color:var(--red)}
   .players{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width:640px){.players{grid-template-columns:1fr}}
   .pcard{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--soft)}
@@ -65,16 +67,18 @@
   .wonlist{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
   .wonlist span{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:1px 7px;font-size:13px}
   .wonlist span small{color:var(--muted);font-size:11px}
-  .cardarea{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 0}
-  .kanjicard{width:170px;height:210px;border-radius:14px;background:linear-gradient(160deg,#fffdf6,#fdf3d3);border:2px solid #d8c39a;color:#4a3a22;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(90,55,10,.15);position:relative}
-  @media (prefers-color-scheme: dark){.kanjicard{background:linear-gradient(160deg,#fdf6e3,#f7e8bd)}}
-  .kanjicard .kanji{font-size:96px;line-height:1.1;font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:700}
-  .kanjicard .strokes{margin-top:8px;font-size:15px;font-weight:700;color:#8a6d3b}
-  .kanjicard.back{background:linear-gradient(160deg,var(--deep2),var(--accent));border-color:var(--deep);color:#fff}
-  .kanjicard.back .kanji{font-size:44px;font-family:inherit}
-  .cardinfo{text-align:center;min-width:200px}
-  .cardinfo .hint{font-size:15px;font-weight:700}
-  .cardinfo .sub{font-size:12.5px;color:var(--muted)}
+  .wonlist span.initc{border-color:var(--gold);background:var(--goldbg)}
+  .fieldarea{display:flex;gap:12px;align-items:stretch;justify-content:center;flex-wrap:wrap;padding:8px 0}
+  .fcard{width:118px;min-height:158px;border-radius:12px;background:linear-gradient(160deg,#fffdf6,#fdf3d3);border:2px solid #d8c39a;color:#4a3a22;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(90,55,10,.15);padding:8px 4px;text-align:center}
+  @media (prefers-color-scheme: dark){.fcard{background:linear-gradient(160deg,#fdf6e3,#f7e8bd)}}
+  .fcard .kanji{font-size:56px;line-height:1.15;font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:700}
+  .fcard .strokes{margin-top:4px;font-size:13px;font-weight:700;color:#8a6d3b}
+  .fcard .band{margin-top:4px;font-size:11.5px;font-weight:700;color:#8a6d3b;background:rgba(255,255,255,.6);border-radius:999px;padding:1px 8px}
+  .fcard.pickable{cursor:pointer}
+  .fcard.pickable:hover{outline:2px solid var(--accent)}
+  .fcard.sel{outline:3px solid var(--accent);outline-offset:1px}
+  .fcard.cpuSel{outline:3px solid var(--gold);outline-offset:1px}
+  .fieldnote{text-align:center;font-size:12.5px;color:var(--muted)}
   .dicepick{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0}
   .die{border:2px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px;font-size:15px;font-weight:700;cursor:pointer;min-height:2.75rem}
   .die small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
@@ -83,9 +87,8 @@
   .range{font-size:14px;text-align:center}
   .range .warn{color:var(--red);font-weight:700}
   .range .ok{color:var(--green);font-weight:700}
-  .rollresult{display:flex;gap:10px;justify-content:center;align-items:center;min-height:64px;margin:6px 0}
+  .rollresult{display:flex;gap:10px;justify-content:center;align-items:center;min-height:64px;margin:6px 0;flex-wrap:wrap}
   .rolled{width:56px;height:56px;border-radius:12px;background:var(--panel);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;box-shadow:var(--shadow)}
-  .rolled small{font-size:11px;color:var(--muted);position:absolute}
   .sum{font-size:20px;font-weight:800}
   .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
   .btn{border:none;border-radius:999px;padding:10px 26px;font-size:16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff;min-height:2.75rem}
@@ -97,6 +100,7 @@
   .mitem .price{font-size:13px;color:var(--muted)}
   .mitem button{margin-top:6px;border:none;border-radius:999px;padding:6px 18px;font-weight:700;background:var(--gold);color:#fff;cursor:pointer;min-height:2.4rem}
   .mitem button:disabled{opacity:.4;cursor:default}
+  .paynote{font-size:12.5px;color:var(--muted);margin-top:8px}
   .log{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13.5px;max-height:180px;overflow-y:auto}
   .log div{padding:2px 0;border-bottom:1px dashed var(--line)}
   .log div:last-child{border-bottom:none}
@@ -107,6 +111,7 @@
   .rules li{margin:4px 0}
   .msg{font-size:16px;font-weight:700;text-align:center;min-height:28px;margin:4px 0}
   .msg.good{color:var(--green)} .msg.bad{color:var(--red)}
+  .decknote{text-align:center;font-size:13.5px;font-weight:700;color:var(--red);min-height:22px}
 </style>
 </head>
 <body>
@@ -114,7 +119,7 @@
   <div class="headwrap">
     <div class="brand">試作ゲームラボ</div>
     <h1>🎲 画数ダイス</h1>
-    <p>漢字カードをめくってサイコロを振り、出た目の合計がその漢字の「画数」とぴったり合えばカードを獲得。獲得すると得点とコインが入り、市場で8面・10面・20面などのダイスを買って、大きな画数の漢字も狙えるようになります。どのダイスの組み合わせで振るかが勝負どころ。CPUと10ラウンドの得点勝負です。</p>
+    <p>場に並んだ3枚の漢字カードから1枚を選んでサイコロを振り、出た目の合計がその漢字の「画数」とぴったり合えばカードを獲得。獲得したカードは得点になると同時に通貨（1枚＝1金）にもなります。市場で8面・10面・20面などのダイスを買ったり、場のカードを入れ替えたりするときに支払えますが、支払ったカードの得点は失われるので、使うかどうかが駆け引き。CPUと10ラウンド（または山札が尽きるまで）の得点勝負です。</p>
     <div class="badges">
       <span class="badge">人数 <strong>1人（CPU 1人）</strong></span>
       <span class="badge">時間 <strong>5〜10分</strong></span>
@@ -126,18 +131,19 @@
   <section class="panel">
     <div class="statusbar">
       <div class="round" id="roundLabel">ラウンド 1 / 10</div>
+      <div class="deckinfo" id="deckInfo">🂠 山札 残り <span id="deckCount">–</span>枚</div>
       <div class="turn" id="turnLabel">あなたの手番</div>
     </div>
     <div class="players" style="margin-top:12px">
       <div class="pcard" id="pCard">
         <div class="who"><span>あなた</span><span class="score"><span id="pScore">0</span>点</span></div>
-        <div class="meta">🪙 コイン <span id="pCoins">0</span>枚</div>
+        <div class="meta">🃏 獲得カード <span id="pGold">0</span>枚（＝<span id="pGold2">0</span>金）</div>
         <div class="diceown">所持ダイス：<span id="pDice"></span></div>
         <div class="wonlist" id="pWon"></div>
       </div>
       <div class="pcard" id="cCard">
         <div class="who"><span>CPU</span><span class="score"><span id="cScore">0</span>点</span></div>
-        <div class="meta">🪙 コイン <span id="cCoins">0</span>枚</div>
+        <div class="meta">🃏 獲得カード <span id="cGold">0</span>枚（＝<span id="cGold2">0</span>金）</div>
         <div class="diceown">所持ダイス：<span id="cDice"></span></div>
         <div class="wonlist" id="cWon"></div>
       </div>
@@ -145,14 +151,10 @@
   </section>
 
   <section class="panel" id="playPanel">
-    <h2>場の漢字カード</h2>
-    <div class="cardarea">
-      <div class="kanjicard back" id="kanjiCard"><div class="kanji">画数</div><div class="strokes">ダイス</div></div>
-      <div class="cardinfo">
-        <div class="hint" id="cardHint">カードをめくると手番が始まります</div>
-        <div class="sub" id="cardSub">画数はヒントだけ表示。字をよく見て数えてみよう</div>
-      </div>
-    </div>
+    <h2>場の漢字カード（3枚）</h2>
+    <div class="fieldarea" id="fieldArea"></div>
+    <div class="fieldnote" id="fieldNote">画数はヒントだけ表示。字をよく見て数えてみよう</div>
+    <div class="decknote" id="deckNote"></div>
     <div class="msg" id="msg"></div>
     <div id="playerControls">
       <div style="text-align:center;font-size:13px;color:var(--muted)">振るダイスを選んでください（タップでON/OFF）</div>
@@ -161,6 +163,7 @@
       <div class="rollresult" id="rollResult"></div>
       <div class="actions">
         <button class="btn" id="rollBtn">🎲 振る</button>
+        <button class="btn sub" id="refreshBtn">🔄 リフレッシュ（1金）</button>
       </div>
     </div>
     <div id="cpuNote" style="display:none;text-align:center;font-size:14px;color:var(--muted)">CPUが考え中…</div>
@@ -170,6 +173,7 @@
   <section class="panel" id="marketPanel">
     <h2>🛒 ダイス市場（自分の手番・振る前に買えます／所持は5個まで）</h2>
     <div class="market" id="market"></div>
+    <div class="paynote">支払いは獲得カードで。画数の小さいカードから自動で選ばれ、支払ったカードとその得点は失われます。</div>
   </section>
 
   <section class="panel" id="resultPanel" style="display:none">
@@ -177,6 +181,7 @@
       <h2>🏁 結果</h2>
       <div class="win" id="winLabel"></div>
       <div class="finalscore" id="finalScore"></div>
+      <div class="finalscore" id="endReason" style="font-size:14px;color:var(--muted)"></div>
       <div style="text-align:left;max-width:640px;margin:0 auto">
         <p><strong>あなたの獲得カード：</strong><span id="finalPWon"></span></p>
         <p><strong>CPUの獲得カード：</strong><span id="finalCWon"></span></p>
@@ -193,11 +198,15 @@
   <section class="panel rules">
     <h2>遊び方</h2>
     <ul>
-      <li>あなたとCPUが交互に手番を行い、全10ラウンド（各自10手番）で得点が高い方の勝ちです。</li>
-      <li>手番では漢字カードを1枚めくります。画数は伏せてあり、ヒント（6画以下／7〜12画／13画以上）だけが出ます。字をよく見て画数を数えるのがコツです。</li>
+      <li>あなたとCPUが交互に手番を行い、全10ラウンド（各自10手番）で得点が高い方の勝ちです。ただし山札が尽きたら、そのラウンドが終わった時点で終了します。</li>
+      <li>場には漢字カードが常に3枚並んでいます。手番では挑戦する1枚を選びます。画数は伏せてあり、ヒント（6画以下／7〜12画／13画以上）だけが出ます。字をよく見て画数を数えるのがコツです。</li>
       <li>持っているサイコロから振る組み合わせを選び、「出せる合計の範囲」を見てから振ります。</li>
-      <li>サイコロの合計が画数とぴったり一致すればカードを獲得。得点＝画数、コインも画数分もらえます。外れたらカードは捨てられます。</li>
-      <li>最初は6面ダイス2個とコイン12枚。市場でコインを使って4面・8面・10面・12面・20面ダイスを買えます（所持は5個まで）。買うのは自分の手番の、振る前だけです。</li>
+      <li>サイコロの合計が画数とぴったり一致すればカードを獲得。外れたらそのカードは捨てられます。どちらでも、場には新しいカードが補充されます（山札が足りないときは、ある分だけ並びます）。</li>
+      <li>獲得したカードは得点（＝画数）になると同時に通貨（1枚＝1金）です。ダイスの購入やリフレッシュの支払いに使うと、そのカードと得点は失われます。支払いは画数の小さいカードから自動で選ばれます。</li>
+      <li>スタート時は6面ダイス2個と、初期資金として山札から引いた漢字カード<span id="ruleFunds">2</span>枚（＝<span id="ruleFunds2">2</span>金）。引いたカードも、持っていれば終了時に得点になります。CPUも同じ枚数を引きます。</li>
+      <li>市場では4面（1金）・8面（1金）・10面（2金）・12面（2金）・20面（3金）のダイスが買えます（所持は5個まで）。買うのは自分の手番の、振る前だけです。</li>
+      <li>リフレッシュ（1金）：自分の手番の振る前に、場の3枚をすべて捨てて新しい3枚にできます。1手番に何回でも使えます。</li>
+      <li>山札の残り枚数は画面の上に常時表示されます。残りが少なくなったら、終わりが近い合図です。</li>
       <li>小さい画数には小さいダイス、大きい画数には大きいダイスや複数の組み合わせが有利。ダイスを増やすと最小の合計も増えるので、組み合わせ選びが大切です。</li>
     </ul>
   </section>
@@ -230,15 +239,19 @@ const DECK = [
   ['蟹',19],['鏡',19],
   ['議',20],['譲',20]
 ];
+/* 価格は「金」＝獲得カードの枚数 */
 const MARKET = [
-  {faces:4,  price:4},
-  {faces:8,  price:7},
-  {faces:10, price:9},
-  {faces:12, price:12},
-  {faces:20, price:20}
+  {faces:4,  price:1},
+  {faces:8,  price:1},
+  {faces:10, price:2},
+  {faces:12, price:2},
+  {faces:20, price:3}
 ];
 const MAX_DICE = 5;
 const ROUNDS = 10;
+const FIELD_SIZE = 3;
+const REFRESH_COST = 1;
+const INITIAL_FUNDS = 2;
 
 function makeDeck(rng){
   const d = DECK.map(([k,s])=>({kanji:k, strokes:s}));
@@ -249,7 +262,15 @@ function makeDeck(rng){
   return d;
 }
 function newPlayer(){
-  return {score:0, coins:12, dice:[6,6], won:[], missStreak:0};
+  return {dice:[6,6], won:[], missStreak:0};
+}
+/* 獲得カードそのものが通貨：1枚＝1金 */
+function goldOf(player){
+  return player.won.length;
+}
+/* 得点は「いま持っているカード」の画数の合計 */
+function scoreOf(player){
+  return player.won.reduce((a,c)=>a+c.strokes,0);
 }
 function sumRange(facesList){
   if(!facesList.length) return null;
@@ -258,9 +279,12 @@ function sumRange(facesList){
 function rollDice(facesList, rng){
   return facesList.map(f=>1+Math.floor(rng()*f));
 }
+const _probCache = new Map();
 /* facesList で target が出る確率（数え上げ） */
 function hitProb(facesList, target){
   if(!facesList.length) return 0;
+  const key = facesList.slice().sort((a,b)=>a-b).join(',')+'|'+target;
+  if(_probCache.has(key)) return _probCache.get(key);
   let dist = new Map([[0,1]]);
   for(const f of facesList){
     const nd = new Map();
@@ -270,7 +294,9 @@ function hitProb(facesList, target){
     dist = nd;
   }
   const total = facesList.reduce((a,b)=>a*b,1);
-  return (dist.get(target)||0)/total;
+  const p = (dist.get(target)||0)/total;
+  _probCache.set(key, p);
+  return p;
 }
 /* dice（面数の配列）の非空な部分集合すべて（面数の配列で返す） */
 function allSubsets(dice){
@@ -294,27 +320,71 @@ function bestCombo(dice, target){
   }
   return {combo:best, prob:bestP};
 }
-/* ダイス購入。成功したら true */
+/* 支払い：画数の小さいカードから n 枚を手放す。手放したカードの配列を返す（足りなければ null） */
+function payCards(player, n){
+  if(player.won.length < n) return null;
+  const sorted = player.won.slice().sort((a,b)=>a.strokes-b.strokes);
+  const pay = sorted.slice(0, n);
+  const paySet = new Set(pay);
+  player.won = player.won.filter(c=>!paySet.has(c));
+  return pay;
+}
+/* ダイス購入。成功したら支払いに使ったカードの配列、失敗したら null */
 function buyDie(player, faces){
   const item = MARKET.find(m=>m.faces===faces);
-  if(!item) return false;
-  if(player.dice.length>=MAX_DICE) return false;
-  if(player.coins<item.price) return false;
-  player.coins -= item.price;
+  if(!item) return null;
+  if(player.dice.length>=MAX_DICE) return null;
+  const paid = payCards(player, item.price);
+  if(!paid) return null;
   player.dice.push(faces);
-  return true;
+  return paid;
 }
-/* CPU：届かない画数が続いたら、買える範囲で大きめのダイスを買う */
-function cpuMaybeBuy(player, target){
-  const bc = bestCombo(player.dice, target);
-  const unreachable = bc.prob===0;
-  if(!unreachable && player.missStreak<2) return 0;
-  const affordable = MARKET.filter(m=>m.price<=player.coins && player.dice.length<MAX_DICE)
-                          .sort((a,b)=>b.faces-a.faces);
-  if(!affordable.length) return 0;
-  const pick = affordable[0];
-  if(buyDie(player, pick.faces)) return pick.faces;
-  return 0;
+/* ===== 場（フィールド）と山札 ===== */
+function newGameState(rng, deckOverride){
+  return {
+    deck: deckOverride ? deckOverride.slice() : makeDeck(rng),
+    discard: [],
+    field: [],
+    deckOut: false
+  };
+}
+/* 山札から1枚引く。引けなければ deckOut を立てて null */
+function drawCard(state){
+  if(!state.deck.length){
+    state.deckOut = true;
+    return null;
+  }
+  return state.deck.pop();
+}
+/* 場が3枚になるよう補充する（足りなければある分だけ） */
+function refillField(state){
+  while(state.field.length < FIELD_SIZE){
+    const card = drawCard(state);
+    if(!card) break;
+    state.field.push(card);
+  }
+}
+/* 初期資金：山札から n 枚引いて獲得カードとして持つ */
+function dealInitialFunds(player, state, n){
+  const got = [];
+  for(let i=0;i<n;i++){
+    const card = drawCard(state);
+    if(!card) break;
+    card.init = true;
+    player.won.push(card);
+    got.push(card);
+  }
+  return got;
+}
+/* リフレッシュ：1金を払い、場の3枚すべてを捨てて引き直す。支払ったカードを返す（使えなければ null） */
+function refreshField(player, state){
+  if(goldOf(player) < REFRESH_COST) return null;
+  const paid = payCards(player, REFRESH_COST);
+  if(!paid) return null;
+  state.discard.push(...state.field);
+  state.field = [];
+  refillField(state);
+  return paid;
 }
 /* 1手番の解決。戻り値 {rolls, sum, hit} */
 function resolveTurn(player, card, combo, rng){
@@ -322,8 +392,6 @@ function resolveTurn(player, card, combo, rng){
   const sum = rolls.reduce((a,b)=>a+b,0);
   const hit = (sum===card.strokes);
   if(hit){
-    player.score += card.strokes;
-    player.coins += card.strokes;
     player.won.push(card);
     player.missStreak = 0;
   }else{
@@ -337,20 +405,64 @@ function hintBand(strokes){
   if(strokes<=12) return '7〜12画';
   return '13画以上';
 }
-/* テスト用：両者とも最善手で1ゲーム通しプレイ */
-function simulateGame(rng){
-  const deck = makeDeck(rng);
-  const p = newPlayer(), c = newPlayer();
-  let di = 0;
-  for(let r=0;r<ROUNDS;r++){
-    for(const pl of [p,c]){
-      const card = deck[di++];
-      cpuMaybeBuy(pl, card.strokes);
-      const bc = bestCombo(pl.dice, card.strokes);
-      resolveTurn(pl, card, bc.combo, rng);
+/* 場の3枚の中で、最も当たる確率が高いカードと組み合わせ */
+function bestFieldChoice(player, field){
+  let best = null;
+  field.forEach((card, i)=>{
+    const bc = bestCombo(player.dice, card.strokes);
+    if(!best || bc.prob > best.prob){
+      best = {index:i, card, combo:bc.combo, prob:bc.prob};
     }
+  });
+  return best;
+}
+/* 素直な購入判断：場のどのカードにも届かない／外れが続いたら、買える範囲で大きめのダイスを買う */
+function strategyMaybeBuy(player, state){
+  if(!state.field.length) return null;
+  if(player.dice.length>=MAX_DICE) return null;
+  const choice = bestFieldChoice(player, state.field);
+  const unreachable = !choice || choice.prob===0;
+  if(!unreachable && player.missStreak<2) return null;
+  const affordable = MARKET.filter(m=>m.price<=goldOf(player))
+                          .sort((a,b)=>b.faces-a.faces);
+  if(!affordable.length) return null;
+  const pick = affordable[0];
+  const paid = buyDie(player, pick.faces);
+  return paid ? {faces:pick.faces, paid} : null;
+}
+/* ゲーム初期化：両者に初期資金を配り、場に3枚並べる */
+function newGame(rng, initialFunds, deckOverride){
+  const state = newGameState(rng, deckOverride);
+  const p = newPlayer(), c = newPlayer();
+  dealInitialFunds(p, state, initialFunds);
+  dealInitialFunds(c, state, initialFunds);
+  refillField(state);
+  return {state, p, c};
+}
+/* テスト用：両者とも最善手で1ゲーム通しプレイ */
+function simulateGame(rng, opts){
+  const o = opts || {};
+  const initialFunds = (o.initialFunds!=null) ? o.initialFunds : INITIAL_FUNDS;
+  const {state, p, c} = newGame(rng, initialFunds, o.deckOverride || null);
+  let purchases = 0, turns = 0, endReason = 'rounds', roundsPlayed = 0;
+  for(let round=1; round<=ROUNDS; round++){
+    roundsPlayed = round;
+    for(const pl of [p, c]){
+      if(strategyMaybeBuy(pl, state)) purchases++;
+      if(state.field.length){
+        const choice = bestFieldChoice(pl, state.field);
+        const card = state.field[choice.index];
+        const res = resolveTurn(pl, card, choice.combo, rng);
+        state.field.splice(choice.index, 1);
+        if(!res.hit) state.discard.push(card);
+        refillField(state);
+      }
+      turns++;
+    }
+    if(state.deckOut){ endReason = 'deck'; break; }
   }
-  return {p, c, used:di};
+  return {p, c, purchases, turns, endReason, roundsPlayed,
+          fieldSize: state.field.length, deckLeft: state.deck.length};
 }
 </script>
 
@@ -366,22 +478,61 @@ function log(text){
   el.prepend(div);
 }
 function diceLabel(f){ return f+'面'; }
-function renderPlayer(pl, scoreEl, coinsEl, diceEl, wonEl){
-  $(scoreEl).textContent = pl.score;
-  $(coinsEl).textContent = pl.coins;
+function cardLabel(c){ return '『'+c.kanji+'』（'+c.strokes+'画）'; }
+function paidLabel(paid){ return paid.map(cardLabel).join('・'); }
+
+function renderPlayer(pl, scoreEl, goldEl, gold2El, diceEl, wonEl){
+  $(scoreEl).textContent = scoreOf(pl);
+  $(goldEl).textContent = goldOf(pl);
+  $(gold2El).textContent = goldOf(pl);
   $(diceEl).textContent = pl.dice.map(diceLabel).join('・');
-  $(wonEl).innerHTML = pl.won.map(c=>'<span>'+c.kanji+'<small> '+c.strokes+'画</small></span>').join('');
+  $(wonEl).innerHTML = pl.won.map(c=>'<span'+(c.init?' class="initc"':'')+'>'+c.kanji+'<small> '+c.strokes+'画'+(c.init?'・初期':'')+'</small></span>').join('');
 }
 function renderAll(){
-  renderPlayer(S.p,'pScore','pCoins','pDice','pWon');
-  renderPlayer(S.c,'cScore','cCoins','cDice','cWon');
+  renderPlayer(S.p,'pScore','pGold','pGold2','pDice','pWon');
+  renderPlayer(S.c,'cScore','cGold','cGold2','cDice','cWon');
   $('roundLabel').textContent = 'ラウンド ' + Math.min(S.round, ROUNDS) + ' / ' + ROUNDS;
   const isP = S.turn==='player';
   $('turnLabel').textContent = S.over ? '対戦終了' : (isP ? 'あなたの手番' : 'CPUの手番');
   $('turnLabel').className = 'turn' + (isP ? '' : ' cpu');
   $('pCard').classList.toggle('active', !S.over && isP);
   $('cCard').classList.toggle('active', !S.over && !isP);
+  const left = S.state.deck.length;
+  $('deckCount').textContent = left;
+  $('deckInfo').classList.toggle('low', left<=10);
+  $('deckNote').textContent = S.state.deckOut
+    ? '🂠 山札が尽きました。このラウンドが終わると対戦終了です'
+    : (left<=10 && !S.over ? '🂠 山札が残りわずかです。尽きたら、そのラウンドで終了します' : '');
+  renderField();
   renderMarket();
+  renderRefreshBtn();
+}
+function renderField(){
+  const wrap = $('fieldArea');
+  wrap.innerHTML = '';
+  const pickable = !S.over && S.turn==='player' && !S.rolled;
+  S.state.field.forEach((card, i)=>{
+    const div = document.createElement('div');
+    div.className = 'fcard'
+      + (pickable ? ' pickable' : '')
+      + (S.selCard===i && S.turn==='player' ? ' sel' : '')
+      + (S.selCard===i && S.turn!=='player' ? ' cpuSel' : '');
+    const revealed = (S.revealIdx===i);
+    div.innerHTML = '<div class="kanji">'+card.kanji+'</div>'
+      + '<div class="strokes">'+(revealed ? card.strokes+'画' : '画数は ？')+'</div>'
+      + '<div class="band">ヒント：'+hintBand(card.strokes)+'</div>';
+    if(pickable){
+      div.addEventListener('click', ()=>{
+        S.selCard = i;
+        renderAll();
+        renderDicePick();
+      });
+    }
+    wrap.appendChild(div);
+  });
+  if(!S.state.field.length){
+    wrap.innerHTML = '<div class="fieldnote">場にカードがありません</div>';
+  }
 }
 function renderMarket(){
   const m = $('market');
@@ -390,187 +541,244 @@ function renderMarket(){
   for(const item of MARKET){
     const div = document.createElement('div');
     div.className = 'mitem';
-    const dis = !(canBuy && S.p.coins>=item.price && S.p.dice.length<MAX_DICE);
-    div.innerHTML = '<div class="faces">🎲 '+item.faces+'面</div><div class="price">🪙 '+item.price+'枚</div>';
+    const dis = !(canBuy && goldOf(S.p)>=item.price && S.p.dice.length<MAX_DICE);
+    div.innerHTML = '<div class="faces">🎲 '+item.faces+'面</div><div class="price">🃏 '+item.price+'金</div>';
     const btn = document.createElement('button');
     btn.textContent = '買う';
     btn.disabled = dis;
     btn.addEventListener('click', ()=>{
-      if(buyDie(S.p, item.faces)){
-        log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'コインで買った（残り '+S.p.coins+'コイン）');
-        S.selected = S.p.dice.map(()=>true);
-        renderDicePick();
+      const paid = buyDie(S.p, item.faces);
+      if(paid){
+        log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'金で買った（支払い：'+paidLabel(paid)+'／残り '+goldOf(S.p)+'金）');
+        S.selDice = S.p.dice.map(()=>true);
         renderAll();
+        renderDicePick();
       }
     });
     div.appendChild(btn);
     m.appendChild(div);
   }
 }
+function renderRefreshBtn(){
+  const btn = $('refreshBtn');
+  const can = !S.over && S.turn==='player' && !S.rolled
+    && goldOf(S.p)>=REFRESH_COST && S.state.deck.length>0;
+  btn.disabled = !can;
+}
 function renderDicePick(){
   const wrap = $('dicePick');
   wrap.innerHTML = '';
   S.p.dice.forEach((f,i)=>{
     const b = document.createElement('button');
-    b.className = 'die' + (S.selected[i] ? ' sel' : '');
-    b.innerHTML = '🎲 '+f+'面<small>'+(S.selected[i]?'使う':'使わない')+'</small>';
+    b.className = 'die' + (S.selDice[i] ? ' sel' : '');
+    b.innerHTML = '🎲 '+f+'面<small>'+(S.selDice[i]?'使う':'使わない')+'</small>';
     b.disabled = S.turn!=='player' || S.rolled || S.over;
     b.addEventListener('click', ()=>{
-      S.selected[i] = !S.selected[i];
+      S.selDice[i] = !S.selDice[i];
       renderDicePick();
     });
     wrap.appendChild(b);
   });
-  const combo = S.p.dice.filter((_,i)=>S.selected[i]);
+  const combo = S.p.dice.filter((_,i)=>S.selDice[i]);
   const r = sumRange(combo);
   const rl = $('rangeLabel');
+  const card = (S.selCard>=0) ? S.state.field[S.selCard] : null;
+  if(!card){
+    rl.innerHTML = 'まず場の3枚から、挑戦するカードを1枚選んでください';
+    $('rollBtn').disabled = true;
+    return;
+  }
   if(!r){
     rl.innerHTML = '<span class="warn">ダイスを1つ以上選んでください</span>';
     $('rollBtn').disabled = true;
     return;
   }
   let note = '出せる合計：<strong>'+r.min+' 〜 '+r.max+'</strong>';
-  if(S.card){
-    const band = S.card.strokes<=6 ? [1,6] : (S.card.strokes<=12 ? [7,12] : [13,20]);
-    if(r.max < band[0] || r.min > band[1]) note += '　<span class="warn">この組み合わせではヒントの範囲に届きません</span>';
-    else note += '　<span class="ok">ヒントの範囲に届く組み合わせです</span>';
-  }
+  const band = card.strokes<=6 ? [1,6] : (card.strokes<=12 ? [7,12] : [13,20]);
+  if(r.max < band[0] || r.min > band[1]) note += '　<span class="warn">この組み合わせではヒントの範囲に届きません</span>';
+  else note += '　<span class="ok">ヒントの範囲に届く組み合わせです</span>';
   rl.innerHTML = note;
   $('rollBtn').disabled = !(S.turn==='player' && !S.rolled && !S.over);
 }
-function showCard(card){
-  const kc = $('kanjiCard');
-  kc.className = 'kanjicard';
-  kc.innerHTML = '<div class="kanji">'+card.kanji+'</div><div class="strokes">画数は ？</div>';
-  $('cardHint').textContent = 'ヒント：この漢字は「'+hintBand(card.strokes)+'」';
-  $('cardSub').textContent = '画数がぴったり合えば獲得（得点とコインが入ります）';
-}
-function revealStrokes(card){
-  const kc = $('kanjiCard');
-  kc.innerHTML = '<div class="kanji">'+card.kanji+'</div><div class="strokes">'+card.strokes+'画</div>';
-}
-function showRolls(container, combo, rolls, sum){
-  container.innerHTML = rolls.map((v,i)=>'<div class="rolled">'+v+'</div>').join('') +
+function showRolls(container, rolls, sum){
+  container.innerHTML = rolls.map(v=>'<div class="rolled">'+v+'</div>').join('') +
     '<span class="sum">＝ '+sum+'</span>';
 }
+/* 解決したカードを場から外し、補充する */
+function commitField(idx, hit, card){
+  S.state.field.splice(idx, 1);
+  if(!hit) S.state.discard.push(card);
+  refillField(S.state);
+  S.revealIdx = -1;
+  S.selCard = -1;
+}
 function startTurn(){
-  if(S.round > ROUNDS){ endGame(); return; }
-  S.card = S.deck[S.di++];
+  if(S.over) return;
   S.rolled = false;
-  S.selected = (S.turn==='player') ? S.p.dice.map(()=>true) : [];
+  S.selCard = -1;
+  S.revealIdx = -1;
+  S.selDice = (S.turn==='player') ? S.p.dice.map(()=>true) : [];
   $('rollResult').innerHTML = '';
   $('cpuRoll').innerHTML = '';
   $('msg').textContent = '';
   $('msg').className = 'msg';
-  showCard(S.card);
   $('playerControls').style.display = S.turn==='player' ? '' : 'none';
   $('cpuNote').style.display = S.turn==='player' ? 'none' : '';
+  $('cpuNote').textContent = 'CPUが考え中…';
   renderAll();
+  if(!S.state.field.length){
+    log('場にカードがないため、'+(S.turn==='player'?'あなた':'CPU')+'の手番はスキップ');
+    setTimeout(afterTurn, 900);
+    return;
+  }
   if(S.turn==='player'){
     renderDicePick();
   }else{
-    renderDicePick();
     setTimeout(cpuTurn, 900);
   }
 }
 function afterTurn(){
+  if(S.over) return;
   if(S.turn==='player'){
     S.turn = 'cpu';
-  }else{
-    S.turn = 'player';
-    S.round++;
+    renderAll();
+    setTimeout(startTurn, 600);
+    return;
   }
+  /* ラウンド終了：山札切れ、または全ラウンド終了で対戦終了 */
+  if(S.state.deckOut){ endGame('deck'); return; }
+  if(S.round >= ROUNDS){ endGame('rounds'); return; }
+  S.round++;
+  S.turn = 'player';
   renderAll();
-  if(S.round > ROUNDS){ endGame(); return; }
-  setTimeout(startTurn, 1100);
+  setTimeout(startTurn, 600);
 }
 function playerRoll(){
-  const combo = S.p.dice.filter((_,i)=>S.selected[i]);
+  const card = S.state.field[S.selCard];
+  if(!card) return;
+  const idx = S.selCard;
+  const combo = S.p.dice.filter((_,i)=>S.selDice[i]);
   if(!combo.length) return;
   S.rolled = true;
   $('rollBtn').disabled = true;
-  renderMarket();
-  // 簡易アニメーション
+  renderAll();
   const cont = $('rollResult');
   let n = 0;
   const iv = setInterval(()=>{
     const fake = combo.map(f=>1+Math.floor(Math.random()*f));
-    showRolls(cont, combo, fake, fake.reduce((a,b)=>a+b,0));
+    showRolls(cont, fake, fake.reduce((a,b)=>a+b,0));
     if(++n>=6){
       clearInterval(iv);
-      const res = resolveTurn(S.p, S.card, combo, Math.random);
-      showRolls(cont, combo, res.rolls, res.sum);
-      revealStrokes(S.card);
+      const res = resolveTurn(S.p, card, combo, Math.random);
+      showRolls(cont, res.rolls, res.sum);
+      S.revealIdx = idx;
       if(res.hit){
-        $('msg').textContent = '🎉 ぴったり！「'+S.card.kanji+'」（'+S.card.strokes+'画）を獲得！';
+        $('msg').textContent = '🎉 ぴったり！'+cardLabel(card)+'を獲得！';
         $('msg').className = 'msg good';
-        log('✅ あなた：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で的中。獲得！');
+        log('✅ あなた：'+cardLabel(card)+'に合計'+res.sum+'で的中。獲得！（'+goldOf(S.p)+'金）');
       }else{
-        $('msg').textContent = '💦 合計'+res.sum+'、「'+S.card.kanji+'」は'+S.card.strokes+'画でした';
+        $('msg').textContent = '💦 合計'+res.sum+'、'+cardLabel(card)+'でした';
         $('msg').className = 'msg bad';
-        log('❌ あなた：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で外れ');
+        log('❌ あなた：'+cardLabel(card)+'に合計'+res.sum+'で外れ');
       }
       renderAll();
-      setTimeout(afterTurn, 1400);
+      setTimeout(()=>{
+        commitField(idx, res.hit, card);
+        renderAll();
+        afterTurn();
+      }, 1400);
     }
   }, 90);
 }
+function playerRefresh(){
+  if(S.turn!=='player' || S.rolled || S.over) return;
+  const paid = refreshField(S.p, S.state);
+  if(!paid) return;
+  S.selCard = -1;
+  S.revealIdx = -1;
+  log('🔄 あなたは場の3枚をリフレッシュした（支払い：'+paidLabel(paid)+'／残り '+goldOf(S.p)+'金）');
+  $('msg').textContent = '🔄 場のカードを入れ替えました';
+  $('msg').className = 'msg';
+  renderAll();
+  renderDicePick();
+}
 function cpuTurn(){
   if(S.over) return;
-  const bought = cpuMaybeBuy(S.c, S.card.strokes);
+  const bought = strategyMaybeBuy(S.c, S.state);
   if(bought){
-    log('🛒 CPUは '+bought+'面ダイスを買った（所持：'+S.c.dice.map(diceLabel).join('・')+'）');
+    log('🛒 CPUは '+bought.faces+'面ダイスを買った（支払い：'+paidLabel(bought.paid)+'／所持：'+S.c.dice.map(diceLabel).join('・')+'）');
     renderAll();
   }
-  const bc = bestCombo(S.c.dice, S.card.strokes);
-  const combo = bc.combo;
+  if(!S.state.field.length){ setTimeout(afterTurn, 600); return; }
+  const choice = bestFieldChoice(S.c, S.state.field);
+  const card = choice.card;
+  const idx = choice.index;
+  const combo = choice.combo;
+  S.selCard = idx;
+  renderAll();
+  $('cpuNote').textContent = 'CPUは 『'+card.kanji+'』 に挑戦（ダイス：'+combo.map(diceLabel).join('＋')+'）';
   setTimeout(()=>{
-    const res = resolveTurn(S.c, S.card, combo, Math.random);
-    showRolls($('cpuRoll'), combo, res.rolls, res.sum);
-    revealStrokes(S.card);
-    $('cpuNote').textContent = 'CPUは '+combo.map(diceLabel).join('＋')+' を振った';
+    const res = resolveTurn(S.c, card, combo, Math.random);
+    showRolls($('cpuRoll'), res.rolls, res.sum);
+    S.revealIdx = idx;
     if(res.hit){
-      $('msg').textContent = 'CPUが「'+S.card.kanji+'」（'+S.card.strokes+'画）を合計'+res.sum+'で獲得';
+      $('msg').textContent = 'CPUが'+cardLabel(card)+'を合計'+res.sum+'で獲得';
       $('msg').className = 'msg bad';
-      log('✅ CPU：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で的中。獲得');
+      log('✅ CPU：'+cardLabel(card)+'に合計'+res.sum+'で的中。獲得');
     }else{
-      $('msg').textContent = 'CPUは合計'+res.sum+'で外れ（「'+S.card.kanji+'」は'+S.card.strokes+'画）';
+      $('msg').textContent = 'CPUは合計'+res.sum+'で外れ（'+cardLabel(card)+'）';
       $('msg').className = 'msg good';
-      log('❌ CPU：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で外れ');
+      log('❌ CPU：'+cardLabel(card)+'に合計'+res.sum+'で外れ');
     }
     renderAll();
-    setTimeout(afterTurn, 1500);
+    setTimeout(()=>{
+      commitField(idx, res.hit, card);
+      renderAll();
+      afterTurn();
+    }, 1500);
   }, 800);
 }
-function endGame(){
+function endGame(reason){
   S.over = true;
+  S.endReason = reason;
   $('playPanel').style.display = 'none';
   $('marketPanel').style.display = 'none';
   const rp = $('resultPanel');
   rp.style.display = '';
-  const win = S.p.score > S.c.score, draw = S.p.score === S.c.score;
+  const ps = scoreOf(S.p), cs = scoreOf(S.c);
+  const win = ps > cs, draw = ps === cs;
   $('winLabel').textContent = draw ? '🤝 引き分け！' : (win ? '🏆 あなたの勝ち！' : '🤖 CPUの勝ち');
-  $('finalScore').textContent = 'あなた '+S.p.score+'点 ― CPU '+S.c.score+'点';
+  $('finalScore').textContent = 'あなた '+ps+'点 ― CPU '+cs+'点';
+  $('endReason').textContent = reason==='deck'
+    ? '山札が尽きたため、ラウンド'+S.round+'の終了時点で対戦を終えました'
+    : '全'+ROUNDS+'ラウンドが終了しました';
   const fmt = pl => pl.won.length ? pl.won.map(c=>c.kanji+'（'+c.strokes+'画）').join('、') : 'なし';
   $('finalPWon').textContent = fmt(S.p);
   $('finalCWon').textContent = fmt(S.c);
-  log('🏁 対戦終了：あなた '+S.p.score+'点 ― CPU '+S.c.score+'点');
+  log('🏁 対戦終了：あなた '+ps+'点 ― CPU '+cs+'点（'+(reason==='deck'?'山札切れ':'全ラウンド終了')+'）');
   renderAll();
 }
 function init(){
+  const g = newGame(Math.random, INITIAL_FUNDS, null);
   S = {
-    deck: makeDeck(Math.random), di: 0,
-    p: newPlayer(), c: newPlayer(),
-    round: 1, turn: 'player', card: null, rolled: false, selected: [], over: false
+    state: g.state, p: g.p, c: g.c,
+    round: 1, turn: 'player', selCard: -1, selDice: [], rolled: false,
+    revealIdx: -1, over: false, endReason: null
   };
   $('playPanel').style.display = '';
   $('marketPanel').style.display = '';
   $('resultPanel').style.display = 'none';
   $('log').innerHTML = '';
-  log('対戦開始。まずは漢字カードをめくった。ダイスを選んで振ろう');
+  $('ruleFunds').textContent = INITIAL_FUNDS;
+  $('ruleFunds2').textContent = INITIAL_FUNDS;
+  const fmtGot = pl => pl.won.filter(c=>c.init).map(cardLabel).join('・');
+  log('対戦開始。初期資金として、あなたは '+fmtGot(S.p)+' を引いた（'+INITIAL_FUNDS+'金）');
+  log('CPUの初期資金は '+fmtGot(S.c)+'（'+INITIAL_FUNDS+'金）');
+  log('場の3枚から挑戦するカードを選び、ダイスを選んで振ろう');
   startTurn();
 }
 $('rollBtn').addEventListener('click', playerRoll);
+$('refreshBtn').addEventListener('click', playerRefresh);
 $('againBtn').addEventListener('click', init);
 init();
 </script>

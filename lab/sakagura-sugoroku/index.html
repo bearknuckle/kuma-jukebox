@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>酒蔵すごろく</title>
+<title>酒蔵チンチロ</title>
 <!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
-<meta property="og:title" content="酒蔵すごろく｜試作ゲームラボ">
-<meta property="og:description" content="酒蔵を巡るすごろく。サイコロを振って進み、仕込みで進んで、試飲でおちょこを集めて、酔ったら1回休み。ゴールに一番乗りした人の勝ち。CPU 1〜3人と対戦。">
+<meta property="og:title" content="酒蔵チンチロ｜試作ゲームラボ">
+<meta property="og:description" content="3つのサイコロを椀で振って役を競うチンチロ。ピンゾロ、シゴロ、ヒフミ…親と子を交代しながら、おちょこを奪い合う。CPU 1〜3人と対戦。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/sakagura-sugoroku/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -54,60 +54,60 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
 .board-top{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .pl{flex:1;min-width:120px;background:rgba(0,0,0,.28);border-radius:12px;padding:8px 10px;border:1.5px solid rgba(247,239,221,.08)}
 .pl.turn{border-color:var(--amber);box-shadow:0 0 0 2px rgba(242,184,75,.35)}
+.pl.dealer{border-color:rgba(255,217,138,.55)}
+.pl.out{opacity:.45}
 .pl .nm{font-weight:900;font-size:14px;display:flex;gap:6px;align-items:center}
+.pl .nm .oya{background:var(--red);color:#fff;font-size:10px;border-radius:6px;padding:1px 6px}
 .pl .st{font-size:12px;opacity:.85;margin-top:3px;line-height:1.5}
 .pl .st b{color:var(--amber2)}
-.pl.rest .nm::after{content:"😵";font-size:13px}
-/* board */
-.board{margin-top:12px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.cell{aspect-ratio:1;border-radius:10px;background:var(--paper);color:var(--ink);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:11px;font-weight:700;position:relative;padding:2px;text-align:center;line-height:1.25}
-.cell .em{font-size:19px;line-height:1.1}
-.cell .no{position:absolute;top:2px;left:5px;font-size:9px;opacity:.55}
-.cell.ev{background:#ffe9b8}
-.cell.goal{background:var(--amber);font-size:13px}
-.cell.start{background:#cfe3f5}
-.tokens{position:absolute;right:2px;bottom:2px;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:70%}
-.tokens i{font-style:normal;font-size:15px;line-height:1;margin-left:-3px;text-shadow:0 1px 2px rgba(0,0,0,.4)}
-/* dice + log */
-.controls{margin-top:14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
-.dice{width:64px;height:64px;border-radius:14px;background:var(--paper);color:var(--ink);
-  font-size:36px;font-weight:900;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 0 #b9a27a;font-family:"Dela Gothic One",sans-serif}
-.dice.roll{animation:shake .12s infinite}
-@keyframes shake{0%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}100%{transform:rotate(-8deg)}}
+/* bowl + dice */
+.bowl-wrap{margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.bowl{width:230px;height:150px;border-radius:50%;background:radial-gradient(ellipse at 50% 38%, #fdf6e0 0%, #e8d5a8 55%, #c9ab72 100%);
+  box-shadow:0 10px 24px rgba(0,0,0,.45), inset 0 -14px 24px rgba(120,84,30,.35), inset 0 8px 14px rgba(255,255,255,.6);
+  display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
+.bowl::after{content:"🍶";position:absolute;bottom:-14px;right:6px;font-size:22px;opacity:.85}
+.die{width:56px;height:56px;border-radius:12px;background:#fffdf6;color:var(--ink);
+  font-size:38px;font-weight:900;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 8px rgba(0,0,0,.35);font-family:"Dela Gothic One",sans-serif}
+.die.roll{animation:shake .12s infinite}
+.die.out{position:absolute;right:-38px;top:6px;transform:rotate(28deg);background:#dfe9f2}
+@keyframes shake{0%{transform:rotate(-9deg) translateY(-2px)}50%{transform:rotate(9deg) translateY(2px)}100%{transform:rotate(-9deg) translateY(-2px)}}
+.handname{font-family:"Dela Gothic One",sans-serif;font-size:24px;color:var(--amber2);min-height:32px;text-align:center;letter-spacing:.04em}
+.handcmt{font-size:13px;opacity:.9;min-height:20px;text-align:center;line-height:1.5}
+.brand{font-size:16px;font-weight:900;color:var(--amber);min-height:24px;text-align:center}
 .turnmsg{font-weight:900;font-size:16px;text-align:center;min-height:24px;margin-top:10px}
-.log{margin-top:12px;max-height:170px;overflow-y:auto;font-size:13px;line-height:1.7}
+.controls{margin-top:10px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;min-height:52px}
+.log{margin-top:12px;max-height:190px;overflow-y:auto;font-size:13px;line-height:1.7}
 .log div{border-bottom:1px dashed rgba(247,239,221,.15);padding:3px 0}
 .log b{color:var(--amber2)}
+/* hands list */
+.hands{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
+.hands div{background:rgba(0,0,0,.22);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.5}
+.hands b{color:var(--amber2)}
 /* modal */
 .modal{position:fixed;inset:0;background:rgba(10,10,20,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal[hidden]{display:none}
 .sheet{background:var(--paper);color:var(--ink);border-radius:18px;padding:20px;max-width:480px;width:100%;max-height:88vh;overflow-y:auto}
 .sheet h2{font-family:"Dela Gothic One",sans-serif;margin:0 0 8px;font-size:22px}
-.sheet p{font-size:14px;line-height:1.7;margin:8px 0}
 .result{font-size:15px;line-height:1.9}
 .result .rank{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dashed #d8c9a8}
 .foot{margin-top:16px;text-align:center;font-size:12px;opacity:.7}
 .rules{font-size:13px;line-height:1.8}
 .rules li{margin:4px 0}
-.evlist{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
-.evlist div{background:rgba(0,0,0,.06);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.5}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>🍶 酒蔵すごろく</h1>
-    <div class="sub">サイコロを振って酒蔵を巡ろう。ゴールに一番乗りした人の勝ち！</div>
+    <h1>🎲 酒蔵チンチロ</h1>
+    <div class="sub">椀の中でサイコロ3つ。役で競って、おちょこを奪い合う！</div>
   </header>
 
   <!-- 設定画面 -->
   <div class="card" id="setupCard" style="margin-top:14px">
     <div class="lbl" style="margin-top:0">対戦相手（CPU）</div>
     <div class="opt" id="optCpu">
-      <button data-v="1">1人</button><button data-v="2">2人</button><button data-v="3" class="on">3人</button>
+      <button data-v="1">1人</button><button data-v="2" class="on">2人</button><button data-v="3">3人</button>
     </div>
     <div class="lbl">あなたの名前</div>
     <div class="opt" id="optName">
@@ -117,93 +117,134 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     </div>
     <div class="lbl">ルール</div>
     <ul class="rules" style="margin:4px 0;padding-left:20px">
-      <li>サイコロを振って、25マスの酒蔵を進むすごろく。ゴール（25マス目）に一番乗りした人の勝ち。</li>
-      <li>イベントマスに止まると、進んだり戻ったり、1回休んだり。試飲マスではおちょこ🍶を1つ集められる。</li>
-      <li>同着なし：ゴールした順に順位が決まる。残りの人は、その時点のマスとおちょこの数で順位を決める。</li>
+      <li>全員おちょこ🍶10杯からスタート。親と子を交代しながら、サイコロ3つで役を競う。</li>
+      <li>振れるのは最大3回まで。役なし（目なし）なら自動でもう1回。「目」が出たら、止めるか、もう1回振って上を狙うか選べる。</li>
+      <li>子の役が親より強ければ子の勝ち、弱ければ親の勝ち。あいこはやり取りなし。勝った役で倍率がつく（ピンゾロ5倍・アラシ3倍・シゴロ2倍）。ヒフミを出した人は2倍払い。</li>
+      <li>親がヒフミ・ションベン・目なしのときは、子は振らずに全員勝ち。</li>
+      <li>親が全員に2回ずつ回ったら終わり。おちょこが0になった人は酔いつぶれで脱落。最後まで残るか、一番多く持っていた人の勝ち。</li>
+      <li>役がそろうと、その強さに応じた「変わった銘柄」が登場。勝つとその銘柄をコレクションできます（勝敗には影響しない、集める楽しみ）。</li>
     </ul>
-    <div class="evlist">
-      <div>🌾 仕込み：2マス進む</div>
-      <div>🍶 試飲：おちょこ+1、もう1回振れる</div>
-      <div>🛢️ 樽転がし：3マス進む</div>
-      <div>✨ 大吟醸：4マス進む</div>
-      <div>🍻 乾杯：みんな1マス進む</div>
-      <div>💧 割り水：2マス戻る</div>
-      <div>😵 酔い：次の番は1回休み</div>
+    <div class="lbl">銘柄図鑑（強い役ほど珍しい銘柄）</div>
+    <div class="hands">
+      <div><b>ピンゾロ</b>：死神／川口納豆</div>
+      <div><b>アラシ</b>：俺の出番／ならぬことはならぬものです</div>
+      <div><b>シゴロ</b>：三芳菊 残骸／SABA de SHU</div>
+      <div><b>目5・6</b>：くどき上手／色おとこ</div>
+      <div><b>目3・4</b>：ねこ正宗</div>
+      <div><b>目1・2</b>：ちょっとおまち</div>
+    </div>
+    <p style="font-size:12px;opacity:.85;margin:4px 0 10px">※ここに出てくる銘柄は、すべて実在の日本酒です。</p>
+    <div class="lbl">役一覧（強い順）</div>
+    <div class="hands">
+      <div><b>ピンゾロ</b>（1・1・1）最強！ 5倍</div>
+      <div><b>アラシ</b>（ゾロ目）3倍</div>
+      <div><b>シゴロ</b>（4・5・6）2倍</div>
+      <div><b>目</b>（ペア＋1つ）残りの数が点。目6が一番強い</div>
+      <div><b>目なし</b>（役なし）3回振っても出なければ負け級</div>
+      <div><b>ヒフミ</b>（1・2・3）即負け・2倍払い</div>
+      <div><b>ションベン</b>（椀の外）即負け</div>
     </div>
     <p class="note">🔞 このゲームはお酒を飲まなくても遊べます。飲みながら遊ぶときは<b>20歳以上</b>で、飲みすぎや一気飲みはやめましょう。ソフトドリンクでも楽しめます。</p>
-    <button class="btn red big" id="startBtn">蔵開きをはじめる</button>
+    <button class="btn red big" id="startBtn">勝負をはじめる</button>
     <p style="text-align:center;margin:12px 0 0"><a href="../" style="color:#d8c9a8;font-size:13px">← 試作ゲームラボに戻る</a></p>
   </div>
 
   <!-- ゲーム画面 -->
   <div id="gameCard" hidden>
     <div class="board-top" id="scoreboard"></div>
-    <div class="board" id="board"></div>
+    <div class="bowl-wrap">
+      <div class="bowl" id="bowl">
+        <div class="die" id="die0">🎲</div>
+        <div class="die" id="die1">🎲</div>
+        <div class="die" id="die2">🎲</div>
+      </div>
+      <div class="handname" id="handName"></div>
+      <div class="handcmt" id="handCmt"></div>
+      <div class="brand" id="handBrand"></div>
+    </div>
     <div class="turnmsg" id="turnMsg"></div>
     <div class="controls">
-      <div class="dice" id="dice">🎲</div>
-      <button class="btn red" id="rollBtn" style="font-size:17px;padding:12px 22px">サイコロを振る</button>
+      <button class="btn red" id="rollBtn" style="font-size:17px;padding:12px 22px" hidden>サイコロを振る</button>
+      <button class="btn" id="stopBtn" style="font-size:16px;padding:12px 18px" hidden>この目で止める</button>
+      <button class="btn red" id="againBtn2" style="font-size:16px;padding:12px 18px" hidden>もう1回振る！</button>
+    </div>
+    <div class="card" style="margin-top:6px">
+      <div class="lbl" style="margin-top:0">役一覧（強い順）</div>
+      <div class="hands" style="margin:0">
+        <div><b>ピンゾロ</b>（1・1・1）5倍</div>
+        <div><b>アラシ</b>（ゾロ目）3倍</div>
+        <div><b>シゴロ</b>（4・5・6）2倍</div>
+        <div><b>目</b>（ペア＋1つ）数が点</div>
+        <div><b>目なし</b>（役なし）</div>
+        <div><b>ヒフミ</b>（1・2・3）即負け2倍払い</div>
+        <div><b>ションベン</b>（椀の外）即負け</div>
+      </div>
     </div>
     <div class="card log" id="log"></div>
     <div style="text-align:center;margin-top:12px">
-      <button class="btn ghost" id="quitBtn" style="background:transparent;color:var(--paper);border:1.5px solid rgba(247,239,221,.4)">メニューに戻る</button>
+      <button class="btn" id="quitBtn" style="background:transparent;color:var(--paper);border:1.5px solid rgba(247,239,221,.4)">メニューに戻る</button>
     </div>
   </div>
 
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵すごろく v0.2</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵チンチロ v0.3</div>
 </div>
 
 <div class="modal" id="endModal" hidden>
   <div class="sheet">
-    <h2 id="endTitle">蔵開き、おつかれさま！</h2>
+    <h2 id="endTitle">勝負あり！</h2>
     <div class="result" id="endBody"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn red" id="againBtn" style="flex:1">もう一巡り（もう一回）</button>
+      <button class="btn red" id="againBtn" style="flex:1">もう一勝負</button>
       <button class="btn" id="menuBtn">メニュー</button>
     </div>
   </div>
 </div>
 
 <script>
-const GOAL = 24; // 0スタート、24がゴール（全25マス）
-const SQUARES = [
-  {n:'スタート', e:'🏮', type:'start'},
-  {n:'', e:'', type:'normal'},
-  {n:'仕込み', e:'🌾', type:'plus', v:2},
-  {n:'', e:'', type:'normal'},
-  {n:'試飲', e:'🍶', type:'taste'},
-  {n:'', e:'', type:'normal'},
-  {n:'割り水', e:'💧', type:'minus', v:2},
-  {n:'', e:'', type:'normal'},
-  {n:'乾杯', e:'🍻', type:'kanpai'},
-  {n:'', e:'', type:'normal'},
-  {n:'樽転がし', e:'🛢️', type:'plus', v:3},
-  {n:'', e:'', type:'normal'},
-  {n:'酔い', e:'😵', type:'rest'},
-  {n:'', e:'', type:'normal'},
-  {n:'大吟醸', e:'✨', type:'plus', v:4},
-  {n:'', e:'', type:'normal'},
-  {n:'試飲', e:'🍶', type:'taste'},
-  {n:'', e:'', type:'normal'},
-  {n:'仕込み', e:'🌾', type:'plus', v:2},
-  {n:'', e:'', type:'normal'},
-  {n:'割り水', e:'💧', type:'minus', v:2},
-  {n:'', e:'', type:'normal'},
-  {n:'樽転がし', e:'🛢️', type:'plus', v:3},
-  {n:'', e:'', type:'normal'},
-  {n:'ゴール', e:'🏆', type:'goal'},
-];
+const FACES = '⚀⚁⚂⚃⚄⚅';
+const START_POINTS = 10;
+const BASE_BET = 1;
+const SHONBEN_RATE = 0.04;
+const FAST = location.search.includes('test=1');
 const CPU_POOL = [
-  {name:'杜氏のおじい', av:'👴', lines:['よい香りじゃ','わしの番じゃな','うむ、いい酒になる']},
-  {name:'きき酒女子', av:'👩', lines:['この香り、好き','いきます！','ふふ、狙い通り']},
-  {name:'たぬき蔵人', av:'🦝', lines:['へい、行くよ','樽は任せとけ','おっと、酔っちまった']},
-  {name:'ねこ番頭', av:'🐱', lines:['にゃ、進むにゃ','見てたにゃ','もう一杯だけ…にゃ']},
+  {name:'杜氏のおじい', av:'👴', lines:['よい香りじゃ','わしの椀さばきを見よ','うむ、いい出目じゃ']},
+  {name:'きき酒女子', av:'👩', lines:['この勝負、好き','いきます！','ふふ、狙い通り']},
+  {name:'たぬき蔵人', av:'🦝', lines:['へい、回すよ','椀は任せとけ','おっと、こぼれた']},
+  {name:'ねこ番頭', av:'🐱', lines:['にゃ、振るにゃ','見てたにゃ','もう一杯だけ…にゃ']},
 ];
 const HUMAN = {name:'あなた', av:'🧑'};
+const ME_CMTS = {
+  6:'目6！こりゃ特上の一杯',
+  5:'目5。なかなかの香り',
+  4:'目4。悪くない出来',
+  3:'目3。まあまあ、といったところ',
+  2:'目2。ちょっと薄い…',
+  1:'目1。水みたいに薄い…',
+};
+// 実在の変わった銘柄。役が強いほど珍しい銘柄が出る
+const BRANDS = {
+  pinzoro:['死神','川口納豆'],
+  arashi:['俺の出番','ならぬことはならぬものです'],
+  shigoro:['三芳菊 残骸','SABA de SHU'],
+  meHi:['くどき上手','色おとこ'],
+  meMid:['ねこ正宗'],
+  meLo:['ちょっとおまち'],
+};
+function brandFor(h){
+  let list = null;
+  if(h.cls==='pinzoro') list = BRANDS.pinzoro;
+  else if(h.cls==='arashi') list = BRANDS.arashi;
+  else if(h.cls==='shigoro') list = BRANDS.shigoro;
+  else if(h.cls==='me' && h.point>=5) list = BRANDS.meHi;
+  else if(h.cls==='me' && h.point>=3) list = BRANDS.meMid;
+  else if(h.cls==='me') list = BRANDS.meLo;
+  return list ? list[rand(list.length)] : null;
+}
 
 let G = null;
+let humanWait = null; // {resolve} for the human's next action
 const $ = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = ms => new Promise(r => setTimeout(r, FAST ? 0 : ms));
 const rand = n => Math.floor(Math.random()*n);
 
 function optVal(id){
@@ -218,24 +259,30 @@ document.querySelectorAll('.opt').forEach(o=>{
   });
 });
 
-function newGame(){
-  const cpuN = parseInt(optVal('optCpu')||'3', 10);
-  const name = optVal('optName') || 'あなた';
-  const cpus = [...CPU_POOL].sort(()=>Math.random()-.5).slice(0, cpuN);
-  G = {
-    players: [{...HUMAN, name, isHuman:true, pos:0, cups:0, rest:false, finished:0},
-      ...cpus.map(c=>({...c, isHuman:false, pos:0, cups:0, rest:false, finished:0}))],
-    turn: 0, over:false, round:1, log:[]
-  };
-  $('setupCard').hidden = true;
-  $('gameCard').hidden = false;
-  $('endModal').hidden = true;
-  $('log').innerHTML = '';
-  addLog(`蔵開きスタート！ ${G.players.map(p=>p.name).join('・')}の${G.players.length}人で酒蔵を巡ります。`);
-  renderAll();
-  setTurnMsg(`${G.players[0].name}の番です。サイコロを振ってください。`);
-  $('rollBtn').disabled = false;
+// ---- 役判定 ----
+function evaluate(dice){
+  const d = [...dice].sort((a,b)=>a-b);
+  if(d[0]===1 && d[1]===2 && d[2]===3)
+    return {cls:'hifumi', rank:-20, mult:1, name:'ヒフミ', cmt:'1・2・3…水みたいな酒。即負け！'};
+  if(d[0]===d[1] && d[1]===d[2]){
+    if(d[0]===1) return {cls:'pinzoro', rank:100, mult:5, name:'ピンゾロ', cmt:'1・1・1！蔵に伝わる伝説の一振り！'};
+    return {cls:'arashi', rank:90+d[0], mult:3, name:d[0]+'のアラシ', cmt:'ゾロ目そろった！蔵中がどよめく'};
+  }
+  if(d[0]===4 && d[1]===5 && d[2]===6)
+    return {cls:'shigoro', rank:80, mult:2, name:'シゴロ', cmt:'4・5・6！粋な並び、蔵人の花道'};
+  let odd = null;
+  if(d[0]===d[1]) odd = d[2];
+  else if(d[1]===d[2]) odd = d[0];
+  if(odd !== null)
+    return {cls:'me', rank:10+odd, mult:1, point:odd, name:'目'+odd, cmt:ME_CMTS[odd]};
+  return {cls:'menashi', rank:0, mult:1, name:'目なし', cmt:'役なし…ただの水たまり'};
 }
+function shonbenHand(){
+  return {cls:'shonben', rank:-10, mult:1, name:'ションベン', cmt:'椀の外にこぼれた！蔵人が青ざめる'};
+}
+function isLoseClass(h){ return h.cls==='hifumi' || h.cls==='shonben'; }
+
+// ---- 画面 ----
 function addLog(html){
   G.log.push(html);
   const d = document.createElement('div');
@@ -244,226 +291,255 @@ function addLog(html){
   $('log').scrollTop = $('log').scrollHeight;
 }
 function setTurnMsg(t){ $('turnMsg').textContent = t; }
-
-function cellIndex(row, col){
-  // 画面の行列（上から row, 左から col）→ マス番号。0は左下、蛇行して24がゴール
-  const br = 4 - row;
-  return br*5 + (br%2===0 ? col : 4-col);
-}
-function renderBoard(){
-  const b = $('board');
-  b.innerHTML = '';
-  for(let row=0; row<5; row++){
-    for(let col=0; col<5; col++){
-      const i = cellIndex(row, col);
-      const sq = SQUARES[i];
-      const cell = document.createElement('div');
-      cell.className = 'cell' + (sq.type==='goal'?' goal':sq.type==='start'?' start':(sq.type!=='normal'?' ev':''));
-      cell.innerHTML = `<span class="no">${i===0?'START':i===GOAL?'GOAL':i}</span>` +
-        (sq.e?`<span class="em">${sq.e}</span>`:'') +
-        (sq.n?`<span>${sq.n}</span>`:'') +
-        `<span class="tokens"></span>`;
-      b.appendChild(cell);
-    }
-  }
-  // コマを置く
-  G.players.forEach((p,pi)=>{
-    const idx = Math.min(p.pos, GOAL);
-    const row = 4 - Math.floor(idx/5);
-    const col = (Math.floor(idx/5)%2===0) ? idx%5 : 4-(idx%5);
-    const cellEl = b.children[row*5+col];
-    const tk = cellEl.querySelector('.tokens');
-    const s = document.createElement('i');
-    s.textContent = p.av;
-    s.title = p.name;
-    tk.appendChild(s);
-  });
-}
 function renderScore(){
   const sb = $('scoreboard');
   sb.innerHTML = '';
   G.players.forEach((p,pi)=>{
     const d = document.createElement('div');
-    d.className = 'pl' + (G.turn===pi && !G.over ? ' turn':'') + (p.rest?' rest':'');
-    d.innerHTML = `<div class="nm">${p.av} ${p.name}${p.isHuman?'（あなた）':''}</div>
-      <div class="st">${p.finished?`🏆 ${p.finished}位でゴール！`:`${p.pos}マス目`}　🍶おちょこ <b>${p.cups}</b>${p.rest?'　😵次回休み':''}</div>`;
+    d.className = 'pl' + (G.current===pi && !G.over ? ' turn':'') + (G.dealer===pi ? ' dealer':'') + (p.pts<=0 ? ' out':'');
+    d.innerHTML = `<div class="nm">${p.av} ${p.name}${p.isHuman?'（あなた）':''}${G.dealer===pi?'<span class="oya">親</span>':''}</div>
+      <div class="st">${p.pts<=0 ? '😵 酔いつぶれ…' : `🍶おちょこ <b>${p.pts}</b>杯　🏷️銘柄 <b>${p.brands.length}</b>種`}</div>`;
     sb.appendChild(d);
   });
 }
-function renderAll(){ renderBoard(); renderScore(); }
-
-async function rollDice(){
-  const d = $('dice');
-  d.classList.add('roll');
-  for(let i=0;i<7;i++){ d.textContent = '⚀⚁⚂⚃⚄⚅'[rand(6)]; await sleep(70); }
-  d.classList.remove('roll');
-  const v = rand(6)+1;
-  d.textContent = '⚀⚁⚂⚃⚄⚅'[v-1];
-  return v;
-}
-
-async function movePlayer(pi, steps){
-  const p = G.players[pi];
-  for(let s=0; s<steps; s++){
-    if(p.pos >= GOAL) break;
-    p.pos++;
-    renderAll();
-    await sleep(220);
+function showDice(dice, outIdx){
+  for(let i=0;i<3;i++){
+    const el = $('die'+i);
+    el.classList.remove('out');
+    el.textContent = dice ? FACES[dice[i]-1] : '🎲';
+  }
+  if(outIdx !== null && outIdx !== undefined){
+    $('die'+outIdx).classList.add('out');
   }
 }
-async function applyEvent(pi){
-  const p = G.players[pi];
-  if(p.pos >= GOAL) return false;
-  const sq = SQUARES[p.pos];
-  if(sq.type==='plus'){
-    addLog(`<b>${p.name}</b>は「${sq.n}」に止まった！ ${sq.v}マス進む！`);
-    await sleep(400);
-    await movePlayer(pi, sq.v);
-    return false;
+function showHand(h){
+  $('handName').textContent = h ? h.name : '';
+  $('handCmt').textContent = h ? h.cmt : '';
+  $('handBrand').textContent = h && h.brand ? `🍶 銘柄登場：「${h.brand}」` : '';
+}
+function hideButtons(){
+  $('rollBtn').hidden = true;
+  $('stopBtn').hidden = true;
+  $('againBtn2').hidden = true;
+}
+function waitHumanAction(btnIds){
+  return new Promise(resolve=>{
+    humanWait = {resolve};
+    btnIds.forEach(id=>{ $(id).hidden = false; });
+  });
+}
+function humanAct(action){
+  if(!humanWait) return;
+  const w = humanWait;
+  humanWait = null;
+  hideButtons();
+  w.resolve(action);
+}
+
+// ---- サイコロを振る ----
+async function animateRoll(){
+  const els = [$('die0'), $('die1'), $('die2')];
+  els.forEach(el=>{ el.classList.remove('out'); el.classList.add('roll'); });
+  for(let i=0;i<7;i++){
+    els.forEach(el=>{ el.textContent = FACES[rand(6)]; });
+    await sleep(70);
   }
-  if(sq.type==='minus'){
-    addLog(`<b>${p.name}</b>は「${sq.n}」に止まった… ${sq.v}マス戻る。`);
-    await sleep(400);
-    p.pos = Math.max(0, p.pos - sq.v);
-    renderAll();
-    return false;
+  els.forEach(el=>el.classList.remove('roll'));
+}
+function rollOnce(){
+  if(Math.random() < SHONBEN_RATE){
+    const dice = [rand(6)+1, rand(6)+1, rand(6)+1];
+    return {shonben:true, dice, outIdx: rand(3)};
   }
-  if(sq.type==='taste'){
-    p.cups++;
-    addLog(`<b>${p.name}</b>は「試飲」に止まった！ おちょこ🍶を1つゲット（${p.cups}個目）。もう1回振れる！`);
-    renderAll();
-    return true; // もう1回
-  }
-  if(sq.type==='kanpai'){
-    addLog(`<b>${p.name}</b>の「乾杯」！ みんな1マス進む！ 🍻`);
-    await sleep(400);
-    G.players.forEach(q=>{ if(q.pos<GOAL) q.pos++; });
-    renderAll();
-    // 乾杯でゴールした人がいれば順位を付ける（手番の人から順に）
-    for(let k=0;k<G.players.length;k++){
-      checkGoal((pi+k)%G.players.length);
+  return {shonben:false, dice:[rand(6)+1, rand(6)+1, rand(6)+1], outIdx:null};
+}
+function cpuReroll(hand){
+  // CPUの判断：目2以下なら上を狙う
+  return hand.cls==='me' && hand.point <= 2;
+}
+
+async function takeRollTurn(p){
+  let rolls = 0;
+  let hand = null;
+  while(rolls < 3){
+    if(!G) return hand || {cls:'menashi', rank:0, mult:1, name:'目なし', cmt:''};
+    if(p.isHuman){
+      setTurnMsg(rolls===0 ? `${p.name}の番。サイコロを振ってください` : `目なし…あと${3-rolls}回振れます`);
+      await waitHumanAction(['rollBtn']);
+    } else {
+      setTurnMsg(`${p.name}が振ります…`);
+      await sleep(650);
     }
-    return false;
+    rolls++;
+    await animateRoll();
+    const r = rollOnce();
+    showDice(r.dice, r.outIdx);
+    if(r.shonben){
+      hand = shonbenHand();
+      showHand(hand);
+      addLog(`<b>${p.name}</b>は椀の外にサイコロをこぼした！ <b>ションベン</b>…`);
+      await sleep(600);
+      return hand;
+    }
+    hand = evaluate(r.dice);
+    hand.brand = brandFor(hand);
+    showHand(hand);
+    addLog(`<b>${p.name}</b>： ${r.dice.join('・')} → <b>${hand.name}</b>${hand.brand ? ` 🍶銘柄「${hand.brand}」` : ''}`);
+    await sleep(500);
+    if(hand.cls==='hifumi') return hand;
+    if(hand.cls==='pinzoro' || hand.cls==='arashi' || hand.cls==='shigoro') return hand;
+    if(hand.cls==='me'){
+      if(rolls >= 3) return hand;
+      // 止めるか、もう1回振るか
+      let reroll;
+      if(p.isHuman){
+        setTurnMsg(`${hand.name}です。止めますか？ もう1回振って上を狙えます（目なし・ヒフミの危険あり）`);
+        const act = await waitHumanAction(['stopBtn','againBtn2']);
+        reroll = (act === 'again');
+      } else {
+        await sleep(500);
+        reroll = cpuReroll(hand);
+        if(reroll) addLog(`<b>${p.name}</b>は${hand.name}では止まらない！ もう1回振る！`);
+      }
+      if(!reroll) return hand;
+    }
+    // 目なしは自動で振り直し
+    if(hand.cls==='menashi' && rolls < 3){
+      await sleep(400);
+    }
   }
-  if(sq.type==='rest'){
-    p.rest = true;
-    addLog(`<b>${p.name}</b>は「酔い」に止まった…😵 次の番は1回休み。`);
-    renderAll();
-    return false;
-  }
-  return false;
+  return hand;
 }
 
-function checkGoal(pi){
-  const p = G.players[pi];
-  if(p.pos >= GOAL && !p.finished){
-    p.pos = GOAL;
-    const rank = G.players.filter(q=>q.finished).length + 1;
-    p.finished = rank;
-    addLog(`🎉 <b>${p.name}</b>がゴール！ ${rank}位！`);
-    renderAll();
-    return true;
-  }
-  return false;
+function transfer(from, to, amount, why){
+  const amt = Math.max(0, Math.min(amount, from.pts));
+  if(amt <= 0) return;
+  from.pts -= amt;
+  to.pts += amt;
+  addLog(`${why} ${from.name} から ${to.name} へ 🍶${amt}杯`);
+  renderScore();
 }
-
-async function takeTurn(pi){
-  const p = G.players[pi];
-  if(G.over) return;
-  if(p.rest){
-    addLog(`<b>${p.name}</b>は酔いがさめず、1回休み😵`);
-    p.rest = false;
-    renderAll();
-    await sleep(700);
-    await endTurn();
+function collectBrand(winner, hand){
+  if(!hand || !hand.brand) return;
+  if(winner.brands.includes(hand.brand)) return;
+  winner.brands.push(hand.brand);
+  addLog(`🏷️ <b>${winner.name}</b>は銘柄「${hand.brand}」をコレクションした！（${winner.brands.length}種目）`);
+  renderScore();
+}
+function settle(dealer, dHand, child, cHand){
+  // 子 vs 親 の1対1
+  if(isLoseClass(cHand)){
+    const mult = Math.max(dHand.mult, cHand.cls==='hifumi' ? 2 : 1);
+    transfer(child, dealer, BASE_BET*mult, `<b>${child.name}</b>の${cHand.name}で負け。`);
+    collectBrand(dealer, dHand);
     return;
   }
-  if(p.isHuman){
-    setTurnMsg(`${p.name}の番です。サイコロを振ってください。`);
-    $('rollBtn').disabled = false;
-    return; // ボタン待ち
+  if(cHand.rank > dHand.rank){
+    transfer(dealer, child, BASE_BET*cHand.mult, `<b>${child.name}</b>の${cHand.name}が親の${dHand.name}に勝ち！`);
+    collectBrand(child, cHand);
+  } else if(cHand.rank < dHand.rank){
+    transfer(child, dealer, BASE_BET*dHand.mult, `<b>${child.name}</b>の${cHand.name}は親の${dHand.name}に届かず。`);
+    collectBrand(dealer, dHand);
+  } else {
+    addLog(`<b>${child.name}</b>と親は同じ${cHand.name}。あいこ、やり取りなし。`);
   }
-  // CPU
-  setTurnMsg(`${p.name}の番です…`);
-  $('rollBtn').disabled = true;
-  await sleep(700);
-  const v = await rollDice();
-  addLog(`<b>${p.name}</b>は ${v} を出した。`);
-  await movePlayer(pi, v);
-  let again = await applyEvent(pi);
-  checkGoal(pi);
-  while(again && !G.over && !checkGoal(pi)){
-    await sleep(500);
-    const v2 = await rollDice();
-    addLog(`<b>${p.name}</b>はもう1回、${v2} を出した。`);
-    await movePlayer(pi, v2);
-    again = await applyEvent(pi);
-    checkGoal(pi);
-  }
-  renderAll();
-  await sleep(500);
-  endTurn();
 }
+function solventPlayers(){ return G.players.filter(p=>p.pts>0); }
 
-async function humanRoll(){
+async function playRound(){
+  const dealer = G.players[G.dealer];
+  G.current = G.dealer;
+  renderScore();
+  addLog(`―― 第${G.round}回戦。親は <b>${dealer.name}</b> ――`);
+  showDice(null); showHand(null);
+  const dHand = await takeRollTurn(dealer);
+  if(!G) return;
+  G.current = -1;
+  renderScore();
   if(G.over) return;
-  const pi = G.turn;
-  const p = G.players[pi];
-  $('rollBtn').disabled = true;
-  const v = await rollDice();
-  addLog(`<b>${p.name}</b>は ${v} を出した。`);
-  await movePlayer(pi, v);
-  let again = await applyEvent(pi);
-  checkGoal(pi);
-  while(again && !G.over && !checkGoal(pi)){
-    await sleep(500);
-    setTurnMsg('もう1回振れます！');
-    $('rollBtn').disabled = false;
-    // もう1回はボタンで振る
-    return;
+
+  const children = G.players.filter((p,pi)=>pi!==G.dealer && p.pts>0);
+  if(isLoseClass(dHand) || dHand.cls==='menashi'){
+    // 親が即負け級・目なし → 子は振らずに全員勝ち
+    const mult = dHand.cls==='hifumi' ? 2 : 1;
+    children.forEach(c=>{
+      transfer(dealer, c, BASE_BET*mult, `親の${dHand.name}で、<b>${c.name}</b>は振らずに勝ち！`);
+    });
+    await sleep(600);
+  } else {
+    for(const child of children){
+      if(G.over) return;
+      if(dealer.pts<=0){ addLog(`親の${dealer.name}はおちょこが尽きた…`); break; }
+      G.current = G.players.indexOf(child);
+      renderScore();
+      const cHand = await takeRollTurn(child);
+      if(!G) return;
+      settle(dealer, dHand, child, cHand);
+      await sleep(500);
+      if(solventPlayers().length <= 1) break;
+    }
   }
-  renderAll();
-  await sleep(400);
-  endTurn();
+  if(!G) return;
+  G.current = -1;
+  renderScore();
+  await sleep(600);
+  endRound();
 }
-
-async function endTurn(){
+function endRound(){
   if(G.over) return;
-  // ゴールした人が出たら、残りはその時点の順位で終了（全員ゴール or 1人ゴールで終了）
-  const finished = G.players.filter(p=>p.finished).length;
-  if(finished >= 1){
+  const alive = solventPlayers();
+  const me = G.players[0];
+  if(alive.length <= 1 || me.pts <= 0 || G.round >= G.totalRounds){
     finishGame();
     return;
   }
-  G.turn = (G.turn+1) % G.players.length;
-  if(G.turn===0) G.round++;
-  renderAll();
-  await takeTurn(G.turn);
+  // 次の親（持っている人の中で次）
+  let next = G.dealer;
+  do { next = (next+1) % G.players.length; } while(G.players[next].pts <= 0);
+  G.dealer = next;
+  G.round++;
+  playRound();
 }
-
 function finishGame(){
   G.over = true;
-  $('rollBtn').disabled = true;
-  const order = [...G.players].sort((a,b)=>{
-    if(a.finished && b.finished) return a.finished-b.finished;
-    if(a.finished) return -1;
-    if(b.finished) return 1;
-    if(b.pos!==a.pos) return b.pos-a.pos;
-    return b.cups-a.cups;
-  });
+  hideButtons();
+  const order = [...G.players].sort((a,b)=>b.pts-a.pts);
   const me = G.players[0];
   const myRank = order.indexOf(me)+1;
   $('endTitle').textContent = myRank===1 ? '🏆 優勝！蔵元の星！' : `${myRank}位でした！`;
   $('endBody').innerHTML = order.map((p,i)=>
-    `<div class="rank"><span style="font-size:20px">${['🥇','🥈','🥉','4️⃣'][i]||'・'}</span><span>${p.av} <b>${p.name}</b></span><span style="margin-left:auto">${p.finished?`ゴール ${p.finished}位`:p.pos+'マス目'}・🍶${p.cups}</span></div>`
+    `<div class="rank"><span style="font-size:20px">${['🥇','🥈','🥉','4️⃣'][i]||'・'}</span><span>${p.av} <b>${p.name}</b></span><span style="margin-left:auto">🍶${p.pts}杯${p.pts<=0?'（酔いつぶれ）':''}</span></div>` +
+    `<div style="font-size:12px;opacity:.75;padding:2px 0 4px">🏷️ 集めた銘柄：${p.brands.length ? p.brands.join('、') : 'なし'}</div>`
   ).join('') +
-  `<p style="margin-top:10px">${myRank===1?'お見事！一番乗りで蔵開きを飾りました。':'次は一番乗りを目指して、もう一巡り！'}</p>`;
-  setTurnMsg('ゲーム終了！');
+  `<p style="margin-top:10px">${myRank===1 ? 'お見事！椀さばきも運も、今日はあなたの日。' : '次はピンゾロで蔵を沸かせましょう！'}</p>`;
+  setTurnMsg('勝負あり！');
   $('endModal').hidden = false;
 }
 
+function newGame(){
+  const cpuN = parseInt(optVal('optCpu')||'2', 10);
+  const name = optVal('optName') || 'あなた';
+  const cpus = [...CPU_POOL].sort(()=>Math.random()-.5).slice(0, cpuN);
+  const players = [{...HUMAN, name, isHuman:true, pts:START_POINTS, brands:[]},
+    ...cpus.map(c=>({...c, isHuman:false, pts:START_POINTS, brands:[]}))];
+  G = {
+    players, dealer: 0, round: 1, totalRounds: players.length*2,
+    over:false, current:-1, log:[]
+  };
+  $('setupCard').hidden = true;
+  $('gameCard').hidden = false;
+  $('endModal').hidden = true;
+  $('log').innerHTML = '';
+  showDice(null); showHand(null);
+  addLog(`勝負スタート！ ${players.map(p=>p.name).join('・')}の${players.length}人、全員おちょこ🍶${START_POINTS}杯。親は2周します。`);
+  renderScore();
+  playRound();
+}
+
 $('startBtn').addEventListener('click', newGame);
-$('rollBtn').addEventListener('click', humanRoll);
+$('rollBtn').addEventListener('click', ()=>humanAct('roll'));
+$('stopBtn').addEventListener('click', ()=>humanAct('stop'));
+$('againBtn2').addEventListener('click', ()=>humanAct('again'));
 $('againBtn').addEventListener('click', ()=>{ $('endModal').hidden = true; newGame(); });
 $('menuBtn').addEventListener('click', ()=>{
   $('endModal').hidden = true;
@@ -472,6 +548,8 @@ $('menuBtn').addEventListener('click', ()=>{
 });
 $('quitBtn').addEventListener('click', ()=>{
   G = null;
+  humanWait = null;
+  hideButtons();
   $('gameCard').hidden = true;
   $('setupCard').hidden = false;
 });

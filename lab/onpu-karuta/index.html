@@ -122,7 +122,8 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
 .card.taken-cpu .tag{background:rgba(47,74,122,.88);opacity:1}
 .card.gone{opacity:.0;pointer-events:none}
 .card.slot{opacity:1;background:transparent;border:2px dashed rgba(120,100,70,.25);box-shadow:none}
-.card.slot::before,.card.slot svg,.card.slot .tag{display:none}
+.card.slot::before,.card.slot svg,.card.slot .tag,.card.slot .pname{display:none}
+.card .pname{position:absolute;top:5px;left:50%;transform:translateX(-50%);background:rgba(255,250,240,.94);border:1.5px solid var(--lv,var(--frame));border-radius:999px;font-size:13px;font-weight:800;padding:0 9px;color:var(--ink);z-index:2;white-space:nowrap}
 .card.shake{animation:shake .35s}
 .card.deal{animation:deal .35s ease}
 @keyframes deal{0%{transform:translateY(-14px) scale(.9);opacity:0}100%{transform:none;opacity:1}}
@@ -169,6 +170,13 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
       <button data-v="3">メロディ取り 3音</button>
       <button data-v="4">メロディ取り 4音</button>
     </div></div>
+  <div class="group"><h2>モード</h2>
+    <div class="seg" data-key="practice">
+      <button data-v="off">通常</button>
+      <button data-v="on">れんしゅう</button>
+    </div>
+    <div class="lvnote">れんしゅう：札に音名が出ます。まちがえてもお手つきなし（札を返したり休んだりしません）。</div>
+  </div>
   <div class="group"><h2>対戦相手</h2>
     <div class="seg" data-key="cpu">
       <button data-v="solo">ひとりで</button>
@@ -193,6 +201,7 @@ summary{cursor:pointer;font-weight:700;color:var(--ink)}
     読み手が音名（または音）を出します。その音が描かれた札をタップして取りましょう。<br>
     ・同じ音名の札が2枚あるときは、どちらを取ってもOK（「音だけ聴く」は高さまでぴったりの札だけ）。<br>
     ・ちがう札をタップすると<b>お手つき</b>。取り札を1枚返し（持っていなければなし）、その回は休みです。<br>
+    ・<b>れんしゅうモード</b>では、札に音名が表示され、まちがえてもお手つきになりません。楽譜がまだ読めなくても始められます。<br>
     ・「ひとりで」は全部の札を取るまで続けて、お手つきの数を数えます。<br>
     ・<b>メロディ取り</b>：番号つきの<b>メロディ読み札</b>（3音は24枚、4音は20枚）を山から1枚めくって読みます。場の札で作れないメロディ札はとばし、作れる札がなくなったら1枚ずつ読みに切りかえます。読み手が3〜4音を続けて出します。その順番どおりに札を取ると、取った札が並んで小さな楽譜になります。全部そろえた人が、その札を全部もらえます（紙で遊ぶときは、取った札を左から順に並べて全員で答え合わせ）。<br>
     ・まちがえた札と取られた札は<b>復習の山</b>によけておき、次のゲームで必ず場に入れます。<br>
@@ -267,7 +276,7 @@ const MELODIES={
   4:['0123','3210','4321','1234','2345','5432','3456','6543','0124','4210','0213','2435','5601','1065','4560','0654','2106','6012','3245','0243']
 };
 
-const S={mode:'name',melody:'1',levels:['white'],cpu:'2',size:'12',names:'doremi'};
+const S={mode:'name',melody:'1',levels:['white'],cpu:'2',size:'12',names:'doremi',practice:'off'};
 try{Object.assign(S,JSON.parse(localStorage.getItem('onpuKarutaSettings')||'{}'))}catch(e){}
 if(!Array.isArray(S.levels)||!S.levels.filter(id=>LV[id]).length) S.levels=['white'];
 S.levels=S.levels.filter(id=>LV[id]);
@@ -301,7 +310,7 @@ function cardEl(c){
   const el=document.createElement('div');
   el.className='card';
   if(LV[c.lv]) el.style.setProperty('--lv',LV[c.lv].color);
-  el.innerHTML=cardSVG(c)+`<div class="tag"></div>`;
+  el.innerHTML=cardSVG(c)+`<div class="tag"></div>`+(S.practice==='on'?`<div class="pname">${nameOf(c)}</div>`:'');
   return el;
 }
 
@@ -489,6 +498,15 @@ function tap(c){
     }
     if(G.pos===G.seq.length) takeRound('you',G.picked);
   }else{
+    if(S.practice==='on'){
+      sfx(false);
+      if(navigator.vibrate) try{navigator.vibrate(80)}catch(e){}
+      c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');
+      const correctP=G.cards.filter(x=>x.onBoard&&!x.taken&&!x.held&&matches(x,want));
+      pushWeak(correctP[0]||want);
+      setMsg(`それは「${nameOf(c)}」。れんしゅう中なので、お手つきなし`,'bad');
+      return;
+    }
     G.miss++; const h=G.hand.you, back=h.length>0; if(back){ h.sort((a,b)=>val(b)-val(a)); h.pop(); } sfx(false);
     if(navigator.vibrate) try{navigator.vibrate(80)}catch(e){}
     c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');

@@ -126,20 +126,25 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
   <div id="setup" class="panel">
     <h2>🍶 あそびかた</h2>
     <div class="rules">
-      ・全<b>8ラウンド</b>。毎回おつまみが1品出品されます。<br>
+      ・通常は全<b>8ラウンド</b>、短縮モードは全<b>4ラウンド</b>。毎回おつまみが1品出品されます。<br>
       ・みんな同時に<b>0〜10コイン</b>で入札。一番高い人が落札して、その金額を払います。<br>
       ・一番高かった人が2人以上いたら<b>流札</b>（誰ももらえず、お金も払いません）。流札した品は<b>次のラウンドに持ち越し</b>で、落札者がまとめてもらえます（最終ラウンドで流札したらそのまま終了）。<br>
       ・CPUには入札の個性があります。<b>🔥強気</b>は高め、<b>🧮堅実</b>は値段相応、<b>👀様子見</b>は序盤は低めで終盤に動きます。<br>
       ・おつまみには種類（揚げ物・焼き物・刺身・〆もの・甘いもの）と点数があります。<br>
       ・同じ種類を<b>3つ</b>集めると <b>+6点</b>、5種類ぜんぶそろうとさらに <b>+10点</b>。<br>
-      ・4ラウンド目は<b>ハッピーアワー</b>で落札額が半額、最終ラウンドは点数が<b>2倍</b>。<br>
-      ・最初はみんな<b>20コイン</b>持ち。8ラウンド終わって一番点が高い人の勝ち。同点なら残りコインが多い人の勝ち。
+      ・途中のラウンド（通常は4ラウンド目、短縮は2ラウンド目）は<b>ハッピーアワー</b>で落札額が半額、最終ラウンドは点数が<b>2倍</b>。<br>
+      ・最初はみんな<b>20コイン</b>持ち。全ラウンド終わって一番点が高い人の勝ち。同点なら残りコインが多い人の勝ち。
     </div>
     <h2 style="margin-top:14px">👥 CPUの人数</h2>
     <div class="seg" id="cpusel">
       <button data-n="1">1人</button>
       <button data-n="2" class="sel">2人</button>
       <button data-n="3">3人</button>
+    </div>
+    <h2 style="margin-top:14px">⏱️ モード</h2>
+    <div class="seg" id="modesel">
+      <button data-r="8" class="sel">通常（8ラウンド）</button>
+      <button data-r="4">短縮（4ラウンド）</button>
     </div>
     <div class="center" style="margin-top:16px">
       <button class="btn amber big" id="startBtn">せり市をはじめる</button>
@@ -204,7 +209,14 @@ const DISHES=[
   {n:'大学芋',e:'🍠',c:'amai',p:1},{n:'どら焼き',e:'🥞',c:'amai',p:3},
 ];
 const CPU_NAMES=[{n:'マスター',e:'🧑‍🍳'},{n:'常連さん',e:'👴'},{n:'お客さん',e:'👩'}];
-const ROUNDS=8, START_COINS=20, MAX_BID=10;
+const START_COINS=20, MAX_BID=10;
+let ROUNDS=8, HAPPY=3;
+let totalRounds=8;
+try{ totalRounds=+localStorage.getItem('izakaya-rounds')||8; if(totalRounds!==4&&totalRounds!==8) totalRounds=8; }catch(e){}
+document.querySelectorAll('#modesel button').forEach(b=>{
+  b.classList.toggle('sel',+b.dataset.r===totalRounds);
+  b.onclick=()=>{document.querySelectorAll('#modesel button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');totalRounds=+b.dataset.r;try{localStorage.setItem('izakaya-rounds',String(totalRounds))}catch(e){}};
+});
 let players=[], deck=[], round=0, selBid=null, cpuCount=2, phase='setup', carry=[];
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -219,6 +231,7 @@ $('againBtn').onclick=()=>{$('result').classList.add('hidden');$('setup').classL
 $('bidBtn').onclick=resolveRound;
 
 function startGame(){
+  ROUNDS=totalRounds; HAPPY=ROUNDS===4?1:3;
   deck=shuffle(DISHES.slice()).slice(0,ROUNDS);
   players=[{name:'あなた',emoji:'😀',coins:START_COINS,dishes:[],isMe:true}];
   const types=shuffle(['strong','steady','watch'].slice());
@@ -234,7 +247,7 @@ function nextRound(){
   phase='bid';selBid=null;$('bidBtn').disabled=true;
   const d=deck[round],c=catOf(d.c);
   $('roundLabel').textContent='第'+(round+1)+'ラウンド / 全'+ROUNDS+'ラウンド';
-  $('eventLabel').textContent=round===3?'🍺 ハッピーアワー！ 落札額が半額':(round===ROUNDS-1?'🌙 ラストオーダー！ 点数2倍':'');
+  $('eventLabel').textContent=round===HAPPY?'🍺 ハッピーアワー！ 落札額が半額':(round===ROUNDS-1?'🌙 ラストオーダー！ 点数2倍':'');
   $('dishBox').innerHTML='<div class="dish flipin" style="--c:'+c.color+'">'
     +'<div class="em">'+d.e+'</div><div class="nm">'+d.n+'</div>'
     +'<div class="cat">'+c.emoji+' '+c.label+'</div>'
@@ -305,7 +318,7 @@ function resolveRound(){
   }else{
     const w=players[winners[0]];
     let pay=bids[winners[0]];
-    if(round===3)pay=Math.ceil(pay/2);
+    if(round===HAPPY)pay=Math.ceil(pay/2);
     w.coins-=pay;
     d._pts=dishPoints(d,round);
     w.dishes.push(d);
@@ -316,7 +329,7 @@ function resolveRound(){
       got.forEach(x=>{x._pts=dishPoints(x,round); w.dishes.push(x);});
       carryMsg=' 持ち越しの <b>'+got.map(x=>x.n).join('・')+'</b> もまとめてゲット！';
     }
-    msgHtml='<b>'+w.name+'</b> が '+bids[winners[0]]+'コイン'+(round===3?'（半額で'+pay+'コイン）':'')+'で <b>'+d.n+'</b> を落札！（'+pts+'点）'+carryMsg;
+    msgHtml='<b>'+w.name+'</b> が '+bids[winners[0]]+'コイン'+(round===HAPPY?'（半額で'+pay+'コイン）':'')+'で <b>'+d.n+'</b> を落札！（'+pts+'点）'+carryMsg;
   }
   $('msg').innerHTML=msgHtml;
   renderOpps(bids,winners.length===1?winners[0]:-1);

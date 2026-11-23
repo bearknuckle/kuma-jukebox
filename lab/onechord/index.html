@@ -61,7 +61,9 @@ h1 span{color:var(--T)}
 #hand{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:96px}
 #hand .card{cursor:pointer}
 #hand .card.off{opacity:.3;cursor:default}
-#hand .card.ok{transform:translateY(-6px);box-shadow:0 6px 14px rgba(0,0,0,.4)}
+#hand .card.ok{transform:translateY(-6px);box-shadow:0 0 0 3px #ffd94d,0 0 16px rgba(255,217,77,.75),0 6px 14px rgba(0,0,0,.4)}
+#hand{padding-bottom:14px}
+.card .tag{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);background:#ffd94d;color:#3a2c00;border-radius:999px;font-size:10px;font-weight:800;padding:1px 8px;white-space:nowrap;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 #hand .card.drawn{outline:3px solid #fff}
 #actions{display:flex;gap:10px;justify-content:center}
 #actions .btn{min-width:120px;padding:12px}
@@ -165,6 +167,7 @@ h1 span{color:var(--T)}
     </ul>
     <h3>手番</h3>
     <ul>
+      <li>あなたの番では、出せるカードが光って「出せる」と表示されます</li>
       <li>つながるカードを1枚出す</li>
       <li>出せないときは1枚引く。引いたカードが出せれば、そのまま出す。出せなければ手番は終わり</li>
       <li>山札がなくなったら、場の一番上以外をシャッフルして山札に戻す</li>
@@ -432,7 +435,8 @@ function render(){
     if(myTurn){ok=S.phase==='afterDraw'?false:canPlay(c,you);}
     if(S.phase==='afterDraw'&&c===S.drawn&&myTurn)el.classList.add('drawn');
     el.classList.add(ok?'ok':(myTurn?'off':'x'));
-    if(ok)el.onclick=()=>{ensureAudio();play(you,c);after();};
+    if(ok){el.onclick=()=>{ensureAudio();play(you,c);after();};
+      const tg=document.createElement('span');tg.className='tag';tg.textContent='出せる';el.appendChild(tg);}
     hand.appendChild(el);
   });
   $('bDraw').disabled=!myTurn||S.phase==='afterDraw';

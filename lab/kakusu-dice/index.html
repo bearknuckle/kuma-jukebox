@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
 <meta property="og:title" content="画数ダイス｜試作ゲームラボ">
-<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が画数と合えば獲得。得点は取ったカードの画数の合計で、取ったカードはお金にもなります（払っても点は減りません）。11画以上のカードへの挑戦では振り直しができ、取ると特典ダイスも付きます。ネタ枠『鬱』『龘』を取れば即勝利。2〜6人で遊べます。">
+<meta property="og:description" content="場の3枚の漢字カードから1枚を選んでサイコロを振り、合計が画数と合えば獲得。得点は取ったカードの画数の合計で、カードを取るとコインが1枚もらえます。11画以上のカードへの挑戦では振り直しができ、取ると特典ダイスも付きます。ネタ枠『鬱』『龘』を取れば即勝利。2〜6人で遊べます。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/kakusu-dice/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -127,7 +127,7 @@
   <div class="headwrap">
     <div class="brand">試作ゲームラボ</div>
     <h1>🎲 画数ダイス</h1>
-    <p>場の3枚の漢字カードから1枚を選んでサイコロを振り、合計がその漢字の画数とぴったり合えば獲得（外れたらそのカードは捨てられます）。得点は取ったカードの画数の合計。取ったカードはお金にもなり、支払いに使っても得点は減りません。11画以上のカードへの挑戦では「振り直し」ができ、取ると特典ダイスも付きます。激レアのネタ枠『鬱』『龘』を取れば即勝利。2〜6人（あなた＋CPU）で遊べます。</p>
+    <p>場の3枚の漢字カードから1枚を選んでサイコロを振り、合計がその漢字の画数とぴったり合えば獲得（外れたらそのカードは捨てられます）。得点は取ったカードの画数の合計。カードを取るとコインが1枚もらえ、リフレッシュやダイスの購入に使えます。11画以上のカードへの挑戦では「振り直し」ができ、取ると特典ダイスも付きます。激レアのネタ枠『鬱』『龘』を取れば即勝利。2〜6人（あなた＋CPU）で遊べます。</p>
     <div class="badges">
       <span class="badge">人数 <strong>2〜6人（あなた＋CPU）</strong></span>
       <span class="badge">時間 <strong>5〜10分</strong></span>
@@ -192,11 +192,11 @@
       <div class="rollresult" id="rollResult"></div>
       <div class="actions">
         <button class="btn" id="rollBtn">🎲 振る</button>
-        <button class="btn sub" id="refreshBtn">🔄 リフレッシュ（1金）</button>
+        <button class="btn sub" id="refreshBtn">🔄 リフレッシュ（1コイン）</button>
         <button class="btn sub" id="passBtn" style="display:none">パスする</button>
       </div>
       <div class="actions">
-        <button class="btn sub" id="buyBtn">🎲 6面ダイスを買う（1金）</button>
+        <button class="btn sub" id="buyBtn">🎲 6面ダイスを買う（1コイン）</button>
       </div>
     </div>
     <div id="cpuNote" style="display:none;text-align:center;font-size:14px;color:var(--muted)">CPUが考え中…</div>
@@ -223,13 +223,13 @@
     <h2>遊び方</h2>
     <ul>
       <li>場の3枚の漢字カードから挑戦する1枚を選び、持っているサイコロから振る組み合わせを選んで振ります。合計が画数とぴったり合えば獲得、外れたらそのカードは捨てられます（画数はヒントだけ表示。字をよく見て数えるのがコツ）。振るダイスは全部でなくても大丈夫です。</li>
-      <li>得点は、獲得したカードの画数の合計です。取ったカードはお金（1枚＝1金）にもなり、支払いに使っても得点は減りません。</li>
+      <li>得点は、獲得したカードの画数の合計です。カードを取るとコインが1枚もらえます。取ったカードは自分の前に置いて、得点の記録になります。</li>
       <li>🔁マークの付いたカード（11画以上）に挑戦するときは、外れても、振ったダイスの一部（全部でも可）を1回だけ振り直せます。</li>
       <li>11画以上のカードを取ると特典ダイスが付きます（11〜16画→12面、17〜20画→20面）。所持ダイスが上限（5個）のときは、いちばん小さいダイスと入れ替わります。</li>
-      <li>リフレッシュ（場の3枚を全入れ替え）と6面ダイスの購入はボタンで、どちらも1金。支払いは画数の小さいカードから。ダイスの所持は5個までです。</li>
+      <li>リフレッシュ（場の3枚を全入れ替え）と6面ダイスの購入はボタンで、どちらも1コイン。支払いはコインだけです。ダイスの所持は5個までです。</li>
       <li>✨ネタ枠『鬱』（29画）『龘』（48画）：ネタ枠ルールONでサイコロで取れば即勝利（人間が取るときは「家に6面ダイスはありますか？」の確認つき）。</li>
       <li>🔀 ヴァリアント「振ってから選ぶ」：先にダイスを振ってから、合計と画数が合うカードを選んで獲得します。🔁マークのカードを選んで合わなかったときは、そのカードに対して1回だけ振り直せます。合わないカードを選ぶとそのカードは捨てられ、選ばずにパスもできます。</li>
-      <li>手番の順番はラウンドごとに1つずつずれます。スタートは6面ダイス2個だけ（所持カードは0枚）。ラウンド数は人数で変わり（2人10／3人8／4人7／5人6／6人5）、山札が尽きたらそのラウンドで終了。得点が一番多い人の勝ちです。</li>
+      <li>手番の順番はラウンドごとに1つずつずれます。スタートは6面ダイス2個とコイン2枚（所持カードは0枚）。ラウンド数は人数で変わり（2人10／3人8／4人7／5人6／6人5）、山札が尽きたらそのラウンドで終了。得点が一番多い人の勝ちです。</li>
     </ul>
   </section>
 
@@ -261,7 +261,7 @@ const DECK = [
 ];
 /* ネタ枠：激レアの超高画数カード。振り直しは付かず、ヴァリアントONで「獲得＝即勝利」 */
 const JOKE_KANJI = new Set(['鬱','龘']);
-/* 市場で買えるのは6面ダイスだけ。価格は「金」＝所持カードの枚数 */
+/* 市場で買えるのは6面ダイスだけ。価格はコイン */
 const MARKET = [
   {faces:6,  price:1}
 ];
@@ -274,6 +274,8 @@ const MAX_DICE = 5;
 const ROUNDS_BY_PLAYERS = {2:10, 3:8, 4:7, 5:6, 6:5};
 const FIELD_SIZE = 3;
 const REFRESH_COST = 1;
+/* 通貨は専用コイン：開始時に2枚、カードを獲得するたびに1枚もらえる。カードは支払いに使わない */
+const INITIAL_COINS = 2;
 
 function makeDeck(rng){
   const d = DECK.map(([k,s])=>{
@@ -293,11 +295,11 @@ function isJokeWin(card, jokeRule){
   return !!(card && card.joke && jokeRule);
 }
 function newPlayer(){
-  return {dice:[6,6], won:[], score:0, missStreak:0};
+  return {dice:[6,6], won:[], score:0, coins:INITIAL_COINS, missStreak:0};
 }
-/* 通貨は所持カードそのもの：1枚＝1金 */
-function goldOf(player){
-  return player.won.length;
+/* 所持コイン数（通貨はコイン専用。カードは得点の記録であり、支払いには使わない） */
+function coinsOf(player){
+  return player.coins;
 }
 /* 得点は「ゲーム中に獲得したカード」の画数の累計。支払いでも減らない */
 function scoreOf(player){
@@ -367,15 +369,11 @@ function bestRerollSubset(facesList, rolls, target){
   }
   return best ? {indices: best, prob: bestP} : null;
 }
-/* 支払い：画数の小さいカードから n 枚を手放す。得点は減らない（獲得時に計上済み）。
-   手放したカードの配列を返す（足りなければ null） */
-function payCards(player, n){
-  if(player.won.length < n) return null;
-  const sorted = player.won.slice().sort((a,b)=>a.strokes-b.strokes);
-  const pay = sorted.slice(0, n);
-  const paySet = new Set(pay);
-  player.won = player.won.filter(c=>!paySet.has(c));
-  return pay;
+/* 支払い：コインを n 枚払う。カードは一切使わない。成功で true、不足で false */
+function payCoins(player, n){
+  if(player.coins < n) return false;
+  player.coins -= n;
+  return true;
 }
 /* 特典ダイスの付与：所持が上限未満なら追加、上限のときは特典の方が大きければ最小のダイスと入れ替える。
    戻り値 {gained, swapped}（swapped は入れ替えで外れたダイスの面数、なければ null） */
@@ -391,11 +389,12 @@ function grantBonusDie(player, faces){
   }
   return {gained:false, swapped:null};
 }
-/* カード獲得：所持に加え、画数を得点に加算する。特典ダイスつきなら手持ちに加える。
+/* カード獲得：所持に加え、画数を得点に加算し、コインを1枚得る。特典ダイスつきなら手持ちに加える。
    戻り値 {bonusDie}（付いた特典ダイスの面数、付かなければ 0） */
 function acquireCard(player, card){
   player.won.push(card);
   player.score += card.strokes;
+  player.coins += 1; /* 収入：獲得でコイン1枚 */
   let bonusDie = 0;
   if(card.bonusDie){
     const g = grantBonusDie(player, card.bonusDie);
@@ -403,11 +402,12 @@ function acquireCard(player, card){
   }
   return {bonusDie};
 }
-/* 獲得の取り消し（ネタ枠のジョーク確認で「ない」と答えたとき）：得点を戻す */
+/* 獲得の取り消し（ネタ枠のジョーク確認で「ない」と答えたとき）：得点と収入コインを戻す */
 function revokeAcquire(player, card){
   const i = player.won.indexOf(card);
   if(i >= 0) player.won.splice(i, 1);
   player.score -= card.strokes;
+  player.coins -= 1;
 }
 /* 振り直しの適用：選んだインデックスのダイスを振り直す。
    戻り値 {rolls, sum}（使えなければ null） */
@@ -451,15 +451,14 @@ function resolveChallenge(player, card, combo, rng){
   }
   return {firstRolls, firstSum, rolls, sum, hit, rerollUsed, rerollIndices, bonusDie};
 }
-/* ダイス購入。成功したら支払いに使ったカードの配列、失敗したら null */
+/* ダイス購入（コイン払い）。成功したら価格、失敗したら null */
 function buyDie(player, faces){
   const item = MARKET.find(m=>m.faces===faces);
   if(!item) return null;
   if(player.dice.length>=MAX_DICE) return null;
-  const paid = payCards(player, item.price);
-  if(!paid) return null;
+  if(!payCoins(player, item.price)) return null;
   player.dice.push(faces);
-  return paid;
+  return item.price;
 }
 /* ===== 場（フィールド）と山札 ===== */
 function newGameState(rng, deckOverride){
@@ -486,15 +485,13 @@ function refillField(state){
     state.field.push(card);
   }
 }
-/* リフレッシュ：1金を払い、場の3枚すべてを捨てて引き直す。支払ったカードを返す（使えなければ null） */
+/* リフレッシュ：コインを払い、場の3枚すべてを捨てて引き直す。価格を返す（使えなければ null） */
 function refreshField(player, state){
-  if(goldOf(player) < REFRESH_COST) return null;
-  const paid = payCards(player, REFRESH_COST);
-  if(!paid) return null;
+  if(!payCoins(player, REFRESH_COST)) return null;
   state.discard.push(...state.field);
   state.field = [];
   refillField(state);
-  return paid;
+  return REFRESH_COST;
 }
 /* ヒント帯 */
 function hintBand(strokes){
@@ -521,7 +518,7 @@ function strategyMaybeBuy(player, state){
   if(player.dice.length>=MAX_DICE) return null;
   const choice = bestFieldChoice(player, state.field);
   if(!choice || choice.prob>0) return null;
-  const affordable = MARKET.filter(m=>m.price<=goldOf(player))
+  const affordable = MARKET.filter(m=>m.price<=coinsOf(player))
                           .sort((a,b)=>a.price-b.price || a.faces-b.faces);
   for(const item of affordable){
     const trial = player.dice.concat(item.faces);
@@ -555,7 +552,7 @@ function variantMaybeBuy(player, state){
   if(!state.field.length) return null;
   if(player.dice.length>=MAX_DICE) return null;
   if(bestCoverageCombo(player.dice, state.field).cov > 0) return null;
-  if(goldOf(player) < MARKET[0].price) return null;
+  if(coinsOf(player) < MARKET[0].price) return null;
   const trial = player.dice.concat(MARKET[0].faces);
   if(bestCoverageCombo(trial, state.field).cov <= 0) return null;
   const paid = buyDie(player, MARKET[0].faces);
@@ -568,7 +565,7 @@ function turnOrder(round, numPlayers){
   for(let k=0;k<numPlayers;k++) order.push((start + k) % numPlayers);
   return order;
 }
-/* ゲーム初期化：全員 所持カード0枚・6面ダイス2個から開始し、場に3枚並べる */
+/* ゲーム初期化：全員 所持カード0枚・コイン2枚・6面ダイス2個から開始し、場に3枚並べる */
 function newGame(rng, opts){
   const o = opts || {};
   const numPlayers = o.numPlayers || 2;
@@ -713,7 +710,6 @@ function log(text){
 }
 function diceLabel(f){ return f+'面'; }
 function cardLabel(c){ return '『'+c.kanji+'』（'+c.strokes+'画）'; }
-function paidLabel(paid){ return paid.map(cardLabel).join('・'); }
 function wonChip(c){
   return '<span>'+c.kanji+(c.reroll?'<small> 🔁</small>':'')+'<i class="sc">'+c.strokes+'</i></span>';
 }
@@ -726,7 +722,8 @@ function renderPlayers(){
     div.className = 'pcard' + (!S.over && S.turnSeat===i ? ' active' : '');
     div.innerHTML =
       '<div class="who"><span>'+playerName(i)+'</span><span class="score">'+scoreOf(pl)+'点</span></div>'
-      + '<div class="meta">🃏 所持カード '+goldOf(pl)+'枚（＝'+goldOf(pl)+'金）</div>'
+      + '<div class="meta">🃏 所持カード '+pl.won.length+'枚</div>'
+      + '<div class="meta">🪙 コイン '+coinsOf(pl)+'枚</div>'
       + '<div class="diceown">所持ダイス：'+pl.dice.map(diceLabel).join('・')+'</div>'
       + '<div class="wonlist">'+pl.won.map(wonChip).join('')+'</div>';
     grid.appendChild(div);
@@ -792,14 +789,14 @@ function renderField(){
     ? '合計と画数が合うカードを選んでください。合わないカードを選ぶと、そのカードは捨てられます'
     : '画数はヒントだけ表示。字をよく見て数えてみよう';
 }
-/* 購入ボタン（リフレッシュの下）：金0のとき・所持ダイス上限のときは押せない */
+/* 購入ボタン（リフレッシュの下）：コイン0のとき・所持ダイス上限のときは押せない */
 function canActBeforeRoll(){
   return !S.over && S.turnSeat===0 && S.phase==='aim' && !S.rolled;
 }
 function renderBuyBtn(){
   const item = MARKET[0];
   const can = canActBeforeRoll()
-    && goldOf(S.players[0])>=item.price && S.players[0].dice.length<MAX_DICE;
+    && coinsOf(S.players[0])>=item.price && S.players[0].dice.length<MAX_DICE;
   $('buyBtn').disabled = !can;
 }
 function playerBuy(){
@@ -807,14 +804,14 @@ function playerBuy(){
   const item = MARKET[0];
   const paid = buyDie(S.players[0], item.faces);
   if(!paid) return;
-  log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'金で買った（支払い：'+paidLabel(paid)+'／残り '+goldOf(S.players[0])+'金・得点は減らない）');
+  log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'コインで買った（残り '+coinsOf(S.players[0])+'コイン）');
   S.selDice = S.players[0].dice.map(()=>true);
   renderAll();
   renderDicePick();
 }
 function renderRefreshBtn(){
   const can = canActBeforeRoll()
-    && goldOf(S.players[0])>=REFRESH_COST && S.state.deck.length>0;
+    && coinsOf(S.players[0])>=REFRESH_COST && S.state.deck.length>0;
   $('refreshBtn').disabled = !can;
 }
 function playerRefresh(){
@@ -823,7 +820,7 @@ function playerRefresh(){
   if(!paid) return;
   S.selCard = -1;
   S.revealIdx = -1;
-  log('🔄 あなたは場の3枚をリフレッシュした（支払い：'+paidLabel(paid)+'／残り '+goldOf(S.players[0])+'金・得点は減らない）');
+  log('🔄 あなたは場の3枚をリフレッシュした（'+REFRESH_COST+'コイン支払い／残り '+coinsOf(S.players[0])+'コイン）');
   $('msg').textContent = '🔄 場のカードを入れ替えました';
   $('msg').className = 'msg';
   renderAll();
@@ -1062,7 +1059,7 @@ function finishHumanHit(){
   const acq = acquireCard(pl, card);
   $('msg').textContent = '🎉 ぴったり！'+cardLabel(card)+'を獲得！（+'+card.strokes+'点）';
   $('msg').className = 'msg good';
-  log('✅ あなた：'+cardLabel(card)+'に合計'+S.pending.sum+'で的中。獲得！（得点 '+scoreOf(pl)+'点／所持 '+goldOf(pl)+'金）');
+  log('✅ あなた：'+cardLabel(card)+'に合計'+S.pending.sum+'で的中。獲得！（得点 '+scoreOf(pl)+'点／コイン '+coinsOf(pl)+'枚）');
   if(acq.bonusDie) log('🎲 特典ダイス（'+acq.bonusDie+'面）を手に入れた！（所持ダイス：'+pl.dice.map(diceLabel).join('・')+'）');
   S.pending = null;
   renderAll();
@@ -1157,7 +1154,7 @@ function cpuTurn(seat){
   const name = playerName(seat);
   const bought = strategyMaybeBuy(pl, S.state);
   if(bought){
-    log('🛒 '+name+'は '+bought.faces+'面ダイスを買った（支払い：'+paidLabel(bought.paid)+'／所持：'+pl.dice.map(diceLabel).join('・')+'）');
+    log('🛒 '+name+'は '+bought.faces+'面ダイスを買った（'+bought.paid+'コイン／残り '+coinsOf(pl)+'コイン・所持：'+pl.dice.map(diceLabel).join('・')+'）');
     renderAll();
   }
   if(!S.state.field.length){ setTimeout(afterTurn, 600); return; }
@@ -1217,7 +1214,7 @@ function cpuTurnVariant(seat){
   const name = playerName(seat);
   const bought = variantMaybeBuy(pl, S.state);
   if(bought){
-    log('🛒 '+name+'は '+bought.faces+'面ダイスを買った（支払い：'+paidLabel(bought.paid)+'／所持：'+pl.dice.map(diceLabel).join('・')+'）');
+    log('🛒 '+name+'は '+bought.faces+'面ダイスを買った（'+bought.paid+'コイン／残り '+coinsOf(pl)+'コイン・所持：'+pl.dice.map(diceLabel).join('・')+'）');
     renderAll();
   }
   if(!S.state.field.length){ setTimeout(afterTurn, 600); return; }

@@ -95,13 +95,6 @@
   .btn{border:none;border-radius:999px;padding:10px 26px;font-size:16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff;min-height:2.75rem}
   .btn:disabled{opacity:.45;cursor:default}
   .btn.sub{background:var(--panel);color:var(--accent);border:2px solid var(--accent)}
-  .market{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
-  .mitem{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;background:var(--soft)}
-  .mitem .faces{font-size:20px;font-weight:800}
-  .mitem .price{font-size:13px;color:var(--muted)}
-  .mitem button{margin-top:6px;border:none;border-radius:999px;padding:6px 18px;font-weight:700;background:var(--gold);color:#fff;cursor:pointer;min-height:2.4rem}
-  .mitem button:disabled{opacity:.4;cursor:default}
-  .paynote{font-size:12.5px;color:var(--muted);margin-top:8px}
   .log{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13.5px;max-height:180px;overflow-y:auto}
   .log div{padding:2px 0;border-bottom:1px dashed var(--line)}
   .log div:last-child{border-bottom:none}
@@ -177,15 +170,12 @@
         <button class="btn" id="rollBtn">🎲 振る</button>
         <button class="btn sub" id="refreshBtn">🔄 リフレッシュ（1金）</button>
       </div>
+      <div class="actions">
+        <button class="btn sub" id="buyBtn">🎲 6面ダイスを買う（1金）</button>
+      </div>
     </div>
     <div id="cpuNote" style="display:none;text-align:center;font-size:14px;color:var(--muted)">CPUが考え中…</div>
     <div class="rollresult" id="cpuRoll"></div>
-  </section>
-
-  <section class="panel" id="marketPanel">
-    <h2>🛒 ダイス市場（買えるのは6面ダイスだけ／自分の手番・振る前に買えます／所持は5個まで）</h2>
-    <div class="market" id="market"></div>
-    <div class="paynote">支払いは獲得カードで。画数の小さいカードから自動で選ばれ、支払ったカード（1枚＝1点・1金）は失われます。買うと得点が減るので、たいていは買わないのが得な「罠」。どうしても届かないときだけ検討しよう。8面以上の大きなダイスは市場では買えず、13画以上のカードの特典でのみ手に入ります。</div>
   </section>
 
   <section class="panel" id="resultPanel" style="display:none">
@@ -218,7 +208,7 @@
       <li>13画以上のカードには特典ダイスが付いています（13〜16画→12面／17〜20画→20面）。カードに「🎲 ○面ダイス獲得」と書かれているものが特典つきです。そのカードを獲得すると、特典ダイスも一緒にもらえます。13画未満のカードには特典は付きません。ダイスを5個持っているときは、特典ダイスの方が大きければ一番小さいダイスと入れ替わります（大きくなければ獲得なし）。ただし、初期資金として引いたカードでは特典は発動しません。</li>
       <li>✨ネタ枠：『鬱』（29画）と『龘』（48画）が1枚ずつ入っています。ネタ枠ルールON（初期設定）のとき、このカードをサイコロで獲得すると、その場で無条件に即勝利します（得点は関係ありません）。ただし人間が取ろうとすると「家に6面ダイスはありますか？」と確認が出て、「ない」と答えると獲得できず、カードは捨てられます（外れと同じ扱い）。CPUは家にダイスがあるので、確認なしで即勝利します。OFFにすると、ただの超高画数カード（特典なし・1枚1点）になります。初期資金で引いただけでは即勝利にはなりません。</li>
       <li>スタート時は6面ダイス2個と、初期資金として山札から引いた漢字カード<span id="ruleFunds">2</span>枚（＝<span id="ruleFunds2">2</span>金）。引いたカードも、持っていれば終了時に得点になります。CPUも同じ枚数を引きます。</li>
-      <li>市場で買えるのは6面ダイス（1金）だけです（所持は5個まで）。8面以上の大きなダイスは市場では買えず、13画以上のカードの特典でのみ手に入ります。買うのは自分の手番の、振る前だけです。買うと得点が減るので、基本的には「買えるけど買わない方がいい」罠です。</li>
+      <li>市場で買えるのは6面ダイス（1金）だけです（所持は5個まで、自分の手番の振る前だけ）。大きなダイスは13画以上のカードの特典でのみ手に入ります。</li>
       <li>リフレッシュ（1金）：自分の手番の振る前に、場の3枚をすべて捨てて新しい3枚にできます。1手番に何回でも使えます。特典ダイス付きのカードが場にないとき、それを探して引き直すのにも使えます。</li>
       <li>山札の残り枚数は画面の上に常時表示されます。残りが少なくなったら、終わりが近い合図です。</li>
       <li>小さい画数には小さいダイス、大きい画数には大きいダイスや複数の組み合わせが有利。ダイスを増やすと最小の合計も増えるので、組み合わせ選びが大切です。</li>
@@ -579,7 +569,7 @@ function renderAll(){
     ? '🂠 山札が尽きました。このラウンドが終わると対戦終了です'
     : (left<=10 && !S.over ? '🂠 山札が残りわずかです。尽きたら、そのラウンドで終了します' : '');
   renderField();
-  renderMarket();
+  renderBuyBtn();
   renderRefreshBtn();
 }
 function renderField(){
@@ -613,30 +603,22 @@ function renderField(){
     wrap.innerHTML = '<div class="fieldnote">場にカードがありません</div>';
   }
 }
-function renderMarket(){
-  const m = $('market');
-  m.innerHTML = '';
-  const canBuy = !S.over && S.turn==='player' && !S.rolled;
-  for(const item of MARKET){
-    const div = document.createElement('div');
-    div.className = 'mitem';
-    const dis = !(canBuy && goldOf(S.p)>=item.price && S.p.dice.length<MAX_DICE);
-    div.innerHTML = '<div class="faces">🎲 '+item.faces+'面</div><div class="price">🃏 '+item.price+'金</div>';
-    const btn = document.createElement('button');
-    btn.textContent = '買う';
-    btn.disabled = dis;
-    btn.addEventListener('click', ()=>{
-      const paid = buyDie(S.p, item.faces);
-      if(paid){
-        log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'金で買った（支払い：'+paidLabel(paid)+'／残り '+goldOf(S.p)+'金）');
-        S.selDice = S.p.dice.map(()=>true);
-        renderAll();
-        renderDicePick();
-      }
-    });
-    div.appendChild(btn);
-    m.appendChild(div);
-  }
+/* 購入ボタン（リフレッシュの下）：金0のとき・所持ダイス上限のときは押せない */
+function renderBuyBtn(){
+  const item = MARKET[0];
+  const can = !S.over && S.turn==='player' && !S.rolled
+    && goldOf(S.p)>=item.price && S.p.dice.length<MAX_DICE;
+  $('buyBtn').disabled = !can;
+}
+function playerBuy(){
+  if(S.turn!=='player' || S.rolled || S.over) return;
+  const item = MARKET[0];
+  const paid = buyDie(S.p, item.faces);
+  if(!paid) return;
+  log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'金で買った（支払い：'+paidLabel(paid)+'／残り '+goldOf(S.p)+'金）');
+  S.selDice = S.p.dice.map(()=>true);
+  renderAll();
+  renderDicePick();
 }
 function renderRefreshBtn(){
   const btn = $('refreshBtn');
@@ -870,7 +852,6 @@ function endGame(reason, jokeCard, jokeWinner){
   S.over = true;
   S.endReason = reason;
   $('playPanel').style.display = 'none';
-  $('marketPanel').style.display = 'none';
   const rp = $('resultPanel');
   rp.style.display = '';
   const ps = scoreOf(S.p), cs = scoreOf(S.c);
@@ -899,7 +880,6 @@ function init(){
     jokeRule: $('jokeRuleChk').checked
   };
   $('playPanel').style.display = '';
-  $('marketPanel').style.display = '';
   $('resultPanel').style.display = 'none';
   $('jokeDialog').style.display = 'none';
   $('log').innerHTML = '';
@@ -913,6 +893,7 @@ function init(){
 }
 $('rollBtn').addEventListener('click', playerRoll);
 $('refreshBtn').addEventListener('click', playerRefresh);
+$('buyBtn').addEventListener('click', playerBuy);
 $('againBtn').addEventListener('click', init);
 $('jokeRuleChk').addEventListener('change', (e)=>{
   if(S) S.jokeRule = e.target.checked;

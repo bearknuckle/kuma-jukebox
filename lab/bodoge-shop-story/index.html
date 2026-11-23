@@ -303,7 +303,7 @@
       <!-- events -->
       <section>
         <h2>イベント置き場 <span class="count" id="ev-count"></span></h2>
-        <p class="section-note">イベントをタップして選び、手札のパワーカードを置いていきます。イベントごとに担当役職が決まっていて、担当役職と共通カードのパワーはそのまま、担当外の役職パワーは合計して半分で数えます。合計が必要パワー以上で処理完了です。</p>
+        <p class="section-note">イベントをタップして選び、手札のパワーカードを置いていきます。イベントごとに担当役職が決まっていて、担当役職のパワーは2倍で数えます（共通カードと担当外の役職パワーはそのまま）。合計が必要パワー以上で処理完了です。</p>
         <div class="event-list" id="events"></div>
       </section>
 
@@ -337,7 +337,7 @@
         <ul>
           <li><b>市場デッキ（40枚）がお金＝残り時間</b>です。カードを買うときは価格のぶんだけ山札の上から捨てます。山札が尽きたら閉店です。</li>
           <li><b>勝敗</b>：閉店までに評判32以上で勝ち。評判が32に届いた時点で即クリアです。</li>
-          <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。イベントには担当役職（接客／店長／仕入れ）があり、担当役職のパワーと共通カードのパワーはそのまま数えますが、担当外の役職のパワーは合計して半分（切り捨て）で数えます。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
+          <li><b>イベント</b>：市場にイベントカードが出ると、ここに並びます。選んで手札のパワーカードを置き、合計が必要パワー以上で処理完了。イベントには担当役職（接客／店長／仕入れ）があり、担当役職のパワーは2倍で数えます。共通カードと担当外の役職のパワーもそのまま（等倍）で数えるので、誰のパワーでも進められますが、担当役職が動くと効率よく進みます。報酬の「収入」は、共通の捨て札から指定枚数を市場デッキの下へ戻します（＝寿命が延びます）。置いたカードは処理完了時に自分の捨て札へ戻ります。</li>
           <li><b>クレーム対応</b>を放置すると、新しいイベントが出るたびに市場デッキから追加で1枚捨てられます。早めに処理しましょう。</li>
           <li><b>手札</b>は4枚までいつでも引けます。自分の山札が尽きたら、自分の捨て札をシャッフルして山札にします。</li>
           <li><b>CPU仲間</b>：接客は接客イベントを中心にパワーを置き、店長は収入や支援（店長イベントでは支援がそのまま効きます）、仕入れは仕入れイベントにパワーを置くほか、市場の入れ替えや安いカードの購入（あなたの捨て札に入ります）を自動で行います。</li>
@@ -567,8 +567,8 @@
       }
       function refillMarket() { for (var i = 0; i < 3; i++) refillSlot(i); }
 
-      // イベントのパワー計算：担当役職ぶんと共通カードぶんはそのまま、
-      // 担当外の役職ぶんは合計して半分（切り捨て）で数える
+      // イベントのパワー計算：担当役職ぶんは2倍、共通カードぶんと
+      // 担当外の役職ぶんはそのまま（等倍）で数える
       function eventMatchPow(ev) { return ev.rolePow[ev.def.role] || 0; }
       function eventOtherPow(ev) {
         var t = 0;
@@ -576,7 +576,7 @@
         return t;
       }
       function eventTotal(ev) {
-        return eventMatchPow(ev) + (ev.rolePow.common || 0) + Math.floor(eventOtherPow(ev) / 2);
+        return eventMatchPow(ev) * 2 + (ev.rolePow.common || 0) + eventOtherPow(ev);
       }
       // パワーをイベントに加える（role は置いたカード／仲間の役職、null は共通カード）
       function addPowerToEvent(ev, role, amount, byCpu) {
@@ -678,7 +678,7 @@
           addPowerToEvent(ev, card.role, add, false);
           ev.playerCards.push(card);
           logMsg("「" + ev.def.name + "」に「" + card.name + "」を置きました（パワー+" + add + "、合計 " + eventTotal(ev) + "/" + ev.def.need + "）。" +
-            (card.role && card.role !== ev.def.role ? "担当は" + ROLE_INFO[ev.def.role].name + "なので、このカードは代用（半分換算）です。" : ""), "");
+            (card.role === ev.def.role ? "担当役職のカードなので、パワー2倍で数えます。" : (card.role ? "担当は" + ROLE_INFO[ev.def.role].name + "ですが、このカードもそのまま数えます。" : "")), "");
           if (card.host) { ev.hostBonus += 1; logMsg("「大会の司会」：このイベントの評判が+1されます。", "dim"); }
           if (card.incomeOnPlay) income(card.incomeOnPlay, "「" + card.name + "」の収入");
           if (card.draw) drawCards(card.draw);
@@ -962,7 +962,7 @@
           else if (S.pendingSwaps > 0) { hintText = "入れ替える市場のカードをタップしてください（あと" + S.pendingSwaps + "回）。"; showCancel = true; }
           else if (S.events.length === 0) hintText = "イベントはまだ来ていません。市場でカードを買って備えましょう。市場の入れ替えや購入でもイベントが出てくることがあります。";
           else if (S.selectedEvent < 0 || !S.events[S.selectedEvent]) hintText = "イベントをタップして選び、手札のパワーカードを置きましょう。";
-          else hintText = "「" + S.events[S.selectedEvent].def.name + "」にパワーカードを置けます（担当：" + ROLE_INFO[S.events[S.selectedEvent].def.role].name + "、あと" + Math.max(0, S.events[S.selectedEvent].def.need - eventTotal(S.events[S.selectedEvent])) + "）。";
+          else hintText = "「" + S.events[S.selectedEvent].def.name + "」にパワーカードを置けます（担当：" + ROLE_INFO[S.events[S.selectedEvent].def.role].name + "のパワーは2倍、あと" + Math.max(0, S.events[S.selectedEvent].def.need - eventTotal(S.events[S.selectedEvent])) + "）。";
           if (S.events.some(function (e) { return e.def.claim; })) { hintText += " クレーム対応が未処理です。新しいイベントが出るたびに追加で1枚捨てられます。"; hintWarn = true; }
         }
         hint.hidden = !hintText;
@@ -981,13 +981,13 @@
             var pct = Math.min(100, total / ev.def.need * 100);
             var detail = [];
             var matchPow = eventMatchPow(ev), commonPow = ev.rolePow.common || 0, otherPow = eventOtherPow(ev);
-            if (matchPow > 0) detail.push("担当・" + ROLE_INFO[ev.def.role].name + " " + matchPow);
+            if (matchPow > 0) detail.push("担当・" + ROLE_INFO[ev.def.role].name + " " + matchPow + "×2＝" + (matchPow * 2));
             if (commonPow > 0) detail.push("共通 " + commonPow);
-            if (otherPow > 0) detail.push("代用（他役職" + otherPow + "→" + Math.floor(otherPow / 2) + "）");
+            if (otherPow > 0) detail.push("他役職 " + otherPow);
             if (ev.hostBonus > 0) detail.push("評判ボーナス +" + ev.hostBonus);
             evHtml += '<button type="button" class="event-card' + (i === S.selectedEvent ? " selected" : "") + (ev.def.claim ? " claim" : "") + '" data-ev="' + i + '">' +
               '<span class="event-head"><span class="ename">' + esc(ev.def.name) + '</span>' +
-              '<span class="tag ' + ROLE_INFO[ev.def.role].tag + '">担当：' + ROLE_INFO[ev.def.role].name + '</span>' +
+              '<span class="tag ' + ROLE_INFO[ev.def.role].tag + '">担当：' + ROLE_INFO[ev.def.role].name + '（パワー2倍）</span>' +
               (ev.def.claim ? '<span class="tag tag-event">クレーム</span>' : '<span class="tag tag-event">イベント</span>') +
               '<span class="reward">' + rewardText(ev.def) + '</span></span>' +
               '<span class="event-progress"><span class="bar"><div style="width:' + pct + '%"></div></span>' +
@@ -1053,7 +1053,7 @@
             if (c.kind === "event") {
               return '<div class="card" data-peek="' + i + '"><span class="tag tag-event">イベント</span>' +
                 '<span class="cname">' + esc(c.def.name) + "</span>" +
-                '<span class="ctext">担当：' + ROLE_INFO[c.def.role].name + "／必要パワー" + c.def.need + "／" + rewardText(c.def) + "</span></div>";
+                '<span class="ctext">担当：' + ROLE_INFO[c.def.role].name + "（パワー2倍）／必要パワー" + c.def.need + "／" + rewardText(c.def) + "</span></div>";
             }
             return '<div class="card" data-peek="' + i + '">' + roleTag(c.def.role) +
               '<span class="cname">' + esc(c.def.name) + "</span>" +

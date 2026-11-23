@@ -79,6 +79,8 @@ summary{cursor:pointer;font-weight:bold}
 .goal{font-size:13px;background:#fff6d6;border-radius:8px;padding:5px 9px}
 .goal.ok{background:#dff3e5}
 .booth .first{font-size:10px;color:#b07a00;font-weight:bold}
+.booth .rec{position:absolute;bottom:6px;right:6px;font-size:10px;background:#ffe9a8;color:#7a5200;border-radius:6px;padding:0 5px;font-weight:bold}
+.booth.recB{border-color:#e8a13a}
 .fin-sub{font-size:11px;color:var(--mute)}
 .price s{opacity:.5;margin-right:2px}
 </style>
@@ -126,6 +128,7 @@ summary{cursor:pointer;font-weight:bold}
       <p><b>閉場前セール：</b>最後の15時は、全部のブースが💴1値下げ。</p>
       <p><b>お目当て：</b>終了時に条件を満たしていれば1枚につき+3点。条件は「重ゲーで⭐4以上を1つ」「🔥話題作を1つ」「10時に1つ買う」など。</p>
       <p><b>得点：</b>買ったゲームの⭐の合計 ＋ 初回特典 ＋ お目当て ＋ ジャンルコンプ（ちがうジャンル2種:+1／3種:+3／4種:+6）＋ 残ったお金2につき1点。</p>
+      <p><b>⭐おすすめ：</b>最初の時間帯（10時）だけ、あなたの状況（お目当て・ジャンルコンプ・値段・在庫）から計算したおすすめブースに⭐が付きます。迷ったときの目安に。</p>
       <p>ジャンルは🧠重ゲー・🎉パーティー・⚔️2人用・🤝協力の4つ。<b>🔥話題作</b>は在庫1つだけ。みんなが狙うので、整理券の使いどころ。</p>
     </details>
   </div>
@@ -234,6 +237,30 @@ function cpuChoose(p){
   return {b:best.b,useTk};
 }
 
+function recommend(){
+  const p=S.players[0];
+  let best={v:1.0+(p.tickets===0?0.8:0)+(p.tickets>=MAX_TK?-1:0),b:-1,reason:'今は休憩所で整理券をためるのも手'};
+  const gc=genreCount(p), others=S.players.length-1;
+  S.booths.forEach((b,i)=>{
+    if(!affordable(p,b))return;
+    const has=p.games.some(g=>g.genre===b.genre);
+    const gain=has?0:SET_BONUS[gc+1]-SET_BONUS[gc];
+    const price=priceOf(b);
+    const met=goalsMet(p).filter(x=>x).length;
+    const after={...p,games:p.games.concat([{genre:b.genre,pts:b.pts,orig:b.orig,r:S.round,first:b.stock===b.orig}])};
+    const goalGain=(goalsMet(after).filter(x=>x).length-met)*3;
+    let v=b.pts+gain+goalGain+(b.stock===b.orig?0.6:0)-price*0.5;
+    const heat=b.pts/b.stock;
+    const crowd=Math.min(1,heat*others/12);
+    v*=(1-crowd*0.4);
+    if(v>best.v){
+      const reason=goalGain>0?'お目当てに合う':(b.orig===1?'在庫1つだけの話題作':(!has&&gain>0?'新しいジャンルでコンプに近づく':'⭐と値段のバランスがいい'));
+      best={v,b:i,reason};
+    }
+  });
+  return best;
+}
+
 function resolve(){
   const me=S.players[0];
   const picks=S.players.map((p,i)=>i===0?{b:S.choice,useTk:S.useTk&&S.choice>=0&&me.tickets>0}:cpuChoose(p));
@@ -307,6 +334,7 @@ function render(){
       '<div class="gicons">'+GK.map(k=>'<span class="gi'+(cnt[k]?'':' zero')+'" style="--c:'+GEN[k].c+'">'+GEN[k].i+cnt[k]+'</span>').join('')+'</div></div>';
   }).join('');
   const me=S.players[0];
+  const recInfo=(S.phase==='choose'&&S.round===0)?recommend():{b:-2};
   const sale=S.round===ROUNDS-1;
   $('booths').innerHTML=S.booths.map((b,i)=>{
     const L='ブース'+'ABCDE'[i];
@@ -314,9 +342,9 @@ function render(){
     const out=S.result?S.result.booth[i]:null;
     const soldNow=b.stock===0;
     const can=S.phase==='choose'&&affordable(me,b);
-    const cls=['booth'];if(S.choice===i)cls.push('sel');if(S.phase==='choose'&&!can)cls.push('cant');
+    const cls=['booth'];if(S.choice===i)cls.push('sel');if(i===recInfo.b)cls.push('recB');if(S.phase==='choose'&&!can)cls.push('cant');
     const pr=priceOf(b);
-    return '<div class="'+cls.join(' ')+'" data-i="'+i+'">'+(b.stock===1&&b.pts>=5&&!soldNow?'<span class="hot">🔥話題作</span>':'')+
+    return '<div class="'+cls.join(' ')+'" data-i="'+i+'">'+(b.stock===1&&b.pts>=5&&!soldNow?'<span class="hot">🔥話題作</span>':'')+(i===recInfo.b?'<span class="rec">⭐おすすめ</span>':'')+
       '<div class="lbl">'+L+'</div><span class="gt" style="--c:'+GEN[b.genre].c+'">'+GEN[b.genre].i+GEN[b.genre].n+'</span>'+
       '<div class="ti">'+b.name+'</div>'+
       '<div class="meta"><span>⭐'+b.pts+'</span><span class="price">'+(sale?'<s>💴'+b.price+'</s><span class="sale">💴'+pr+'</span>':'💴'+pr)+'</span></div>'+
@@ -331,7 +359,7 @@ function render(){
   rest.innerHTML='☕ <b>休憩所で一息</b>：今回は何も買わず、整理券を1枚もらう'+(S.result&&S.result.rest.length?'<div class="who">'+S.result.rest.map(i=>'<span>'+S.players[i].name+'</span>').join('')+'</div>':'');
   const btns=$('btns');
   if(S.phase==='choose'){
-    $('msg').innerHTML=(sale?'<span class="sale">閉場前セール中！</span> ':'')+'<b>'+TIMES[S.round]+'</b>：行くブースを選んでください。';
+    $('msg').innerHTML=(sale?'<span class="sale">閉場前セール中！</span> ':'')+'<b>'+TIMES[S.round]+'</b>：行くブースを選んでください。'+(recInfo.b>=0?' ⭐おすすめはブース'+'ABCDE'[recInfo.b]+'「'+S.booths[recInfo.b].name+'」（'+recInfo.reason+'）':(recInfo.b===-1?' ⭐'+recInfo.reason+'です':''));
     btns.innerHTML='<label class="tk'+(me.tickets?'':' off')+'"><input type="checkbox" id="tk" '+(S.useTk?'checked':'')+(me.tickets&&S.choice!==-1?'':' disabled')+'> 🎫整理券を使って先頭に並ぶ（残り'+me.tickets+'）</label>'+
       '<button id="go" '+(S.choice===null?'disabled':'')+'>みんなで公開</button>';
     $('tk').onchange=e=>{S.useTk=e.target.checked};

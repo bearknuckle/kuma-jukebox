@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>酒蔵チンチロ</title>
+<title>銘柄サイコロ</title>
 <!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="試作ゲームラボ">
-<meta property="og:title" content="酒蔵チンチロ｜試作ゲームラボ">
-<meta property="og:description" content="3つのサイコロを椀で振って役を競うチンチロ。ピンゾロ、シゴロ、ヒフミ…親と子を交代しながら、おちょこを奪い合う。CPU 1〜3人と対戦。">
+<meta property="og:title" content="銘柄サイコロ｜試作ゲームラボ">
+<meta property="og:description" content="漢字だけのサイコロ4つを振って、実在の変わった名前の日本酒銘柄をそろえるゲーム。「死神」「川口納豆」「国士無双」…残すサイコロを選んで振り直し、銘柄は早い者勝ち。CPU 1〜3人と対戦。">
 <meta property="og:url" content="https://game-lab-oj9t.onrender.com/sakagura-sugoroku/">
 <meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -54,38 +54,46 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
 .board-top{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .pl{flex:1;min-width:120px;background:rgba(0,0,0,.28);border-radius:12px;padding:8px 10px;border:1.5px solid rgba(247,239,221,.08)}
 .pl.turn{border-color:var(--amber);box-shadow:0 0 0 2px rgba(242,184,75,.35)}
-.pl.dealer{border-color:rgba(255,217,138,.55)}
-.pl.out{opacity:.45}
 .pl .nm{font-weight:900;font-size:14px;display:flex;gap:6px;align-items:center}
-.pl .nm .oya{background:var(--red);color:#fff;font-size:10px;border-radius:6px;padding:1px 6px}
 .pl .st{font-size:12px;opacity:.85;margin-top:3px;line-height:1.5}
 .pl .st b{color:var(--amber2)}
-/* bowl + dice */
-.bowl-wrap{margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:8px}
-.bowl{width:230px;height:150px;border-radius:50%;background:radial-gradient(ellipse at 50% 38%, #fdf6e0 0%, #e8d5a8 55%, #c9ab72 100%);
-  box-shadow:0 10px 24px rgba(0,0,0,.45), inset 0 -14px 24px rgba(120,84,30,.35), inset 0 8px 14px rgba(255,255,255,.6);
-  display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
-.bowl::after{content:"🍶";position:absolute;bottom:-14px;right:6px;font-size:22px;opacity:.85}
-.die{width:56px;height:56px;border-radius:12px;background:#fffdf6;color:var(--ink);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:0 4px 8px rgba(0,0,0,.35)}
-.die .face{font-size:30px;font-weight:900;line-height:1.05;font-family:"Dela Gothic One",sans-serif}
-.die .kj{font-size:14px;font-weight:900;line-height:1.1;color:var(--red)}
-.die.roll{animation:shake .12s infinite}
-.die.out{position:absolute;right:-38px;top:6px;transform:rotate(28deg);background:#dfe9f2}
+/* dice */
+.dice-wrap{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.dice-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.kdie{width:68px;height:68px;border-radius:14px;background:#fffdf6;color:var(--ink);position:relative;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 8px rgba(0,0,0,.35);border:3px solid transparent;user-select:none}
+.kdie .kj{font-size:38px;font-weight:900;line-height:1;font-family:"Dela Gothic One",sans-serif}
+.kdie.can{cursor:pointer}
+.kdie.keep{border-color:var(--amber);background:#ffedb8;box-shadow:0 0 0 3px rgba(242,184,75,.45),0 4px 8px rgba(0,0,0,.35)}
+.kdie.keep::after{content:"残す";position:absolute;top:-9px;right:-6px;background:var(--red);color:#fff;
+  font-size:10px;font-weight:900;border-radius:6px;padding:1px 6px}
+.kdie.hit{border-color:var(--red);background:#ffe1de}
+.kdie.roll{animation:shake .12s infinite}
 @keyframes shake{0%{transform:rotate(-9deg) translateY(-2px)}50%{transform:rotate(9deg) translateY(2px)}100%{transform:rotate(-9deg) translateY(-2px)}}
-.handname{font-family:"Dela Gothic One",sans-serif;font-size:24px;color:var(--amber2);min-height:32px;text-align:center;letter-spacing:.04em}
-.handcmt{font-size:13px;opacity:.9;min-height:20px;text-align:center;line-height:1.5}
-.brand{font-size:16px;font-weight:900;color:var(--amber);min-height:24px;text-align:center}
+.hint{font-size:13px;opacity:.9;min-height:20px;text-align:center;line-height:1.5}
+.hint b{color:var(--amber2)}
+/* big announcement */
+.bigshow{text-align:center;min-height:0;margin-top:4px}
+.bigshow .bn{font-family:"Dela Gothic One",sans-serif;font-size:34px;color:var(--amber2);letter-spacing:.05em;line-height:1.2;
+  text-shadow:0 2px 0 var(--red),0 0 22px rgba(242,184,75,.5)}
+.bigshow .br{font-size:13px;opacity:.85;margin-top:2px}
+.bigshow .bp{font-size:15px;font-weight:900;color:var(--amber);margin-top:2px}
+.bigshow .bd{font-size:13px;line-height:1.6;opacity:.95;margin:6px auto 0;max-width:520px}
 .turnmsg{font-weight:900;font-size:16px;text-align:center;min-height:24px;margin-top:10px}
 .controls{margin-top:10px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;min-height:52px}
+.choices{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .log{margin-top:12px;max-height:190px;overflow-y:auto;font-size:13px;line-height:1.7}
 .log div{border-bottom:1px dashed rgba(247,239,221,.15);padding:3px 0}
 .log b{color:var(--amber2)}
-/* hands list */
-.hands{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
-.hands div{background:rgba(0,0,0,.22);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.5}
-.hands b{color:var(--amber2)}
+/* brand lists */
+.brands{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
+.brands div{background:rgba(0,0,0,.22);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.55}
+.brands b{color:var(--amber2)}
+.brands .pts{color:var(--amber);font-weight:900}
+.brands .dsc{display:block;opacity:.85;font-size:11.5px;margin-top:2px}
+.brands div.taken{opacity:.55}
+.brands div.taken b{color:var(--paper)}
 /* modal */
 .modal{position:fixed;inset:0;background:rgba(10,10,20,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal[hidden]{display:none}
@@ -101,8 +109,8 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
 <body>
 <div class="wrap">
   <header>
-    <h1>🎲 酒蔵チンチロ</h1>
-    <div class="sub">椀の中でサイコロ3つ。役で競って、おちょこを奪い合う！</div>
+    <h1>🎲 銘柄サイコロ</h1>
+    <div class="sub">漢字だけのサイコロ4つ。実在の変わった銘柄をそろえよう！</div>
   </header>
 
   <!-- 設定画面 -->
@@ -119,41 +127,14 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     </div>
     <div class="lbl">ルール</div>
     <ul class="rules" style="margin:4px 0;padding-left:20px">
-      <li>全員おちょこ🍶10杯からスタート。親と子を交代しながら、サイコロ3つで役を競う。</li>
-      <li>振れるのは最大3回まで。役なし（目なし）なら自動でもう1回。「目」が出たら、止めるか、もう1回振って上を狙うか選べる。</li>
-      <li>子の役が親より強ければ子の勝ち、弱ければ親の勝ち。あいこはやり取りなし。勝った役で倍率がつく（ピンゾロ5倍・アラシ3倍・シゴロ2倍）。ヒフミを出した人は2倍払い。</li>
-      <li>親がヒフミ・ションベン・目なしのときは、子は振らずに全員勝ち。</li>
-      <li>親が全員に2回ずつ回ったら終わり。おちょこが0になった人は酔いつぶれで脱落。最後まで残るか、一番多く持っていた人の勝ち。</li>
-      <li>役がそろうと、その強さに応じた「変わった銘柄」が登場。勝つとその銘柄をコレクションできます（勝敗には影響しない、集める楽しみ）。</li>
-      <li>サイコロの面には漢字も書かれています。組み合わせで実在の銘柄がそろうと、その勝負に勝ったとき銘柄コレクション入り＋1杯ボーナス。</li>
+      <li>漢字だけが書かれたサイコロ4つを振り、実在の日本酒銘柄の漢字をそろえるゲーム。</li>
+      <li>1手番に最大3回まで振れる。残したいサイコロをタップで「残す」にして、残りを振り直そう。</li>
+      <li>出た漢字で銘柄が作れたら獲得！ 得点は 2字＝2点・3字＝4点・4字＝7点。複数の銘柄が作れたら、好きなほうを1つ選べる。</li>
+      <li>銘柄は全員で共有する早い者勝ち。誰かが取った銘柄はもう取れない。</li>
+      <li>各自6手番ずつで終わり。得点が高い人の勝ち（同点なら、獲得した銘柄が多いほう）。</li>
     </ul>
-    <div class="lbl">漢字コンボ（サイコロの漢字でそろう銘柄）</div>
-    <div class="hands">
-      <div><b>死＋神</b>：死神</div>
-      <div><b>納＋豆</b>：川口納豆</div>
-      <div><b>猫＋正＋宗</b>：ねこ正宗</div>
-      <div><b>三＋芳＋菊</b>：三芳菊</div>
-    </div>
-    <div class="lbl">銘柄図鑑（強い役ほど珍しい銘柄）</div>
-    <div class="hands">
-      <div><b>ピンゾロ</b>：死神／川口納豆</div>
-      <div><b>アラシ</b>：俺の出番／ならぬことはならぬものです</div>
-      <div><b>シゴロ</b>：三芳菊 残骸／SABA de SHU</div>
-      <div><b>目5・6</b>：くどき上手／色おとこ</div>
-      <div><b>目3・4</b>：ねこ正宗</div>
-      <div><b>目1・2</b>：ちょっとおまち</div>
-    </div>
-    <p style="font-size:12px;opacity:.85;margin:4px 0 10px">※ここに出てくる銘柄は、すべて実在の日本酒です。</p>
-    <div class="lbl">役一覧（強い順）</div>
-    <div class="hands">
-      <div><b>ピンゾロ</b>（1・1・1）最強！ 5倍</div>
-      <div><b>アラシ</b>（ゾロ目）3倍</div>
-      <div><b>シゴロ</b>（4・5・6）2倍</div>
-      <div><b>目</b>（ペア＋1つ）残りの数が点。目6が一番強い</div>
-      <div><b>目なし</b>（役なし）3回振っても出なければ負け級</div>
-      <div><b>ヒフミ</b>（1・2・3）即負け・2倍払い</div>
-      <div><b>ションベン</b>（椀の外）即負け</div>
-    </div>
+    <div class="lbl">銘柄図鑑（すべて実在の日本酒です）</div>
+    <div class="brands" id="zukanSetup"></div>
     <p class="note">🔞 このゲームはお酒を飲まなくても遊べます。飲みながら遊ぶときは<b>20歳以上</b>で、飲みすぎや一気飲みはやめましょう。ソフトドリンクでも楽しめます。</p>
     <button class="btn red big" id="startBtn">勝負をはじめる</button>
     <p style="text-align:center;margin:12px 0 0"><a href="../" style="color:#d8c9a8;font-size:13px">← 試作ゲームラボに戻る</a></p>
@@ -162,33 +143,21 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
   <!-- ゲーム画面 -->
   <div id="gameCard" hidden>
     <div class="board-top" id="scoreboard"></div>
-    <div class="bowl-wrap">
-      <div class="bowl" id="bowl">
-        <div class="die" id="die0"><span class="face">🎲</span><span class="kj"></span></div>
-        <div class="die" id="die1"><span class="face">🎲</span><span class="kj"></span></div>
-        <div class="die" id="die2"><span class="face">🎲</span><span class="kj"></span></div>
-      </div>
-      <div class="handname" id="handName"></div>
-      <div class="handcmt" id="handCmt"></div>
-      <div class="brand" id="handBrand"></div>
+    <div class="dice-wrap">
+      <div class="dice-row" id="diceRow"></div>
+      <div class="hint" id="hint"></div>
+      <div class="bigshow" id="bigShow"></div>
     </div>
     <div class="turnmsg" id="turnMsg"></div>
     <div class="controls">
       <button class="btn red" id="rollBtn" style="font-size:17px;padding:12px 22px" hidden>サイコロを振る</button>
-      <button class="btn" id="stopBtn" style="font-size:16px;padding:12px 18px" hidden>この目で止める</button>
-      <button class="btn red" id="againBtn2" style="font-size:16px;padding:12px 18px" hidden>もう1回振る！</button>
+      <button class="btn red" id="rerollBtn" style="font-size:16px;padding:12px 18px" hidden>振り直す</button>
+      <button class="btn" id="confirmBtn" style="font-size:16px;padding:12px 18px" hidden>この出目で確定</button>
     </div>
+    <div class="choices" id="choices"></div>
     <div class="card" style="margin-top:6px">
-      <div class="lbl" style="margin-top:0">役一覧（強い順）</div>
-      <div class="hands" style="margin:0">
-        <div><b>ピンゾロ</b>（1・1・1）5倍</div>
-        <div><b>アラシ</b>（ゾロ目）3倍</div>
-        <div><b>シゴロ</b>（4・5・6）2倍</div>
-        <div><b>目</b>（ペア＋1つ）数が点</div>
-        <div><b>目なし</b>（役なし）</div>
-        <div><b>ヒフミ</b>（1・2・3）即負け2倍払い</div>
-        <div><b>ションベン</b>（椀の外）即負け</div>
-      </div>
+      <div class="lbl" style="margin-top:0">銘柄ボード（早い者勝ち）</div>
+      <div class="brands" id="brandBoard" style="margin:0"></div>
     </div>
     <div class="card log" id="log"></div>
     <div style="text-align:center;margin-top:12px">
@@ -196,7 +165,7 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     </div>
   </div>
 
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵チンチロ v0.4</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 銘柄サイコロ v0.5</div>
 </div>
 
 <div class="modal" id="endModal" hidden>
@@ -211,67 +180,76 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
 </div>
 
 <script>
-const FACES = '⚀⚁⚂⚃⚄⚅';
-const START_POINTS = 10;
-const BASE_BET = 1;
-const SHONBEN_RATE = 0.04;
+// 漢字サイコロ4つ（各6面）。24面すべて違う漢字で、対象銘柄がすべてそろうよう配分
+const DICE = [
+  ['死','川','猫','国','芳','残'],
+  ['神','口','正','士','菊','骸'],
+  ['納','三','無','色','龍','上'],
+  ['豆','宗','双','男','力','手'],
+];
+// 対象銘柄（すべて実在の日本酒）。pts: 2字=2点・3字=4点・4字=7点
+const BRANDS = [
+  {name:'死神', reading:'しにがみ', kanji:['死','神'], pts:2,
+   desc:'島根・加茂福酒造の銘柄。名前の由来は古典落語「死神」。あえて縁起の悪い名前をつけた、濃醇でコクのある味わい。'},
+  {name:'川口納豆', reading:'かわぐちなっとう', kanji:['川','口','納','豆'], pts:7,
+   desc:'宮城・金の井酒造の銘柄。納豆は入っていない。地元の納豆会社が酒米を栽培した縁で生まれた名前。'},
+  {name:'ねこ正宗', reading:'ねこまさむね', kanji:['猫','正','宗'], pts:4,
+   desc:'滋賀・近江酒造の「近江ねこ正宗」。猫好きの蔵元が生んだ、猫が主役の銘柄。'},
+  {name:'三芳菊', reading:'みよしぎく', kanji:['三','芳','菊'], pts:4,
+   desc:'徳島・三芳菊酒造の銘柄。個性的なラベルでも知られる蔵の酒。'},
+  {name:'残骸', reading:'ざんがい', kanji:['残','骸'], pts:2,
+   desc:'徳島・三芳菊酒造の「三芳菊 残骸」。搾りの終盤に出る「責め」の部分をブレンドした酒。'},
+  {name:'龍力', reading:'たつりき', kanji:['龍','力'], pts:2,
+   desc:'兵庫・本田商店の代表銘柄。'},
+  {name:'国士無双', reading:'こくしむそう', kanji:['国','士','無','双'], pts:7,
+   desc:'北海道・高砂酒造の銘柄。「国に並ぶ者のない逸材」という意味の言葉が、そのまま名前になった。'},
+  {name:'納豆', reading:'なっとう', kanji:['納','豆'], pts:2,
+   desc:'「川口納豆」の要の2字。もちろん、納豆そのものは入っていない。'},
+  {name:'くどき上手', reading:'くどきじょうず', kanji:['上','手'], pts:2,
+   desc:'山形・亀の井酒造の代表銘柄。'},
+  {name:'色おとこ', reading:'いろおとこ', kanji:['色','男'], pts:2,
+   desc:'岐阜・飛騨の渡辺酒造店「蓬莱 色おとこ」。優しくフルーティーな純米大吟醸。'},
+];
+const TURNS_PER_PLAYER = 6;
+const MAX_ROLLS = 3;
 const FAST = location.search.includes('test=1');
 const CPU_POOL = [
-  {name:'杜氏のおじい', av:'👴', lines:['よい香りじゃ','わしの椀さばきを見よ','うむ、いい出目じゃ']},
-  {name:'きき酒女子', av:'👩', lines:['この勝負、好き','いきます！','ふふ、狙い通り']},
-  {name:'たぬき蔵人', av:'🦝', lines:['へい、回すよ','椀は任せとけ','おっと、こぼれた']},
-  {name:'ねこ番頭', av:'🐱', lines:['にゃ、振るにゃ','見てたにゃ','もう一杯だけ…にゃ']},
+  {name:'杜氏のおじい', av:'👴', lines:['よい香りじゃ','わしの読みは当たるぞ','うむ、いい漢字じゃ']},
+  {name:'きき酒女子', av:'👩', lines:['この銘柄、好き','いきます！','ふふ、狙い通り']},
+  {name:'たぬき蔵人', av:'🦝', lines:['へい、回すよ','漢字は任せとけ','おっと、ずれた']},
+  {name:'ねこ番頭', av:'🐱', lines:['にゃ、振るにゃ','見てたにゃ','猫の字、来いにゃ']},
 ];
 const HUMAN = {name:'あなた', av:'🧑'};
-const ME_CMTS = {
-  6:'目6！こりゃ特上の一杯',
-  5:'目5。なかなかの香り',
-  4:'目4。悪くない出来',
-  3:'目3。まあまあ、といったところ',
-  2:'目2。ちょっと薄い…',
-  1:'目1。水みたいに薄い…',
-};
-// 実在の変わった銘柄。役が強いほど珍しい銘柄が出る
-const BRANDS = {
-  pinzoro:['死神','川口納豆'],
-  arashi:['俺の出番','ならぬことはならぬものです'],
-  shigoro:['三芳菊 残骸','SABA de SHU'],
-  meHi:['くどき上手','色おとこ'],
-  meMid:['ねこ正宗'],
-  meLo:['ちょっとおまち'],
-};
-function brandFor(h){
-  let list = null;
-  if(h.cls==='pinzoro') list = BRANDS.pinzoro;
-  else if(h.cls==='arashi') list = BRANDS.arashi;
-  else if(h.cls==='shigoro') list = BRANDS.shigoro;
-  else if(h.cls==='me' && h.point>=5) list = BRANDS.meHi;
-  else if(h.cls==='me' && h.point>=3) list = BRANDS.meMid;
-  else if(h.cls==='me') list = BRANDS.meLo;
-  return list ? list[rand(list.length)] : null;
+
+// ---- 銘柄判定（テストからも使う） ----
+function formableBrands(faces, taken){
+  // faces: 出た漢字4つ。taken: 獲得済み銘柄名の Set
+  return BRANDS.filter(b => !taken.has(b.name) && b.kanji.every(k => faces.includes(k)));
 }
-// サイコロごとの面の漢字（目1〜6）。組み合わせで実在の銘柄がそろう
-const KANJI = [
-  {1:'死',2:'猫',3:'三',4:'酒',5:'納',6:'米'},
-  {1:'神',2:'正',3:'芳',4:'蔵',5:'豆',6:'番'},
-  {1:'宗',2:'菊',3:'水',4:'色',5:'男',6:'出'},
-];
-const KANJI_COMBOS = [
-  {need:['猫','正','宗'], brand:'ねこ正宗'},
-  {need:['三','芳','菊'], brand:'三芳菊'},
-  {need:['死','神'], brand:'死神'},
-  {need:['納','豆'], brand:'川口納豆'},
-];
-function kanjiOf(dice){ return dice.map((v,i)=>KANJI[i][v]); }
-function comboOf(kj){
-  for(const c of KANJI_COMBOS){
-    if(c.need.every(k=>kj.includes(k))) return c.brand;
+function progressOf(brand, faces){
+  return brand.kanji.filter(k => faces.includes(k)).length;
+}
+function missingOf(brand, faces){
+  return brand.kanji.filter(k => !faces.includes(k));
+}
+function bestTarget(faces, taken){
+  // 未獲得の銘柄のうち「そろい具合」が一番よいもの
+  let best = null;
+  for(const b of BRANDS){
+    if(taken.has(b.name)) continue;
+    const prog = progressOf(b, faces);
+    const score = prog * 100 + b.pts;
+    if(!best || score > best.score) best = {brand:b, prog, score};
   }
-  return null;
+  return best;
 }
+function keepMaskFor(brand, faces){
+  return faces.map(f => brand.kanji.includes(f));
+}
+window.__game = {DICE, BRANDS, formableBrands, progressOf, missingOf, bestTarget, keepMaskFor};
 
 let G = null;
-let humanWait = null; // {resolve} for the human's next action
+let humanWait = null;
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, FAST ? 0 : ms));
 const rand = n => Math.floor(Math.random()*n);
@@ -288,30 +266,18 @@ document.querySelectorAll('.opt').forEach(o=>{
   });
 });
 
-// ---- 役判定 ----
-function evaluate(dice){
-  const d = [...dice].sort((a,b)=>a-b);
-  if(d[0]===1 && d[1]===2 && d[2]===3)
-    return {cls:'hifumi', rank:-20, mult:1, name:'ヒフミ', cmt:'1・2・3…水みたいな酒。即負け！'};
-  if(d[0]===d[1] && d[1]===d[2]){
-    if(d[0]===1) return {cls:'pinzoro', rank:100, mult:5, name:'ピンゾロ', cmt:'1・1・1！蔵に伝わる伝説の一振り！'};
-    return {cls:'arashi', rank:90+d[0], mult:3, name:d[0]+'のアラシ', cmt:'ゾロ目そろった！蔵中がどよめく'};
-  }
-  if(d[0]===4 && d[1]===5 && d[2]===6)
-    return {cls:'shigoro', rank:80, mult:2, name:'シゴロ', cmt:'4・5・6！粋な並び、蔵人の花道'};
-  let odd = null;
-  if(d[0]===d[1]) odd = d[2];
-  else if(d[1]===d[2]) odd = d[0];
-  if(odd !== null)
-    return {cls:'me', rank:10+odd, mult:1, point:odd, name:'目'+odd, cmt:ME_CMTS[odd]};
-  return {cls:'menashi', rank:0, mult:1, name:'目なし', cmt:'役なし…ただの水たまり'};
-}
-function shonbenHand(){
-  return {cls:'shonben', rank:-10, mult:1, name:'ションベン', cmt:'椀の外にこぼれた！蔵人が青ざめる'};
-}
-function isLoseClass(h){ return h.cls==='hifumi' || h.cls==='shonben'; }
-
 // ---- 画面 ----
+function brandCell(b, takenBy){
+  const who = takenBy ? ` <span>（${takenBy}）</span>` : '';
+  return `<div class="${takenBy ? 'taken' : ''}"><b>${b.name}</b>（${b.reading}） <span class="pts">${b.pts}点</span>${who}` +
+    `<span class="dsc">${b.kanji.join('＋')} ／ ${b.desc}</span></div>`;
+}
+function renderZukan(){
+  $('zukanSetup').innerHTML = BRANDS.map(b => brandCell(b, null)).join('');
+}
+function renderBoard(){
+  $('brandBoard').innerHTML = BRANDS.map(b => brandCell(b, G.taken.get(b.name) || null)).join('');
+}
 function addLog(html){
   G.log.push(html);
   const d = document.createElement('div');
@@ -325,37 +291,50 @@ function renderScore(){
   sb.innerHTML = '';
   G.players.forEach((p,pi)=>{
     const d = document.createElement('div');
-    d.className = 'pl' + (G.current===pi && !G.over ? ' turn':'') + (G.dealer===pi ? ' dealer':'') + (p.pts<=0 ? ' out':'');
-    d.innerHTML = `<div class="nm">${p.av} ${p.name}${p.isHuman?'（あなた）':''}${G.dealer===pi?'<span class="oya">親</span>':''}</div>
-      <div class="st">${p.pts<=0 ? '😵 酔いつぶれ…' : `🍶おちょこ <b>${p.pts}</b>杯　🏷️銘柄 <b>${p.brands.length}</b>種`}</div>`;
+    d.className = 'pl' + (G.current===pi && !G.over ? ' turn':'');
+    d.innerHTML = `<div class="nm">${p.av} ${p.name}${p.isHuman?'（あなた）':''}</div>
+      <div class="st">🏆 <b>${p.score}</b>点　🏷️銘柄 <b>${p.brands.length}</b>種　あと<b>${p.turnsLeft}</b>手番</div>`;
     sb.appendChild(d);
   });
 }
-function showDice(dice, outIdx){
-  for(let i=0;i<3;i++){
-    const el = $('die'+i);
-    el.classList.remove('out');
-    el.querySelector('.face').textContent = dice ? FACES[dice[i]-1] : '🎲';
-    el.querySelector('.kj').textContent = dice ? KANJI[i][dice[i]] : '';
-  }
-  if(outIdx !== null && outIdx !== undefined){
-    $('die'+outIdx).classList.add('out');
-  }
+function renderDice(){
+  const row = $('diceRow');
+  row.innerHTML = '';
+  G.faces.forEach((f,i)=>{
+    const d = document.createElement('div');
+    d.className = 'kdie' + (G.canKeep ? ' can' : '') + (G.keep[i] ? ' keep' : '');
+    d.innerHTML = `<span class="kj">${f || '？'}</span>`;
+    d.addEventListener('click', ()=>{
+      if(!G || !G.canKeep) return;
+      G.keep[i] = !G.keep[i];
+      renderDice();
+    });
+    row.appendChild(d);
+  });
 }
-function showHand(h){
-  $('handName').textContent = h ? h.name : '';
-  $('handCmt').textContent = h ? h.cmt : '';
-  const parts = [];
-  if(h && h.brand) parts.push(`🍶 銘柄登場：「${h.brand}」`);
-  if(h && h.kanjiBrand) parts.push(`✨ 漢字で「${h.kanjiBrand}」がそろった！`);
-  $('handBrand').innerHTML = parts.join('<br>');
+function showBig(brand, playerName){
+  $('bigShow').innerHTML =
+    `<div class="bn">🍶 ${brand.name}</div>` +
+    `<div class="br">${brand.reading} ／ ${playerName} が獲得！</div>` +
+    `<div class="bp">＋${brand.pts}点</div>` +
+    `<div class="bd">${brand.desc}</div>`;
+}
+function clearBig(){ $('bigShow').innerHTML = ''; }
+function showHint(){
+  if(!G.faces[0]){ $('hint').innerHTML = ''; return; }
+  const t = bestTarget(G.faces, new Set(G.taken.keys()));
+  if(!t){ $('hint').innerHTML = '銘柄は全部取られました'; return; }
+  const miss = missingOf(t.brand, G.faces);
+  $('hint').innerHTML = miss.length === 0
+    ? `✨ <b>${t.brand.name}</b> がそろっています！`
+    : `あと <b>${miss.join('・')}</b> で <b>${t.brand.name}</b>（${t.brand.pts}点）`;
 }
 function hideButtons(){
   $('rollBtn').hidden = true;
-  $('stopBtn').hidden = true;
-  $('againBtn2').hidden = true;
+  $('rerollBtn').hidden = true;
+  $('confirmBtn').hidden = true;
 }
-function waitHumanAction(btnIds){
+function waitHuman(btnIds){
   return new Promise(resolve=>{
     humanWait = {resolve};
     btnIds.forEach(id=>{ $(id).hidden = false; });
@@ -370,222 +349,214 @@ function humanAct(action){
 }
 
 // ---- サイコロを振る ----
-async function animateRoll(){
-  const els = [$('die0'), $('die1'), $('die2')];
-  els.forEach(el=>{ el.classList.remove('out'); el.classList.add('roll'); });
-  for(let i=0;i<7;i++){
-    els.forEach((el,di)=>{
-      const v = rand(6)+1;
-      el.querySelector('.face').textContent = FACES[v-1];
-      el.querySelector('.kj').textContent = KANJI[di][v];
+function rollFaces(keepMask, faces){
+  return faces.map((f,i)=> (keepMask && keepMask[i]) ? f : DICE[i][rand(6)]);
+}
+async function animateRoll(keepMask){
+  const els = [...$('diceRow').children];
+  els.forEach((el,i)=>{ if(!keepMask || !keepMask[i]) el.classList.add('roll'); });
+  for(let t=0;t<7;t++){
+    els.forEach((el,i)=>{
+      if(keepMask && keepMask[i]) return;
+      el.querySelector('.kj').textContent = DICE[i][rand(6)];
     });
     await sleep(70);
   }
   els.forEach(el=>el.classList.remove('roll'));
 }
-function rollOnce(){
-  if(Math.random() < SHONBEN_RATE){
-    const dice = [rand(6)+1, rand(6)+1, rand(6)+1];
-    return {shonben:true, dice, outIdx: rand(3)};
+
+// ---- CPUの判断 ----
+function cpuDecide(faces, rollsLeft){
+  const taken = new Set(G.taken.keys());
+  const form = formableBrands(faces, taken);
+  if(form.length){
+    const bestForm = [...form].sort((a,b)=>b.pts-a.pts)[0];
+    if(rollsLeft <= 0 || bestForm.pts >= 4) return {stop:true, brand:bestForm};
+    // 2点の銘柄なら、より大きい銘柄まであと1字なら狙い直す
+    const t = bestTarget(faces, taken);
+    if(t && t.brand.name !== bestForm.name && t.prog === t.brand.kanji.length - 1 && t.brand.pts > bestForm.pts){
+      return {stop:false, keep:keepMaskFor(t.brand, faces)};
+    }
+    return {stop:true, brand:bestForm};
   }
-  return {shonben:false, dice:[rand(6)+1, rand(6)+1, rand(6)+1], outIdx:null};
-}
-function cpuReroll(hand){
-  // CPUの判断：目2以下なら上を狙う
-  return hand.cls==='me' && hand.point <= 2;
+  const t = bestTarget(faces, taken);
+  if(!t) return {stop:true, brand:null};
+  return {stop:false, keep:keepMaskFor(t.brand, faces)};
 }
 
-async function takeRollTurn(p){
+// ---- 1手番 ----
+async function takeTurn(p){
+  const pi = G.players.indexOf(p);
+  G.current = pi;
+  G.faces = [null,null,null,null];
+  G.keep = [false,false,false,false];
+  G.canKeep = false;
+  clearBig();
+  renderScore(); renderDice(); showHint();
+  setTurnMsg(`${p.name}の手番（あと${p.turnsLeft}手番）`);
+  addLog(`―― <b>${p.name}</b>の手番 ――`);
+  await sleep(450);
+
   let rolls = 0;
-  let hand = null;
-  while(rolls < 3){
-    if(!G) return hand || {cls:'menashi', rank:0, mult:1, name:'目なし', cmt:''};
-    if(p.isHuman){
-      setTurnMsg(rolls===0 ? `${p.name}の番。サイコロを振ってください` : `目なし…あと${3-rolls}回振れます`);
-      await waitHumanAction(['rollBtn']);
-    } else {
-      setTurnMsg(`${p.name}が振ります…`);
-      await sleep(650);
-    }
-    rolls++;
-    await animateRoll();
-    const r = rollOnce();
-    showDice(r.dice, r.outIdx);
-    if(r.shonben){
-      hand = shonbenHand();
-      showHand(hand);
-      addLog(`<b>${p.name}</b>は椀の外にサイコロをこぼした！ <b>ションベン</b>…`);
-      await sleep(600);
-      return hand;
-    }
-    hand = evaluate(r.dice);
-    hand.brand = brandFor(hand);
-    hand.kanjiBrand = comboOf(kanjiOf(r.dice));
-    showHand(hand);
-    addLog(`<b>${p.name}</b>： ${r.dice.join('・')}（${kanjiOf(r.dice).join('・')}） → <b>${hand.name}</b>${hand.brand ? ` 🍶銘柄「${hand.brand}」` : ''}${hand.kanjiBrand ? ` ✨漢字で「${hand.kanjiBrand}」！` : ''}`);
-    await sleep(500);
-    if(hand.cls==='hifumi') return hand;
-    if(hand.cls==='pinzoro' || hand.cls==='arashi' || hand.cls==='shigoro') return hand;
-    if(hand.cls==='me'){
-      if(rolls >= 3) return hand;
-      // 止めるか、もう1回振るか
-      let reroll;
+  let chosen = null;
+  while(rolls < MAX_ROLLS){
+    if(!G) return;
+    if(rolls === 0){
       if(p.isHuman){
-        setTurnMsg(`${hand.name}です。止めますか？ もう1回振って上を狙えます（目なし・ヒフミの危険あり）`);
-        const act = await waitHumanAction(['stopBtn','againBtn2']);
-        reroll = (act === 'again');
+        setTurnMsg('サイコロを振ってください');
+        await waitHuman(['rollBtn']);
       } else {
         await sleep(500);
-        reroll = cpuReroll(hand);
-        if(reroll) addLog(`<b>${p.name}</b>は${hand.name}では止まらない！ もう1回振る！`);
       }
-      if(!reroll) return hand;
     }
-    // 目なしは自動で振り直し
-    if(hand.cls==='menashi' && rolls < 3){
-      await sleep(400);
+    const keepMask = rolls === 0 ? null : G.keep.slice();
+    await animateRoll(keepMask);
+    G.faces = rollFaces(keepMask, G.faces);
+    rolls++;
+    G.canKeep = false;
+    renderDice(); showHint();
+    addLog(`<b>${p.name}</b>： ${G.faces.join('・')}`);
+    await sleep(350);
+    if(!G) return;
+
+    const taken = new Set(G.taken.keys());
+    const form = formableBrands(G.faces, taken);
+    const rollsLeft = MAX_ROLLS - rolls;
+
+    if(p.isHuman){
+      if(rollsLeft <= 0) break;
+      if(form.length){
+        setTurnMsg(`✨ ${form.map(b=>b.name).join('・')} がそろっています！ このまま確定するか、振り直して上を狙うか選べます`);
+      } else {
+        const t = bestTarget(G.faces, taken);
+        setTurnMsg(t ? `残したいサイコロをタップ。あと${missingOf(t.brand, G.faces).join('・')}で「${t.brand.name}」` : '残したいサイコロをタップ');
+      }
+      G.canKeep = true;
+      renderDice();
+      const act = await waitHuman(['rerollBtn','confirmBtn']);
+      G.canKeep = false;
+      if(act === 'confirm') break;
+      // 振り直し：keep のまま次ループへ
+    } else {
+      const dec = cpuDecide(G.faces, rollsLeft);
+      if(dec.stop){
+        chosen = dec.brand;
+        break;
+      }
+      G.keep = dec.keep;
+      renderDice();
+      const t = bestTarget(G.faces, taken);
+      if(t) addLog(`<b>${p.name}</b>は「${t.brand.name}」を狙って ${G.faces.filter((f,i)=>dec.keep[i]).join('・') || 'なし'} を残して振り直す！`);
+      await sleep(450);
     }
   }
-  return hand;
-}
-
-function transfer(from, to, amount, why){
-  const amt = Math.max(0, Math.min(amount, from.pts));
-  if(amt <= 0) return;
-  from.pts -= amt;
-  to.pts += amt;
-  addLog(`${why} ${from.name} から ${to.name} へ 🍶${amt}杯`);
-  renderScore();
-}
-function collectBrand(winner, brand){
-  if(!brand) return;
-  if(winner.brands.includes(brand)) return;
-  winner.brands.push(brand);
-  addLog(`🏷️ <b>${winner.name}</b>は銘柄「${brand}」をコレクションした！（${winner.brands.length}種目）`);
-  renderScore();
-}
-function kanjiBonus(winner, loser, hand){
-  if(!hand || !hand.kanjiBrand) return;
-  transfer(loser, winner, 1, `✨ 漢字で「${hand.kanjiBrand}」がそろったご褒美！`);
-  collectBrand(winner, hand.kanjiBrand);
-}
-function settle(dealer, dHand, child, cHand){
-  // 子 vs 親 の1対1
-  if(isLoseClass(cHand)){
-    const mult = Math.max(dHand.mult, cHand.cls==='hifumi' ? 2 : 1);
-    transfer(child, dealer, BASE_BET*mult, `<b>${child.name}</b>の${cHand.name}で負け。`);
-    collectBrand(dealer, dHand.brand);
-    kanjiBonus(dealer, child, dHand);
-    return;
-  }
-  if(cHand.rank > dHand.rank){
-    transfer(dealer, child, BASE_BET*cHand.mult, `<b>${child.name}</b>の${cHand.name}が親の${dHand.name}に勝ち！`);
-    collectBrand(child, cHand.brand);
-    kanjiBonus(child, dealer, cHand);
-  } else if(cHand.rank < dHand.rank){
-    transfer(child, dealer, BASE_BET*dHand.mult, `<b>${child.name}</b>の${cHand.name}は親の${dHand.name}に届かず。`);
-    collectBrand(dealer, dHand.brand);
-    kanjiBonus(dealer, child, dHand);
-  } else {
-    addLog(`<b>${child.name}</b>と親は同じ${cHand.name}。あいこ、やり取りなし。`);
-  }
-}
-function solventPlayers(){ return G.players.filter(p=>p.pts>0); }
-
-async function playRound(){
-  const dealer = G.players[G.dealer];
-  G.current = G.dealer;
-  renderScore();
-  addLog(`―― 第${G.round}回戦。親は <b>${dealer.name}</b> ――`);
-  showDice(null); showHand(null);
-  const dHand = await takeRollTurn(dealer);
   if(!G) return;
-  G.current = -1;
-  renderScore();
-  if(G.over) return;
 
-  const children = G.players.filter((p,pi)=>pi!==G.dealer && p.pts>0);
-  if(isLoseClass(dHand) || dHand.cls==='menashi'){
-    // 親が即負け級・目なし → 子は振らずに全員勝ち
-    const mult = dHand.cls==='hifumi' ? 2 : 1;
-    children.forEach(c=>{
-      transfer(dealer, c, BASE_BET*mult, `親の${dHand.name}で、<b>${c.name}</b>は振らずに勝ち！`);
+  // 確定：獲得できる銘柄を決める
+  const taken = new Set(G.taken.keys());
+  const form = formableBrands(G.faces, taken);
+  if(form.length){
+    let brand = chosen;
+    if(!brand){
+      if(form.length === 1 || !p.isHuman){
+        brand = [...form].sort((a,b)=>b.pts-a.pts)[0];
+      } else {
+        setTurnMsg('そろった銘柄が2つあります。どちらを取りますか？');
+        brand = await chooseBrand(form);
+        if(!G) return;
+      }
+    }
+    G.taken.set(brand.name, p.name);
+    p.brands.push(brand);
+    p.score += brand.pts;
+    showBig(brand, p.name);
+    addLog(`🍶 <b>${p.name}</b>は銘柄「<b>${brand.name}</b>」（${brand.reading}）をそろえた！ ＋${brand.pts}点 ―― ${brand.desc}`);
+    const line = CPU_POOL.find(c=>c.name===p.name);
+    if(line && !p.isHuman) addLog(`${p.av} ${p.name}「${line.lines[rand(line.lines.length)]}」`);
+  } else {
+    addLog(`<b>${p.name}</b>は銘柄をそろえられなかった…`);
+    setTurnMsg('そろわなかった…次の人へ');
+  }
+  p.turnsLeft--;
+  renderScore(); renderBoard(); renderDice();
+  await sleep(p.isHuman ? 700 : 900);
+}
+function chooseBrand(form){
+  return new Promise(resolve=>{
+    const box = $('choices');
+    box.innerHTML = '';
+    form.forEach(b=>{
+      const btn = document.createElement('button');
+      btn.className = 'btn red';
+      btn.textContent = `${b.name}（${b.pts}点）を取る`;
+      btn.addEventListener('click', ()=>{
+        box.innerHTML = '';
+        resolve(b);
+      });
+      box.appendChild(btn);
     });
-    await sleep(600);
-  } else {
-    for(const child of children){
-      if(G.over) return;
-      if(dealer.pts<=0){ addLog(`親の${dealer.name}はおちょこが尽きた…`); break; }
-      G.current = G.players.indexOf(child);
-      renderScore();
-      const cHand = await takeRollTurn(child);
+  });
+}
+
+// ---- ゲーム進行 ----
+async function playGame(){
+  while(G && !G.over){
+    const p = G.players[G.turnIdx];
+    if(p.turnsLeft > 0){
+      await takeTurn(p);
       if(!G) return;
-      settle(dealer, dHand, child, cHand);
-      await sleep(500);
-      if(solventPlayers().length <= 1) break;
+    }
+    G.turnIdx = (G.turnIdx + 1) % G.players.length;
+    const allDone = G.players.every(x=>x.turnsLeft <= 0);
+    const poolEmpty = G.taken.size >= BRANDS.length;
+    if(allDone || poolEmpty){
+      if(poolEmpty && !allDone) addLog('銘柄が全部取られました！ ここで勝負あり。');
+      finishGame();
+      return;
     }
   }
-  if(!G) return;
-  G.current = -1;
-  renderScore();
-  await sleep(600);
-  endRound();
-}
-function endRound(){
-  if(G.over) return;
-  const alive = solventPlayers();
-  const me = G.players[0];
-  if(alive.length <= 1 || me.pts <= 0 || G.round >= G.totalRounds){
-    finishGame();
-    return;
-  }
-  // 次の親（持っている人の中で次）
-  let next = G.dealer;
-  do { next = (next+1) % G.players.length; } while(G.players[next].pts <= 0);
-  G.dealer = next;
-  G.round++;
-  playRound();
 }
 function finishGame(){
   G.over = true;
   hideButtons();
-  const order = [...G.players].sort((a,b)=>b.pts-a.pts);
+  G.current = -1;
+  renderScore();
+  const order = [...G.players].sort((a,b)=> (b.score - a.score) || (b.brands.length - a.brands.length));
   const me = G.players[0];
-  const myRank = order.indexOf(me)+1;
-  $('endTitle').textContent = myRank===1 ? '🏆 優勝！蔵元の星！' : `${myRank}位でした！`;
+  const myRank = order.indexOf(me) + 1;
+  $('endTitle').textContent = myRank === 1 ? '🏆 優勝！銘柄マスター！' : `${myRank}位でした！`;
   $('endBody').innerHTML = order.map((p,i)=>
-    `<div class="rank"><span style="font-size:20px">${['🥇','🥈','🥉','4️⃣'][i]||'・'}</span><span>${p.av} <b>${p.name}</b></span><span style="margin-left:auto">🍶${p.pts}杯${p.pts<=0?'（酔いつぶれ）':''}</span></div>` +
-    `<div style="font-size:12px;opacity:.75;padding:2px 0 4px">🏷️ 集めた銘柄：${p.brands.length ? p.brands.join('、') : 'なし'}</div>`
+    `<div class="rank"><span style="font-size:20px">${['🥇','🥈','🥉','4️⃣'][i]||'・'}</span><span>${p.av} <b>${p.name}</b></span><span style="margin-left:auto">🏆${p.score}点・🏷️${p.brands.length}種</span></div>` +
+    `<div style="font-size:12px;opacity:.75;padding:2px 0 4px">🍶 集めた銘柄：${p.brands.length ? p.brands.map(b=>b.name).join('、') : 'なし'}</div>`
   ).join('') +
-  `<p style="margin-top:10px">${myRank===1 ? 'お見事！椀さばきも運も、今日はあなたの日。' : '次はピンゾロで蔵を沸かせましょう！'}</p>`;
+  `<p style="margin-top:10px">${myRank === 1 ? 'お見事！変わった銘柄を集め切る、見事な読みでした。' : '次は4字銘柄「川口納豆」「国士無双」を狙いましょう！'}</p>`;
   setTurnMsg('勝負あり！');
   $('endModal').hidden = false;
 }
-
 function newGame(){
   const cpuN = parseInt(optVal('optCpu')||'2', 10);
   const name = optVal('optName') || 'あなた';
   const cpus = [...CPU_POOL].sort(()=>Math.random()-.5).slice(0, cpuN);
-  const players = [{...HUMAN, name, isHuman:true, pts:START_POINTS, brands:[]},
-    ...cpus.map(c=>({...c, isHuman:false, pts:START_POINTS, brands:[]}))];
-  G = {
-    players, dealer: 0, round: 1, totalRounds: players.length*2,
-    over:false, current:-1, log:[]
-  };
+  const players = [{...HUMAN, name, isHuman:true, score:0, brands:[], turnsLeft:TURNS_PER_PLAYER},
+    ...cpus.map(c=>({...c, isHuman:false, score:0, brands:[], turnsLeft:TURNS_PER_PLAYER}))];
+  G = {players, turnIdx:0, current:-1, over:false, log:[],
+       taken:new Map(), faces:[null,null,null,null], keep:[false,false,false,false], canKeep:false};
   $('setupCard').hidden = true;
   $('gameCard').hidden = false;
   $('endModal').hidden = true;
   $('log').innerHTML = '';
-  showDice(null); showHand(null);
-  addLog(`勝負スタート！ ${players.map(p=>p.name).join('・')}の${players.length}人、全員おちょこ🍶${START_POINTS}杯。親は2周します。`);
-  renderScore();
-  playRound();
+  $('choices').innerHTML = '';
+  clearBig();
+  addLog(`勝負スタート！ ${players.map(p=>p.name).join('・')}の${players.length}人、各自${TURNS_PER_PLAYER}手番。銘柄は全${BRANDS.length}種、早い者勝ち！`);
+  renderScore(); renderBoard(); renderDice(); showHint();
+  playGame();
 }
 
+renderZukan();
 $('startBtn').addEventListener('click', newGame);
 $('rollBtn').addEventListener('click', ()=>humanAct('roll'));
-$('stopBtn').addEventListener('click', ()=>humanAct('stop'));
-$('againBtn2').addEventListener('click', ()=>humanAct('again'));
+$('rerollBtn').addEventListener('click', ()=>humanAct('reroll'));
+$('confirmBtn').addEventListener('click', ()=>humanAct('confirm'));
 $('againBtn').addEventListener('click', ()=>{ $('endModal').hidden = true; newGame(); });
 $('menuBtn').addEventListener('click', ()=>{
   $('endModal').hidden = true;

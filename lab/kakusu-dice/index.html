@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<!-- 試作ゲームラボ: 下のOGタグ・アイコン・「試作ゲームラボに戻る」リンクは消さないこと（作業ルールはリポジトリ直下の CLAUDE.md） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="試作ゲームラボ">
+<meta property="og:title" content="画数ダイス｜試作ゲームラボ">
+<meta property="og:description" content="漢字カードをめくってサイコロを振り、合計が漢字の画数とぴったり合えばカードを獲得。市場でいろんな面のダイスを買って、大きな画数を狙うゲーム。">
+<meta property="og:url" content="https://game-lab-oj9t.onrender.com/kakusu-dice/">
+<meta property="og:image" content="https://game-lab-oj9t.onrender.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>画数ダイス</title>
+<style>
+  button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.75rem; }
+  :root{
+    --accent:#2f5d8a; --deep:#1d3f61; --deep2:#2a4f78;
+    --ink:#26303a; --muted:#68707a; --line:#d7dee6;
+    --bg:#f2f5f8; --panel:#ffffff; --soft:#eef3f8; --soft2:#e2ebf4;
+    --gold:#c98f14; --goldbg:#fdf3d3;
+    --red:#c0392b; --green:#2e7d4f;
+    --shadow:0 8px 24px rgba(30,60,100,.10);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#e8edf2; --muted:#a7b2bd; --line:#3d4a57;
+      --bg:#161c22; --panel:#212a33; --soft:#28323d; --soft2:#2f3d4b;
+      --goldbg:#4a3a10;
+      --shadow:0 8px 24px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.65}
+  header{background:linear-gradient(120deg,var(--deep),var(--accent));color:#fff;padding:20px 16px 22px}
+  .headwrap{max-width:1020px;margin:0 auto}
+  .brand{font-size:11px;letter-spacing:.14em;opacity:.85;font-weight:700}
+  h1{font-size:clamp(26px,5vw,36px);margin:6px 0 4px;line-height:1.25}
+  header p{margin:0;color:#dcebfb;font-size:13.5px;line-height:1.75;max-width:640px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .badge{border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:5px 11px;font-size:12px;background:rgba(255,255,255,.08)}
+  .badge strong{color:#ffe9a8}
+  main{max-width:1020px;margin:18px auto 40px;padding:0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .panel h2{font-size:17px;margin:0 0 10px}
+  .statusbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  .round{font-size:18px;font-weight:800}
+  .turn{font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;background:var(--soft2)}
+  .turn.cpu{background:var(--goldbg)}
+  .players{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:640px){.players{grid-template-columns:1fr}}
+  .pcard{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--soft)}
+  .pcard.active{outline:2px solid var(--accent);background:var(--panel)}
+  .pcard .who{font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:baseline}
+  .pcard .score{font-size:22px;font-weight:800;color:var(--accent)}
+  .pcard .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .diceown{font-size:13px;margin-top:4px}
+  .wonlist{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .wonlist span{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:1px 7px;font-size:13px}
+  .wonlist span small{color:var(--muted);font-size:11px}
+  .cardarea{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 0}
+  .kanjicard{width:170px;height:210px;border-radius:14px;background:linear-gradient(160deg,#fffdf6,#fdf3d3);border:2px solid #d8c39a;color:#4a3a22;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(90,55,10,.15);position:relative}
+  @media (prefers-color-scheme: dark){.kanjicard{background:linear-gradient(160deg,#fdf6e3,#f7e8bd)}}
+  .kanjicard .kanji{font-size:96px;line-height:1.1;font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:700}
+  .kanjicard .strokes{margin-top:8px;font-size:15px;font-weight:700;color:#8a6d3b}
+  .kanjicard.back{background:linear-gradient(160deg,var(--deep2),var(--accent));border-color:var(--deep);color:#fff}
+  .kanjicard.back .kanji{font-size:44px;font-family:inherit}
+  .cardinfo{text-align:center;min-width:200px}
+  .cardinfo .hint{font-size:15px;font-weight:700}
+  .cardinfo .sub{font-size:12.5px;color:var(--muted)}
+  .dicepick{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+  .die{border:2px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px;font-size:15px;font-weight:700;cursor:pointer;min-height:2.75rem}
+  .die small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+  .die.sel{border-color:var(--accent);background:var(--soft2)}
+  .die:disabled{opacity:.45;cursor:default}
+  .range{font-size:14px;text-align:center}
+  .range .warn{color:var(--red);font-weight:700}
+  .range .ok{color:var(--green);font-weight:700}
+  .rollresult{display:flex;gap:10px;justify-content:center;align-items:center;min-height:64px;margin:6px 0}
+  .rolled{width:56px;height:56px;border-radius:12px;background:var(--panel);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;box-shadow:var(--shadow)}
+  .rolled small{font-size:11px;color:var(--muted);position:absolute}
+  .sum{font-size:20px;font-weight:800}
+  .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .btn{border:none;border-radius:999px;padding:10px 26px;font-size:16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff;min-height:2.75rem}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn.sub{background:var(--panel);color:var(--accent);border:2px solid var(--accent)}
+  .market{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+  .mitem{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;background:var(--soft)}
+  .mitem .faces{font-size:20px;font-weight:800}
+  .mitem .price{font-size:13px;color:var(--muted)}
+  .mitem button{margin-top:6px;border:none;border-radius:999px;padding:6px 18px;font-weight:700;background:var(--gold);color:#fff;cursor:pointer;min-height:2.4rem}
+  .mitem button:disabled{opacity:.4;cursor:default}
+  .log{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13.5px;max-height:180px;overflow-y:auto}
+  .log div{padding:2px 0;border-bottom:1px dashed var(--line)}
+  .log div:last-child{border-bottom:none}
+  .result{text-align:center}
+  .result .win{font-size:26px;font-weight:800;margin:6px 0}
+  .result .finalscore{font-size:17px;margin:4px 0 10px}
+  .rules{font-size:14px}
+  .rules li{margin:4px 0}
+  .msg{font-size:16px;font-weight:700;text-align:center;min-height:28px;margin:4px 0}
+  .msg.good{color:var(--green)} .msg.bad{color:var(--red)}
+</style>
+</head>
+<body>
+<header>
+  <div class="headwrap">
+    <div class="brand">試作ゲームラボ</div>
+    <h1>🎲 画数ダイス</h1>
+    <p>漢字カードをめくってサイコロを振り、出た目の合計がその漢字の「画数」とぴったり合えばカードを獲得。獲得すると得点とコインが入り、市場で8面・10面・20面などのダイスを買って、大きな画数の漢字も狙えるようになります。どのダイスの組み合わせで振るかが勝負どころ。CPUと10ラウンドの得点勝負です。</p>
+    <div class="badges">
+      <span class="badge">人数 <strong>1人（CPU 1人）</strong></span>
+      <span class="badge">時間 <strong>5〜10分</strong></span>
+      <span class="badge">ジャンル <strong>ボドゲ</strong></span>
+    </div>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <div class="statusbar">
+      <div class="round" id="roundLabel">ラウンド 1 / 10</div>
+      <div class="turn" id="turnLabel">あなたの手番</div>
+    </div>
+    <div class="players" style="margin-top:12px">
+      <div class="pcard" id="pCard">
+        <div class="who"><span>あなた</span><span class="score"><span id="pScore">0</span>点</span></div>
+        <div class="meta">🪙 コイン <span id="pCoins">0</span>枚</div>
+        <div class="diceown">所持ダイス：<span id="pDice"></span></div>
+        <div class="wonlist" id="pWon"></div>
+      </div>
+      <div class="pcard" id="cCard">
+        <div class="who"><span>CPU</span><span class="score"><span id="cScore">0</span>点</span></div>
+        <div class="meta">🪙 コイン <span id="cCoins">0</span>枚</div>
+        <div class="diceown">所持ダイス：<span id="cDice"></span></div>
+        <div class="wonlist" id="cWon"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="playPanel">
+    <h2>場の漢字カード</h2>
+    <div class="cardarea">
+      <div class="kanjicard back" id="kanjiCard"><div class="kanji">画数</div><div class="strokes">ダイス</div></div>
+      <div class="cardinfo">
+        <div class="hint" id="cardHint">カードをめくると手番が始まります</div>
+        <div class="sub" id="cardSub">画数はヒントだけ表示。字をよく見て数えてみよう</div>
+      </div>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div id="playerControls">
+      <div style="text-align:center;font-size:13px;color:var(--muted)">振るダイスを選んでください（タップでON/OFF）</div>
+      <div class="dicepick" id="dicePick"></div>
+      <div class="range" id="rangeLabel"></div>
+      <div class="rollresult" id="rollResult"></div>
+      <div class="actions">
+        <button class="btn" id="rollBtn">🎲 振る</button>
+      </div>
+    </div>
+    <div id="cpuNote" style="display:none;text-align:center;font-size:14px;color:var(--muted)">CPUが考え中…</div>
+    <div class="rollresult" id="cpuRoll"></div>
+  </section>
+
+  <section class="panel" id="marketPanel">
+    <h2>🛒 ダイス市場（自分の手番・振る前に買えます／所持は5個まで）</h2>
+    <div class="market" id="market"></div>
+  </section>
+
+  <section class="panel" id="resultPanel" style="display:none">
+    <div class="result">
+      <h2>🏁 結果</h2>
+      <div class="win" id="winLabel"></div>
+      <div class="finalscore" id="finalScore"></div>
+      <div style="text-align:left;max-width:640px;margin:0 auto">
+        <p><strong>あなたの獲得カード：</strong><span id="finalPWon"></span></p>
+        <p><strong>CPUの獲得カード：</strong><span id="finalCWon"></span></p>
+      </div>
+      <div class="actions"><button class="btn" id="againBtn">もう一戦</button></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>📜 記録</h2>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section class="panel rules">
+    <h2>遊び方</h2>
+    <ul>
+      <li>あなたとCPUが交互に手番を行い、全10ラウンド（各自10手番）で得点が高い方の勝ちです。</li>
+      <li>手番では漢字カードを1枚めくります。画数は伏せてあり、ヒント（6画以下／7〜12画／13画以上）だけが出ます。字をよく見て画数を数えるのがコツです。</li>
+      <li>持っているサイコロから振る組み合わせを選び、「出せる合計の範囲」を見てから振ります。</li>
+      <li>サイコロの合計が画数とぴったり一致すればカードを獲得。得点＝画数、コインも画数分もらえます。外れたらカードは捨てられます。</li>
+      <li>最初は6面ダイス2個とコイン12枚。市場でコインを使って4面・8面・10面・12面・20面ダイスを買えます（所持は5個まで）。買うのは自分の手番の、振る前だけです。</li>
+      <li>小さい画数には小さいダイス、大きい画数には大きいダイスや複数の組み合わせが有利。ダイスを増やすと最小の合計も増えるので、組み合わせ選びが大切です。</li>
+    </ul>
+  </section>
+
+  <p style="text-align:center;margin:16px 0 0"><a href="../" style="color:var(--accent);font-size:13px">← 試作ゲームラボに戻る</a></p>
+</main>
+
+<script id="game-logic">
+'use strict';
+/* ===== 画数ダイス 純粋ロジック（DOMに触れない） ===== */
+const DECK = [
+  ['一',1],
+  ['二',2],['人',2],['八',2],
+  ['三',3],['山',3],['川',3],['口',3],['大',3],['子',3],
+  ['手',4],['日',4],['月',4],['木',4],['火',4],['水',4],
+  ['田',5],['目',5],['白',5],['石',5],['生',5],['本',5],
+  ['耳',6],['字',6],['米',6],['竹',6],['年',6],['虫',6],
+  ['花',7],['車',7],['男',7],['町',7],['麦',7],['声',7],
+  ['金',8],['雨',8],['青',8],['林',8],['松',8],['空',8],
+  ['海',9],['音',9],['星',9],['春',9],['南',9],['前',9],
+  ['夏',10],['家',10],['酒',10],['島',10],['桜',10],['高',10],
+  ['雪',11],['鳥',11],['魚',11],['猫',11],['船',11],
+  ['森',12],['雲',12],['絵',12],['傘',12],['晴',12],
+  ['楽',13],['漢',13],['夢',13],
+  ['歌',14],['銀',14],['踊',14],
+  ['影',15],['線',15],['箱',15],
+  ['龍',16],['橋',16],['館',16],
+  ['鍵',17],['霜',17],
+  ['顔',18],['題',18],
+  ['蟹',19],['鏡',19],
+  ['議',20],['譲',20]
+];
+const MARKET = [
+  {faces:4,  price:4},
+  {faces:8,  price:7},
+  {faces:10, price:9},
+  {faces:12, price:12},
+  {faces:20, price:20}
+];
+const MAX_DICE = 5;
+const ROUNDS = 10;
+
+function makeDeck(rng){
+  const d = DECK.map(([k,s])=>({kanji:k, strokes:s}));
+  for(let i=d.length-1;i>0;i--){
+    const j = Math.floor(rng()*(i+1));
+    [d[i],d[j]]=[d[j],d[i]];
+  }
+  return d;
+}
+function newPlayer(){
+  return {score:0, coins:12, dice:[6,6], won:[], missStreak:0};
+}
+function sumRange(facesList){
+  if(!facesList.length) return null;
+  return {min:facesList.length, max:facesList.reduce((a,b)=>a+b,0)};
+}
+function rollDice(facesList, rng){
+  return facesList.map(f=>1+Math.floor(rng()*f));
+}
+/* facesList で target が出る確率（数え上げ） */
+function hitProb(facesList, target){
+  if(!facesList.length) return 0;
+  let dist = new Map([[0,1]]);
+  for(const f of facesList){
+    const nd = new Map();
+    for(const [s,c] of dist){
+      for(let v=1;v<=f;v++) nd.set(s+v,(nd.get(s+v)||0)+c);
+    }
+    dist = nd;
+  }
+  const total = facesList.reduce((a,b)=>a*b,1);
+  return (dist.get(target)||0)/total;
+}
+/* dice（面数の配列）の非空な部分集合すべて（面数の配列で返す） */
+function allSubsets(dice){
+  const out=[];
+  const n=dice.length;
+  for(let mask=1; mask<(1<<n); mask++){
+    const sub=[];
+    for(let i=0;i<n;i++) if(mask&(1<<i)) sub.push(dice[i]);
+    out.push(sub);
+  }
+  return out;
+}
+/* 目標に対して最も当たる確率が高い組み合わせ */
+function bestCombo(dice, target){
+  let best=null, bestP=-1;
+  for(const sub of allSubsets(dice)){
+    const p = hitProb(sub, target);
+    if(p>bestP || (p===bestP && best && sub.length<best.length)){
+      best=sub; bestP=p;
+    }
+  }
+  return {combo:best, prob:bestP};
+}
+/* ダイス購入。成功したら true */
+function buyDie(player, faces){
+  const item = MARKET.find(m=>m.faces===faces);
+  if(!item) return false;
+  if(player.dice.length>=MAX_DICE) return false;
+  if(player.coins<item.price) return false;
+  player.coins -= item.price;
+  player.dice.push(faces);
+  return true;
+}
+/* CPU：届かない画数が続いたら、買える範囲で大きめのダイスを買う */
+function cpuMaybeBuy(player, target){
+  const bc = bestCombo(player.dice, target);
+  const unreachable = bc.prob===0;
+  if(!unreachable && player.missStreak<2) return 0;
+  const affordable = MARKET.filter(m=>m.price<=player.coins && player.dice.length<MAX_DICE)
+                          .sort((a,b)=>b.faces-a.faces);
+  if(!affordable.length) return 0;
+  const pick = affordable[0];
+  if(buyDie(player, pick.faces)) return pick.faces;
+  return 0;
+}
+/* 1手番の解決。戻り値 {rolls, sum, hit} */
+function resolveTurn(player, card, combo, rng){
+  const rolls = rollDice(combo, rng);
+  const sum = rolls.reduce((a,b)=>a+b,0);
+  const hit = (sum===card.strokes);
+  if(hit){
+    player.score += card.strokes;
+    player.coins += card.strokes;
+    player.won.push(card);
+    player.missStreak = 0;
+  }else{
+    player.missStreak += 1;
+  }
+  return {rolls, sum, hit};
+}
+/* ヒント帯 */
+function hintBand(strokes){
+  if(strokes<=6) return '6画以下';
+  if(strokes<=12) return '7〜12画';
+  return '13画以上';
+}
+/* テスト用：両者とも最善手で1ゲーム通しプレイ */
+function simulateGame(rng){
+  const deck = makeDeck(rng);
+  const p = newPlayer(), c = newPlayer();
+  let di = 0;
+  for(let r=0;r<ROUNDS;r++){
+    for(const pl of [p,c]){
+      const card = deck[di++];
+      cpuMaybeBuy(pl, card.strokes);
+      const bc = bestCombo(pl.dice, card.strokes);
+      resolveTurn(pl, card, bc.combo, rng);
+    }
+  }
+  return {p, c, used:di};
+}
+</script>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let S = null;
+
+function log(text){
+  const el = $('log');
+  const div = document.createElement('div');
+  div.textContent = text;
+  el.prepend(div);
+}
+function diceLabel(f){ return f+'面'; }
+function renderPlayer(pl, scoreEl, coinsEl, diceEl, wonEl){
+  $(scoreEl).textContent = pl.score;
+  $(coinsEl).textContent = pl.coins;
+  $(diceEl).textContent = pl.dice.map(diceLabel).join('・');
+  $(wonEl).innerHTML = pl.won.map(c=>'<span>'+c.kanji+'<small> '+c.strokes+'画</small></span>').join('');
+}
+function renderAll(){
+  renderPlayer(S.p,'pScore','pCoins','pDice','pWon');
+  renderPlayer(S.c,'cScore','cCoins','cDice','cWon');
+  $('roundLabel').textContent = 'ラウンド ' + Math.min(S.round, ROUNDS) + ' / ' + ROUNDS;
+  const isP = S.turn==='player';
+  $('turnLabel').textContent = S.over ? '対戦終了' : (isP ? 'あなたの手番' : 'CPUの手番');
+  $('turnLabel').className = 'turn' + (isP ? '' : ' cpu');
+  $('pCard').classList.toggle('active', !S.over && isP);
+  $('cCard').classList.toggle('active', !S.over && !isP);
+  renderMarket();
+}
+function renderMarket(){
+  const m = $('market');
+  m.innerHTML = '';
+  const canBuy = !S.over && S.turn==='player' && !S.rolled;
+  for(const item of MARKET){
+    const div = document.createElement('div');
+    div.className = 'mitem';
+    const dis = !(canBuy && S.p.coins>=item.price && S.p.dice.length<MAX_DICE);
+    div.innerHTML = '<div class="faces">🎲 '+item.faces+'面</div><div class="price">🪙 '+item.price+'枚</div>';
+    const btn = document.createElement('button');
+    btn.textContent = '買う';
+    btn.disabled = dis;
+    btn.addEventListener('click', ()=>{
+      if(buyDie(S.p, item.faces)){
+        log('🛒 あなたは '+item.faces+'面ダイスを '+item.price+'コインで買った（残り '+S.p.coins+'コイン）');
+        S.selected = S.p.dice.map(()=>true);
+        renderDicePick();
+        renderAll();
+      }
+    });
+    div.appendChild(btn);
+    m.appendChild(div);
+  }
+}
+function renderDicePick(){
+  const wrap = $('dicePick');
+  wrap.innerHTML = '';
+  S.p.dice.forEach((f,i)=>{
+    const b = document.createElement('button');
+    b.className = 'die' + (S.selected[i] ? ' sel' : '');
+    b.innerHTML = '🎲 '+f+'面<small>'+(S.selected[i]?'使う':'使わない')+'</small>';
+    b.disabled = S.turn!=='player' || S.rolled || S.over;
+    b.addEventListener('click', ()=>{
+      S.selected[i] = !S.selected[i];
+      renderDicePick();
+    });
+    wrap.appendChild(b);
+  });
+  const combo = S.p.dice.filter((_,i)=>S.selected[i]);
+  const r = sumRange(combo);
+  const rl = $('rangeLabel');
+  if(!r){
+    rl.innerHTML = '<span class="warn">ダイスを1つ以上選んでください</span>';
+    $('rollBtn').disabled = true;
+    return;
+  }
+  let note = '出せる合計：<strong>'+r.min+' 〜 '+r.max+'</strong>';
+  if(S.card){
+    const band = S.card.strokes<=6 ? [1,6] : (S.card.strokes<=12 ? [7,12] : [13,20]);
+    if(r.max < band[0] || r.min > band[1]) note += '　<span class="warn">この組み合わせではヒントの範囲に届きません</span>';
+    else note += '　<span class="ok">ヒントの範囲に届く組み合わせです</span>';
+  }
+  rl.innerHTML = note;
+  $('rollBtn').disabled = !(S.turn==='player' && !S.rolled && !S.over);
+}
+function showCard(card){
+  const kc = $('kanjiCard');
+  kc.className = 'kanjicard';
+  kc.innerHTML = '<div class="kanji">'+card.kanji+'</div><div class="strokes">画数は ？</div>';
+  $('cardHint').textContent = 'ヒント：この漢字は「'+hintBand(card.strokes)+'」';
+  $('cardSub').textContent = '画数がぴったり合えば獲得（得点とコインが入ります）';
+}
+function revealStrokes(card){
+  const kc = $('kanjiCard');
+  kc.innerHTML = '<div class="kanji">'+card.kanji+'</div><div class="strokes">'+card.strokes+'画</div>';
+}
+function showRolls(container, combo, rolls, sum){
+  container.innerHTML = rolls.map((v,i)=>'<div class="rolled">'+v+'</div>').join('') +
+    '<span class="sum">＝ '+sum+'</span>';
+}
+function startTurn(){
+  if(S.round > ROUNDS){ endGame(); return; }
+  S.card = S.deck[S.di++];
+  S.rolled = false;
+  S.selected = (S.turn==='player') ? S.p.dice.map(()=>true) : [];
+  $('rollResult').innerHTML = '';
+  $('cpuRoll').innerHTML = '';
+  $('msg').textContent = '';
+  $('msg').className = 'msg';
+  showCard(S.card);
+  $('playerControls').style.display = S.turn==='player' ? '' : 'none';
+  $('cpuNote').style.display = S.turn==='player' ? 'none' : '';
+  renderAll();
+  if(S.turn==='player'){
+    renderDicePick();
+  }else{
+    renderDicePick();
+    setTimeout(cpuTurn, 900);
+  }
+}
+function afterTurn(){
+  if(S.turn==='player'){
+    S.turn = 'cpu';
+  }else{
+    S.turn = 'player';
+    S.round++;
+  }
+  renderAll();
+  if(S.round > ROUNDS){ endGame(); return; }
+  setTimeout(startTurn, 1100);
+}
+function playerRoll(){
+  const combo = S.p.dice.filter((_,i)=>S.selected[i]);
+  if(!combo.length) return;
+  S.rolled = true;
+  $('rollBtn').disabled = true;
+  renderMarket();
+  // 簡易アニメーション
+  const cont = $('rollResult');
+  let n = 0;
+  const iv = setInterval(()=>{
+    const fake = combo.map(f=>1+Math.floor(Math.random()*f));
+    showRolls(cont, combo, fake, fake.reduce((a,b)=>a+b,0));
+    if(++n>=6){
+      clearInterval(iv);
+      const res = resolveTurn(S.p, S.card, combo, Math.random);
+      showRolls(cont, combo, res.rolls, res.sum);
+      revealStrokes(S.card);
+      if(res.hit){
+        $('msg').textContent = '🎉 ぴったり！「'+S.card.kanji+'」（'+S.card.strokes+'画）を獲得！';
+        $('msg').className = 'msg good';
+        log('✅ あなた：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で的中。獲得！');
+      }else{
+        $('msg').textContent = '💦 合計'+res.sum+'、「'+S.card.kanji+'」は'+S.card.strokes+'画でした';
+        $('msg').className = 'msg bad';
+        log('❌ あなた：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で外れ');
+      }
+      renderAll();
+      setTimeout(afterTurn, 1400);
+    }
+  }, 90);
+}
+function cpuTurn(){
+  if(S.over) return;
+  const bought = cpuMaybeBuy(S.c, S.card.strokes);
+  if(bought){
+    log('🛒 CPUは '+bought+'面ダイスを買った（所持：'+S.c.dice.map(diceLabel).join('・')+'）');
+    renderAll();
+  }
+  const bc = bestCombo(S.c.dice, S.card.strokes);
+  const combo = bc.combo;
+  setTimeout(()=>{
+    const res = resolveTurn(S.c, S.card, combo, Math.random);
+    showRolls($('cpuRoll'), combo, res.rolls, res.sum);
+    revealStrokes(S.card);
+    $('cpuNote').textContent = 'CPUは '+combo.map(diceLabel).join('＋')+' を振った';
+    if(res.hit){
+      $('msg').textContent = 'CPUが「'+S.card.kanji+'」（'+S.card.strokes+'画）を合計'+res.sum+'で獲得';
+      $('msg').className = 'msg bad';
+      log('✅ CPU：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で的中。獲得');
+    }else{
+      $('msg').textContent = 'CPUは合計'+res.sum+'で外れ（「'+S.card.kanji+'」は'+S.card.strokes+'画）';
+      $('msg').className = 'msg good';
+      log('❌ CPU：'+S.card.kanji+'（'+S.card.strokes+'画）に合計'+res.sum+'で外れ');
+    }
+    renderAll();
+    setTimeout(afterTurn, 1500);
+  }, 800);
+}
+function endGame(){
+  S.over = true;
+  $('playPanel').style.display = 'none';
+  $('marketPanel').style.display = 'none';
+  const rp = $('resultPanel');
+  rp.style.display = '';
+  const win = S.p.score > S.c.score, draw = S.p.score === S.c.score;
+  $('winLabel').textContent = draw ? '🤝 引き分け！' : (win ? '🏆 あなたの勝ち！' : '🤖 CPUの勝ち');
+  $('finalScore').textContent = 'あなた '+S.p.score+'点 ― CPU '+S.c.score+'点';
+  const fmt = pl => pl.won.length ? pl.won.map(c=>c.kanji+'（'+c.strokes+'画）').join('、') : 'なし';
+  $('finalPWon').textContent = fmt(S.p);
+  $('finalCWon').textContent = fmt(S.c);
+  log('🏁 対戦終了：あなた '+S.p.score+'点 ― CPU '+S.c.score+'点');
+  renderAll();
+}
+function init(){
+  S = {
+    deck: makeDeck(Math.random), di: 0,
+    p: newPlayer(), c: newPlayer(),
+    round: 1, turn: 'player', card: null, rolled: false, selected: [], over: false
+  };
+  $('playPanel').style.display = '';
+  $('marketPanel').style.display = '';
+  $('resultPanel').style.display = 'none';
+  $('log').innerHTML = '';
+  log('対戦開始。まずは漢字カードをめくった。ダイスを選んで振ろう');
+  startTurn();
+}
+$('rollBtn').addEventListener('click', playerRoll);
+$('againBtn').addEventListener('click', init);
+init();
+</script>
+</body>
+</html>

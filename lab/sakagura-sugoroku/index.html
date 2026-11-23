@@ -150,7 +150,7 @@ button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-rad
     </div>
   </div>
 
-  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵すごろく v0.1</div>
+  <div class="foot"><a href="../" style="color:inherit">← 試作ゲームラボに戻る</a> ・ 酒蔵すごろく v0.2</div>
 </div>
 
 <div class="modal" id="endModal" hidden>
@@ -245,6 +245,11 @@ function addLog(html){
 }
 function setTurnMsg(t){ $('turnMsg').textContent = t; }
 
+function cellIndex(row, col){
+  // 画面の行列（上から row, 左から col）→ マス番号。0は左下、蛇行して24がゴール
+  const br = 4 - row;
+  return br*5 + (br%2===0 ? col : 4-col);
+}
 function renderBoard(){
   const b = $('board');
   b.innerHTML = '';

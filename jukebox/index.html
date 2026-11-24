@@ -271,7 +271,14 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (!items[i]) return;
     try { history.replaceState(null, '', '#' + items[i].id); } catch (e) {}
     if (attract) stopAttract();
-    current = i; quickStart = null; djStart = null; djWhoosh = false; djQueued = null; player.loadVideoById(items[i].id);
+    current = i; quickStart = null; djStart = null; djWhoosh = false; djQueued = null; djHush = false;
+    if (dj) {
+      // DJモード：頭の音が出ないように、音を消してから入る位置で読み込む
+      djHush = true;
+      try { player.mute(); } catch (e) {}
+      const sec = items[i].sec;
+      player.loadVideoById({videoId: items[i].id, startSeconds: sec > 100 ? Math.floor(sec * 0.3) : 0});
+    } else player.loadVideoById(items[i].id);
     render(); setNow();
   }
   function step(d) {
@@ -324,7 +331,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
         targets.slice(i, i + 50).forEach(o => {
           const f = d.info[o.id]; if (!f) return;
           if (f.sec > MAX_SECONDS || (f.sec > 0 && f.sec <= 60) || f.live !== 'none') o.hide = true;
-          o.cat = f.cat;
+          o.cat = f.cat; o.sec = f.sec;
         });
       } catch (e) { break; }
     }
@@ -570,10 +577,11 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   // ・次の曲は、サブスク／動画／YouTube限定をなるべく交互に、一周するまで同じ曲を流さない
   const DJ_SECONDS = 60, DJ_FADE = 5;
   const djBtn = document.getElementById('dj'), mixEl = document.getElementById('mix');
+  let djHush = false;
   let dj = false, djStart = null, djFadeAt = 0, djWhoosh = false, djPlayed = new Set(), djQueued = null, ac = null;
   function setDj(on) {
     dj = on; djBtn.setAttribute('aria-pressed', on);
-    if (!on) { try { player.setVolume(100); } catch (e) {} setNow(); return; }
+    if (!on) { djHush = false; try { player.unMute(); player.setVolume(100); } catch (e) {} setNow(); return; }
     if (quick) { quick = false; quickBtn.setAttribute('aria-pressed', false); quickBtn.textContent = '15秒ずつ'; }
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
     djPlayed = new Set(); djStart = null;
@@ -622,10 +630,18 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (!(dur > 0)) return;
     if (djStart === null) {
       const target = dur > 100 ? Math.floor(dur * 0.3) : 0;
-      if (t < target - 2) player.seekTo(target, true);
-      djStart = target; djFadeAt = Date.now(); djPlayed.add(items[current].id);
-      player.setVolume(0); sfx('boom');
+      if (Math.abs(t - target) > 2) player.seekTo(target, true);
+      djStart = target; djPlayed.add(items[current].id);
       djQueued = djPick(); setNow();
+      return;
+    }
+    // 入る位置に着いてから音を出す（ドンと一緒にふわっと上げる）
+    if (djHush) {
+      if (t < djStart - 0.5 || t > djStart + 5) { if (t < djStart - 0.5) return; }
+      djHush = false;
+      player.setVolume(0);
+      try { player.unMute(); } catch (e) {}
+      djFadeAt = Date.now(); sfx('boom');
       return;
     }
     const fin = (Date.now() - djFadeAt) / 2500;

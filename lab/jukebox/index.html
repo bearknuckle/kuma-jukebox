@@ -31,6 +31,10 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 4px;text-align:cen
 @keyframes mix{0%{opacity:0;transform:scale(.7)}25%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.25)}}
 .nextup{display:block;font-size:13px;color:var(--sub);font-weight:500;margin-top:2px}
 @media(prefers-reduced-motion:reduce){.mix.go{animation:none}}
+.out{margin-top:8px}.out button,.outlink{min-height:44px;font-size:14px}
+.outlink{display:inline-flex;align-items:center;padding:0 16px;border-radius:99px;border:2px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-weight:800}
+.outlink:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+.wakemsg{text-align:center;color:var(--sub);font-size:13px;margin:8px 0 0}
 .now{text-align:center;margin:16px 0 4px;font-weight:800;font-size:19px;min-height:1.6em}
 .badge{display:inline-block;font-size:13px;padding:1px 9px;border-radius:99px;vertical-align:2px;margin-left:6px;font-weight:800}
 .b-sub{background:var(--mint);color:#12382c}.b-vid{background:#ffd36e;color:#3a2a00}.b-yt{background:var(--coral);color:#3a0f06}
@@ -73,6 +77,12 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       <button id="quick" aria-pressed="false">15秒ずつ</button>
       <button id="dj" aria-pressed="false">DJモード</button>
     </div>
+    <div class="ctrl out">
+      <button id="wake" aria-pressed="false">画面をつけたまま</button>
+      <a id="toYt" class="outlink" href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeアプリで続きを聴く</a>
+      <a id="toYtm" class="outlink" href="https://music.youtube.com/channel/UCRlaIisipjF9qL1zYkMMCug" target="_blank" rel="noopener">YouTube Musicで続きを聴く</a>
+    </div>
+    <p class="wakemsg" id="wakemsg" hidden></p>
   </section>
 
   <div class="tabs" role="tablist">
@@ -175,6 +185,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     document.getElementById('spot').hidden = filter !== 'sub' || items.some(o => o.sub);
     msg.hidden = list.length > 0 || (filter === 'sub' && items.length > 0);
     if (!list.length && items.length) msg.textContent = 'この棚にはまだ曲がありません';
+    try { updateOut(); } catch (e) {}
   }
   function playAt(i) {
     if (!items[i]) return;
@@ -330,6 +341,39 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     quickStart = null;
     if (quick && current < 0 && player && items.length) step(1);
   });
+  // ===== 画面をつけたまま／アプリで続きを聴く =====
+  const wakeBtn = document.getElementById('wake'), wakeMsg = document.getElementById('wakemsg');
+  let wakeOn = false, wakeLock = null;
+  async function grabWake() {
+    try { wakeLock = await navigator.wakeLock.request('screen'); return true; } catch (e) { return false; }
+  }
+  wakeBtn.addEventListener('click', async () => {
+    if (!('wakeLock' in navigator)) { wakeMsg.hidden = false; wakeMsg.textContent = 'この端末のブラウザでは使えません（iPhoneはiOS 16.4以降のSafariで使えます）'; return; }
+    wakeOn = !wakeOn;
+    if (wakeOn) { if (!(await grabWake())) { wakeOn = false; wakeMsg.hidden = false; wakeMsg.textContent = '画面をつけたままにできませんでした。もう一度押してみてください'; } else wakeMsg.hidden = true; }
+    else { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+    wakeBtn.setAttribute('aria-pressed', wakeOn);
+  });
+  document.addEventListener('visibilitychange', () => { if (wakeOn && document.visibilityState === 'visible') grabWake(); });
+
+  // いま選んでいるタブの曲を、いま流れている曲から順に並べる（最大50曲）
+  function outIds() {
+    const list = view().map(o => o.i);
+    const at = list.indexOf(current);
+    const order = at > 0 ? list.slice(at).concat(list.slice(0, at)) : list;
+    return order.map(i => items[i].id).slice(0, 50);
+  }
+  function updateOut() {
+    const ids = outIds();
+    const yt = document.getElementById('toYt'), ytm = document.getElementById('toYtm');
+    if (ids.length) yt.href = 'https://www.youtube.com/watch_videos?video_ids=' + ids.join(',');
+    // YouTube Music：サブスク配信のタブはアーティストページ、それ以外は流れている曲（なければ先頭の曲）から続きを再生
+    if (filter === 'sub') ytm.href = 'https://music.youtube.com/channel/UCRlaIisipjF9qL1zYkMMCug';
+    else if (ids.length) ytm.href = 'https://music.youtube.com/watch?v=' + ids[0];
+  }
+  document.querySelector('.cab').addEventListener('pointerdown', e => { if (e.target.closest('.outlink')) updateOut(); });
+  document.querySelector('.cab').addEventListener('focusin', e => { if (e.target.closest('.outlink')) updateOut(); });
+
   // ===== DJモード =====
   // ・各曲のいちばん盛り上がりやすい位置（曲の3割あたり）から60秒ずつ
   // ・終わり5秒で音を下げ、つなぎ目に「シュワッ」という効果音と MIX の演出、次の曲は低音のドンで入ってふわっと音量を上げる

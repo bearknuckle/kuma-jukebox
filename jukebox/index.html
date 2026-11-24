@@ -302,14 +302,14 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (!items[i]) return;
     try { history.replaceState(null, '', '#' + items[i].id); } catch (e) {}
     if (attract) stopAttract();
-    current = i; quickStart = null; djStart = null; djWhoosh = false; djQueued = null; djHush = false;
+    current = i; quickStart = null; djStart = null; djWhoosh = false; djQueued = null; djHush = false; djBreak = false;
     if (dj) {
       // DJモード：頭の音が出ないように、音を消してから入る位置で読み込む
       djHush = true;
       try { player.mute(); } catch (e) {}
       const sec = items[i].sec;
       player.loadVideoById({videoId: items[i].id, startSeconds: sec > 100 ? Math.floor(sec * 0.3) : 0});
-    } else player.loadVideoById(items[i].id);
+    } else { try { player.unMute(); } catch (e) {} player.loadVideoById(items[i].id); }
     render(); setNow();
   }
   function step(d) {
@@ -632,11 +632,11 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   // ・次の曲は、サブスク／動画／YouTube限定をなるべく交互に、一周するまで同じ曲を流さない
   const DJ_SECONDS = 60, DJ_FADE = 5;
   const djBtn = document.getElementById('dj'), mixEl = document.getElementById('mix');
-  let djHush = false;
+  let djHush = false, djBreak = false;
   let dj = false, djStart = null, djFadeAt = 0, djWhoosh = false, djPlayed = new Set(), djQueued = null, ac = null;
   function setDj(on) {
     dj = on; djBtn.setAttribute('aria-pressed', on);
-    if (!on) { djHush = false; try { player.unMute(); player.setVolume(100); } catch (e) {} setNow(); return; }
+    if (!on) { djHush = false; djBreak = false; try { player.unMute(); player.setVolume(100); } catch (e) {} setNow(); return; }
     if (quick) { quick = false; quickBtn.setAttribute('aria-pressed', false); quickBtn.textContent = '15秒ずつ'; }
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
     djPlayed = new Set(); djStart = null;
@@ -723,6 +723,8 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (rest < DJ_FADE) vol = Math.min(vol, Math.max(0, rest / DJ_FADE));
     player.setVolume(Math.round(vol * 100));
     if (rest <= 1.3 && !djWhoosh) { djWhoosh = true; sfx('whoosh'); flash(); }
+    // ブレイク：切り替わる直前に一瞬音を消して「間」を作る（iPhoneでフェードが効かない分、ブツッと切れないように）
+    if (rest <= 0.9 && !djBreak) { djBreak = true; try { player.mute(); } catch (e) {} }
     if (rest <= 0) { const j = djQueued != null && items[djQueued] && !items[djQueued].hide ? djQueued : djPick(); if (j != null) playAt(j); }
   }, 200);
 

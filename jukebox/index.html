@@ -41,7 +41,7 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 4px;text-align:cen
 .cab{background:linear-gradient(#4a1826,#33101b);border:3px solid #c98b5a;border-radius:220px 220px 26px 26px;padding:clamp(26px,6vw,56px) clamp(14px,3vw,30px) 22px;box-shadow:0 0 0 6px #2b0d16,0 0 0 9px #7a3a2c,0 24px 60px #0008}
 .screen{position:relative;aspect-ratio:16/9;max-width:760px;margin:0 auto;border-radius:18px;overflow:hidden;background:#000;box-shadow:inset 0 0 0 2px #0006}
 .screen iframe,#player{position:absolute;inset:0;width:100%;height:100%}
-.mix{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-weight:800;font-size:clamp(40px,10vw,90px);letter-spacing:.08em;color:#fff;opacity:0;background:radial-gradient(circle,#ff7a5c88,#5fe0b522 60%,transparent 75%);text-shadow:0 0 24px #ff7a5c}
+.mix{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-weight:800;font-size:clamp(30px,8vw,72px);letter-spacing:.06em;color:#fff;opacity:0;background:radial-gradient(circle,#ff7a5c88,#5fe0b522 60%,transparent 75%);text-shadow:0 0 24px #ff7a5c}
 .mix.go{animation:mix 1.6s ease-out}
 @keyframes mix{0%{opacity:0;transform:scale(.7)}25%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.25)}}
 .nextup{display:block;font-size:13px;color:var(--sub);font-weight:500;margin-top:2px}
@@ -132,7 +132,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       <path d="M70 118 A230 80 0 0 1 530 118" stroke="#ffd36e"/>
       <path d="M120 118 A180 52 0 0 1 480 118" stroke="#5fe0b5"/>
     </svg>
-    <div class="screen"><div id="player"></div><div class="mix" id="mix" aria-hidden="true">MIX</div></div>
+    <div class="screen"><div id="player"></div><div class="mix" id="mix" aria-hidden="true">NEXT TRACK</div></div>
     <div class="nowrow"><span class="disc" id="disc" aria-hidden="true"></span><div class="now" id="now" aria-live="polite">読み込み中…</div><button id="share" class="share" aria-label="この曲を共有" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button></div>
     <p class="toast" id="toast" role="status" hidden></p>
     <div class="ctrl transport">

@@ -24,6 +24,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="KUMA JUKEBOX">
 <meta name="theme-color" content="#2b0d16">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
 <style>
@@ -60,7 +61,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .row button,.outlink{min-height:46px;padding:6px 8px;border-radius:14px;font-weight:800;font-size:14px;line-height:1.3;text-align:center;display:flex;align-items:center;justify-content:center}
 .modes button{border:2px solid #c98b5a;background:#5a1d2c}
 .modes button[aria-pressed=true],.out button[aria-pressed=true]{background:var(--mint);color:#12382c;border-color:var(--mint)}
-.out{margin-top:8px}
+.out{margin-top:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .out button,.outlink{border:2px solid var(--line);background:var(--panel);color:var(--sub);font-size:13px;text-decoration:none}
 .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:760px;margin:28px auto 16px}
 .tabs button{min-height:46px;padding:6px 8px;border-radius:12px;border:2px solid var(--line);background:var(--panel);font-weight:800;font-size:14px;line-height:1.3}
@@ -81,6 +82,18 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .search input::-webkit-search-cancel-button{display:none}
 .search button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:0;background:#5c2433;color:var(--ink);font-size:20px;line-height:1}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
+.qrbg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;z-index:50;padding:20px}
+.qrbg[hidden]{display:none}
+.qrbox{width:min(360px,100%);background:#3d1420;border:3px solid #c98b5a;border-radius:24px;padding:20px;text-align:center}
+.qrttl{margin:0 0 12px;font-weight:800;font-size:19px}
+.qrseg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.qrseg button{min-height:44px;border-radius:12px;border:2px solid #5c2433;background:#2b0d16;font-weight:800;font-size:14px}
+.qrseg button[aria-selected=true]{background:#c98b5a;border-color:#c98b5a;color:#2b0d16}
+.qrseg button:disabled{opacity:.4}
+#qrImg{width:100%;max-width:260px;aspect-ratio:1;background:#fff;border-radius:14px;padding:12px;display:block;margin:0 auto}
+.qrurl{white-space:pre-line;font-size:12px;color:var(--sub);overflow-wrap:anywhere;margin:10px 0 2px}
+.qrnote{font-size:12px;color:#b8909a;margin:0 0 14px}
+.qrclose{min-height:46px;width:100%;border-radius:14px;border:2px solid #c98b5a;background:#5a1d2c;font-weight:800}
 .stat{text-align:center;color:#b8909a;font-size:12px;margin:24px 0 0}
 .links{text-align:center;margin-top:34px;font-size:14px;color:var(--sub)}
 .links a{color:var(--mint)}
@@ -148,6 +161,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     <div class="row out">
       <button id="wake" aria-pressed="false">画面をつけたまま</button>
       <a id="toYt" class="outlink" href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeで続きを聴く</a>
+      <button id="qrBtn">QRコード</button>
       <a id="toYtm" class="outlink" href="https://music.youtube.com/channel/UCRlaIisipjF9qL1zYkMMCug" target="_blank" rel="noopener">YouTube Musicで続きを聴く</a>
     </div>
     <p class="wakemsg" id="wakemsg" hidden></p>
@@ -168,6 +182,19 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
   <p class="stat" id="stat"></p>
+  <div class="qrbg" id="qrbg" hidden>
+    <div class="qrbox" role="dialog" aria-modal="true" aria-labelledby="qrttl">
+      <p class="qrttl" id="qrttl">QRコード</p>
+      <div class="qrseg" role="tablist">
+        <button id="qrSite" aria-selected="true">ジュークボックス</button>
+        <button id="qrSong" aria-selected="false">いまの曲</button>
+      </div>
+      <img id="qrImg" alt="QRコード">
+      <p class="qrurl" id="qrUrl"></p>
+      <p class="qrnote">画像を長押しすると保存できます</p>
+      <button class="qrclose" id="qrClose">閉じる</button>
+    </div>
+  </div>
   <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
 </div>
 
@@ -530,6 +557,30 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (navigator.share) { try { await navigator.share({title, url}); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     try { await navigator.clipboard.writeText(url); say('リンクをコピーしました'); } catch (e) { say(url); }
   });
+
+  // ===== QRコード =====
+  const qrBg = document.getElementById('qrbg'), qrImg = document.getElementById('qrImg'), qrUrl = document.getElementById('qrUrl');
+  const qrSite = document.getElementById('qrSite'), qrSong = document.getElementById('qrSong');
+  const SITE_URL = 'https://kuma-jukebox.onrender.com/';
+  let qrMode = 'site';
+  function drawQr() {
+    const o = items[current];
+    qrSong.disabled = !o;
+    if (!o && qrMode === 'song') qrMode = 'site';
+    qrSite.setAttribute('aria-selected', qrMode === 'site'); qrSong.setAttribute('aria-selected', qrMode === 'song');
+    const url = qrMode === 'song' ? SITE_URL + '#' + o.id : SITE_URL;
+    qrUrl.textContent = qrMode === 'song' ? (o.t || '') + '\n' + url : url;
+    try {
+      const q = qrcode(0, 'M'); q.addData(url); q.make();
+      qrImg.src = q.createDataURL(8, 2);
+    } catch (e) { qrImg.removeAttribute('src'); qrUrl.textContent = 'QRコードを作れませんでした。' + url; }
+  }
+  document.getElementById('qrBtn').addEventListener('click', () => { qrMode = items[current] ? 'song' : 'site'; drawQr(); qrBg.hidden = false; document.getElementById('qrClose').focus(); });
+  qrSite.addEventListener('click', () => { qrMode = 'site'; drawQr(); });
+  qrSong.addEventListener('click', () => { qrMode = 'song'; drawQr(); });
+  document.getElementById('qrClose').addEventListener('click', () => { qrBg.hidden = true; });
+  qrBg.addEventListener('click', e => { if (e.target === qrBg) qrBg.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') qrBg.hidden = true; });
 
   // ===== 検索 =====
   const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');

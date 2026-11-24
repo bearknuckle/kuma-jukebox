@@ -703,9 +703,16 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   // 例：「ボードゲームと猫 (BGM ver.)」「ボードゲームと猫 (8-bit Instrumental)」→「ボードゲームと猫」
   function baseTitle(t) {
     let x = String(t || '').normalize('NFKC').toLowerCase();
-    x = x.split(' / ')[0];
+    // YouTubeの動画タイトルの前後につく飾りを外す（【MV】、#タグ、｜チャンネル名 など）
+    x = x.replace(/#\S+/g, ' ');
+    x = x.replace(/[(（\[【「『].*?[)）\]】」』]/g, m => /[「『]/.test(m[0]) ? ' ' + m.slice(1, -1) + ' ' : ' ');
+    const parts = x.split(/\s[\/|｜]\s|[|｜]/).map(p => p.trim()).filter(Boolean);
+    const brand = /^(kuma ?music|f-?pag|ai assisted|official|公式)/;
+    x = (parts.find(p => !brand.test(p)) || parts[0] || '');
     x = x.replace(/song by.*$/, '');
-    x = x.replace(/[(（\[【].*?[)）\]】]/g, '').replace(/[〜~].*?([〜~]|$)/g, '').replace(/\s-.*?(-|$)/g, '');
+    x = x.replace(/[〜~].*?([〜~]|$)/g, '').replace(/\s-.*?(-|$)/g, '');
+    x = x.replace(/\b(official|music video|lyric video|mv|pv|full|short ver\.?|full ver\.?|ver\.?|bgm|instrumental|off vocal|karaoke|live)\b/g, ' ');
+    x = x.replace(/(公式|歌詞付き|ミュージックビデオ|フル|オリジナルカラオケ|カラオケ)/g, ' ');
     return x.replace(/[\s　・\-_/|｜:："'「」『』!！?？.,、。]/g, '');
   }
   const djRecent = [];  // 最近流した曲の元の名前（同じ曲名が続かないように）

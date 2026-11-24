@@ -98,6 +98,18 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .qrurl{white-space:pre-line;font-size:12px;color:var(--sub);overflow-wrap:anywhere;margin:10px 0 2px}
 .qrnote{font-size:12px;color:#b8909a;margin:0 0 14px}
 .qrclose{min-height:46px;width:100%;border-radius:14px;border:2px solid #c98b5a;background:#5a1d2c;font-weight:800}
+.out .wide{grid-column:1/-1}
+.lock{position:fixed;inset:0;z-index:60;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.lock[hidden]{display:none}
+.lockin{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:min(320px,90vw);transition:transform 1s}
+.lockclock{margin:0;font-size:56px;font-weight:800;color:#3a2a2e;letter-spacing:.04em}
+.locknow{margin:4px 0 28px;font-size:14px;color:#3a2a2e;min-height:1.4em}
+.unlock{position:relative;overflow:hidden;min-height:52px;width:100%;border-radius:99px;border:2px solid #2a1a1e;background:#0b0507;color:#4a3a3e;font-weight:800;font-size:15px}
+.unlock .ring{position:absolute;inset:0;width:0;background:#2a1a1e;transition:none}
+.unlock.hold .ring{width:100%;transition:width 1.5s linear}
+.unlock{isolation:isolate}.unlock .ring{z-index:-1}
+body.locked{overflow:hidden}
+body.locked .neon path,body.locked .disc{animation:none!important}
 .stat{text-align:center;color:#b8909a;font-size:12px;margin:24px 0 0}
 .links{text-align:center;margin-top:34px;font-size:14px;color:var(--sub)}
 .links a{color:var(--mint)}
@@ -166,6 +178,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       <button id="wake" aria-pressed="false">画面をつけたまま</button>
       <a id="toYt" class="outlink" href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeで続きを聴く</a>
       <button id="qrBtn">QRコード</button>
+      <button id="lockBtn" class="wide">画面ロック</button>
       <a id="toYtm" class="outlink" href="https://music.youtube.com/channel/UCRlaIisipjF9qL1zYkMMCug" target="_blank" rel="noopener">YouTube Musicで続きを聴く</a>
     </div>
     <p class="wakemsg" id="wakemsg" hidden></p>
@@ -186,6 +199,13 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
   <p class="stat" id="stat"></p>
+  <div class="lock" id="lock" hidden>
+    <div class="lockin" id="lockin">
+      <p class="lockclock" id="lockClock"></p>
+      <p class="locknow" id="lockNow"></p>
+      <button class="unlock" id="unlock"><span class="ring" id="ring"></span>長押しで解除</button>
+    </div>
+  </div>
   <div class="qrbg" id="qrbg" hidden>
     <div class="qrbox" role="dialog" aria-modal="true" aria-labelledby="qrttl">
       <p class="qrttl" id="qrttl">QRコード</p>
@@ -585,6 +605,39 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   document.getElementById('qrClose').addEventListener('click', () => { qrBg.hidden = true; });
   qrBg.addEventListener('click', e => { if (e.target === qrBg) qrBg.hidden = true; });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') qrBg.hidden = true; });
+
+  // ===== 画面ロック（真っ黒にして誤タッチを防ぐ。黒い画面は有機ELのiPhoneで電池の減りが少ない）=====
+  const lockEl = document.getElementById('lock'), lockIn = document.getElementById('lockin');
+  const lockClock = document.getElementById('lockClock'), lockNow = document.getElementById('lockNow'), unlockBtn = document.getElementById('unlock');
+  let lockTick = null, holdTimer = null, lockWakeAuto = false;
+  function lockDraw() {
+    const d = new Date();
+    lockClock.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const o = items[current]; lockNow.textContent = o && !attract ? '♪ ' + (o.t || '') : '';
+    // 焼き付き防止に、表示を少しずつずらす
+    const m = d.getMinutes();
+    lockIn.style.transform = 'translate(calc(-50% + ' + ((m % 5) - 2) * 12 + 'px), calc(-50% + ' + ((m % 7) - 3) * 14 + 'px))';
+  }
+  async function lockOn() {
+    lockEl.hidden = false; document.body.classList.add('locked');
+    lockDraw(); lockTick = setInterval(lockDraw, 10000);
+    // 画面が自動で消えると再生が止まるので、ロック中は画面をつけたままにする
+    if (!wakeOn && 'wakeLock' in navigator) { lockWakeAuto = await grabWake(); }
+    try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+  }
+  function lockOff() {
+    lockEl.hidden = true; document.body.classList.remove('locked'); clearInterval(lockTick);
+    if (lockWakeAuto && !wakeOn) { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+    lockWakeAuto = false;
+    try { document.fullscreenElement && document.exitFullscreen(); } catch (e) {}
+  }
+  document.getElementById('lockBtn').addEventListener('click', lockOn);
+  const holdStart = e => { e.preventDefault(); unlockBtn.classList.add('hold'); clearTimeout(holdTimer); holdTimer = setTimeout(() => { unlockBtn.classList.remove('hold'); lockOff(); }, 1500); };
+  const holdEnd = () => { unlockBtn.classList.remove('hold'); clearTimeout(holdTimer); };
+  unlockBtn.addEventListener('pointerdown', holdStart);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => unlockBtn.addEventListener(t, holdEnd));
+  unlockBtn.addEventListener('contextmenu', e => e.preventDefault());
+  lockEl.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
 
   // ===== 検索 =====
   const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');

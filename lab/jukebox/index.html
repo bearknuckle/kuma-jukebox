@@ -130,6 +130,19 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     });
   }
 
+  // メインのプレーヤーに再生リストを順番に読み込ませて、動画IDを取り出す
+  function cueList(listId, prev) {
+    return new Promise(res => {
+      let n = 40;
+      try { player.cuePlaylist({listType: 'playlist', list: listId}); } catch (e) { return res([]); }
+      const poll = () => {
+        const l = player.getPlaylist && player.getPlaylist();
+        const fresh = l && l.length && !(prev && prev.length && l[0] === prev[0] && l.length === prev.length);
+        if (fresh) res(l.slice()); else if (n-- > 0) setTimeout(poll, 400); else res([]);
+      };
+      setTimeout(poll, 300);
+    });
+  }
   function view() { return items.map((o, i) => ({...o, i})).filter(o => filter === 'all' || (filter === 'sub') === o.sub); }
   function render() {
     const list = view();
@@ -155,7 +168,10 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   }
 
   async function build() {
-    const [fpag, topic] = await Promise.all([getList(uploads(FPAG_CHANNEL)), getList(uploads(TOPIC_CHANNEL))]);
+    const fpag = await cueList(uploads(FPAG_CHANNEL), null);
+    let topic = await cueList(uploads(TOPIC_CHANNEL), fpag);
+    if (!topic.length) topic = await getList(uploads(TOPIC_CHANNEL));
+    try { player.stopVideo(); } catch (e) {}
     if (!fpag.length && !topic.length) { msg.textContent = '曲リストを読み込めませんでした。時間をおいて再読み込みしてください'; now.textContent = ''; return; }
     const [ft, tt] = await Promise.all([titlesFor(fpag), titlesFor(topic)]);
     const subKeys = topic.map(id => norm(tt[id])).concat(EXTRA_SUB_TITLES.map(norm)).filter(k => k.length >= 2);

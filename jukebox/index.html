@@ -44,6 +44,10 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 4px;text-align:cen
 .screen iframe,#player{position:absolute;inset:0;width:100%;height:100%}
 .mix{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-weight:800;font-size:clamp(22px,5.5vw,46px);line-height:1.25;letter-spacing:.02em;text-align:center;padding:0 8%;color:#fff;opacity:0;background:radial-gradient(circle,#ff7a5c88,#5fe0b522 60%,transparent 75%);text-shadow:0 0 24px #ff7a5c}
 .mix.go{animation:mix 1.6s ease-out}
+.mix.type{opacity:1;font-family:"M PLUS Rounded 1c",ui-monospace,monospace;background:#14060ad9;text-shadow:0 0 14px #5fe0b5;color:#eafff6;transition:opacity .5s}
+.mix.type.out{opacity:0}
+.mix .caret{color:#5fe0b5;animation:blink .7s steps(1) infinite;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
 @keyframes mix{0%{opacity:0;transform:scale(.7)}25%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.25)}}
 .nextup{display:block;font-size:13px;color:var(--sub);font-weight:500;margin-top:2px}
 @media(prefers-reduced-motion:reduce){.mix.go{animation:none}}
@@ -674,11 +678,24 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       }
     } catch (e) {}
   }
+  // 切り替わる瞬間に、次の曲名をキーボードで打つように1文字ずつ出す
+  let typeTimer = null, fadeTimer = null;
   function flash() {
-    // 切り替わる瞬間に、次の曲名を出す
-    const nx = djQueued != null && items[djQueued] ? items[djQueued].t : '';
-    mixEl.textContent = nx ? '♪ ' + nx : '♪';
-    mixEl.classList.remove('go'); void mixEl.offsetWidth; mixEl.classList.add('go');
+    const nx = djQueued != null && items[djQueued] ? items[djQueued].t || '' : '';
+    const chars = Array.from('♪ ' + nx);
+    clearInterval(typeTimer); clearTimeout(fadeTimer);
+    mixEl.classList.remove('go', 'out'); mixEl.classList.add('type');
+    mixEl.innerHTML = '<span class="typed"></span><span class="caret">▍</span>';
+    const typed = mixEl.firstChild;
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const step = Math.max(28, Math.min(80, 1400 / chars.length));
+    let k = reduce ? chars.length : 0;
+    const done = () => { fadeTimer = setTimeout(() => mixEl.classList.add('out'), 1100); };
+    if (reduce) { typed.textContent = chars.join(''); return done(); }
+    typeTimer = setInterval(() => {
+      typed.textContent = chars.slice(0, ++k).join('');
+      if (k >= chars.length) { clearInterval(typeTimer); done(); }
+    }, step);
   }
   setInterval(() => {
     if (attract || !dj || !playing || !player || current < 0) return;

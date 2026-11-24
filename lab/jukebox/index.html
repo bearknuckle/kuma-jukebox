@@ -183,11 +183,29 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 
     render();
     now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
-    addSubs(fpag);
-    // 長い動画を外す（YouTube限定のみ）。長さが分からない曲は残す
-    const dur = await durationsFor(fpag);
-    items.forEach(o => { if (!o.fromTopic && !o.sub && (dur[o.id] > MAX_SECONDS || (dur[o.id] <= 60 && /#shorts/i.test(o.t || '')))) o.hide = true; });
-    render();
+    await addSubs(fpag);
+    // 長い動画を外す（YouTube限定のみ）。まだ何も再生していない間に、1本ずつプレーヤーに読み込んで長さを調べる
+    for (const o of items.slice()) {
+      if (current >= 0) break;
+      if (o.fromTopic || o.sub || o.hide) continue;
+      const sec = await cueDuration(o.id);
+      if (sec > MAX_SECONDS) { o.hide = true; render(); }
+    }
+    if (current < 0) { try { player.stopVideo(); } catch (e) {} }
+  }
+
+  function cueDuration(id) {
+    return new Promise(res => {
+      let n = 15;
+      try { player.cueVideoById(id); } catch (e) { return res(0); }
+      const poll = () => {
+        if (current >= 0) return res(0);
+        const d = player.getVideoData && player.getVideoData();
+        const sec = player.getDuration && player.getDuration();
+        if (sec > 0 && d && d.video_id === id) res(sec); else if (n-- > 0) setTimeout(poll, 200); else res(0);
+      };
+      setTimeout(poll, 200);
+    });
   }
 
   // 動画の長さ（秒）を、見えないプレーヤーに1本ずつ読み込ませて調べる

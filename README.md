@@ -1,61 +1,8 @@
-# Boardgame Tutorial
+# KUMA MUSIC ジュークボックス
 
-ボードゲームのルールを、順番に学びながら理解できるブラウザチュートリアルのプロジェクトです。
+KUMA MUSIC の曲をボタンひとつで聴けるページ（Render ワークスペース「KUMA MUSIC JUKEBOX」で公開）。
 
-## 現在のゲーム
+- `jukebox/` … 静的サイト `kuma-jukebox`（ページ本体・アイコン）
+- `jukebox-api/` … Web サービス `kuma-jukebox-api`（サブスク曲の一覧・動画の長さ。環境変数 `YOUTUBE_API_KEY` があれば YouTube 公式 API を使う）
 
-- **ニムト男爵**：ルールチュートリアル・CPU対戦
-- **アクワイア**：基本ルール解説・理解度チェック
-- **カタン**：基本セット（3〜4人用）のルール解説・理解度チェック
-
-## 方針
-
-- スマートフォンで遊びやすいレスポンシブUI
-- トップ画面のプルダウンからゲームを選択
-- ゲームごとに独立したHTMLで管理
-- ルールを学ぶチュートリアルを順次追加
-
-## 構成
-
-```text
-boardgame-tutorial/
-├── README.md
-├── app.py
-└── baron-nimmt/
-    ├── home.html
-    ├── index.html
-    ├── draft.html
-    ├── cpu.html
-    ├── acquire.html
-    └── catan.html
-```
-
-## URL
-
-- トップ：`/`
-- ニムト男爵：`/baron-nimmt`
-- アクワイア：`/acquire`
-- カタン：`/catan`
-
-## 公開期間の制御
-
-現在は期間制限を無効にし、通常アクセスで閲覧できる設定です。
-
-期間制限を再度有効にする場合は、Renderの環境変数に `PUBLIC_WINDOW_ENABLED=true` を設定し、`PUBLIC_START_JST` と `PUBLIC_END_JST` に日本時間の開始・終了日時を設定します。
-
-## テスト
-
-```bash
-pip install -r requirements-dev.txt
-pytest -q
-```
-
-ブラウザで2人対戦を操作するテスト（`tests/e2e`）は Playwright を使います。Playwright が入っていない環境では自動でスキップされます。
-
-```bash
-pip install -r requirements-e2e.txt
-python -m playwright install chromium
-pytest -q tests/e2e
-```
-
-Pull Request と `main` への push のたびに、GitHub Actions（`.github/workflows/test.yml`）で同じテストが自動で実行されます。
+このブランチ（`jukebox`）に push すると自動で反映される。試作ゲームラボ（`lab` ブランチ）とは別。

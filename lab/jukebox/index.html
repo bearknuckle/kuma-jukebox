@@ -26,6 +26,11 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 4px;text-align:cen
 .cab{background:linear-gradient(#4a1826,#33101b);border:3px solid #c98b5a;border-radius:220px 220px 26px 26px;padding:clamp(26px,6vw,56px) clamp(14px,3vw,30px) 22px;box-shadow:0 0 0 6px #2b0d16,0 0 0 9px #7a3a2c,0 24px 60px #0008}
 .screen{position:relative;aspect-ratio:16/9;max-width:760px;margin:0 auto;border-radius:18px;overflow:hidden;background:#000;box-shadow:inset 0 0 0 2px #0006}
 .screen iframe,#player{position:absolute;inset:0;width:100%;height:100%}
+.mix{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-weight:800;font-size:clamp(40px,10vw,90px);letter-spacing:.08em;color:#fff;opacity:0;background:radial-gradient(circle,#ff7a5c88,#5fe0b522 60%,transparent 75%);text-shadow:0 0 24px #ff7a5c}
+.mix.go{animation:mix 1.6s ease-out}
+@keyframes mix{0%{opacity:0;transform:scale(.7)}25%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.25)}}
+.nextup{display:block;font-size:13px;color:var(--sub);font-weight:500;margin-top:2px}
+@media(prefers-reduced-motion:reduce){.mix.go{animation:none}}
 .now{text-align:center;margin:16px 0 4px;font-weight:800;font-size:19px;min-height:1.6em}
 .badge{display:inline-block;font-size:13px;padding:1px 9px;border-radius:99px;vertical-align:2px;margin-left:6px;font-weight:800}
 .b-sub{background:var(--mint);color:#12382c}.b-vid{background:#ffd36e;color:#3a2a00}.b-yt{background:var(--coral);color:#3a0f06}
@@ -58,7 +63,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   <p class="lead">曲札を押すとすぐ流れます</p>
 
   <section class="cab" aria-label="プレーヤー">
-    <div class="screen"><div id="player"></div></div>
+    <div class="screen"><div id="player"></div><div class="mix" id="mix" aria-hidden="true">MIX</div></div>
     <div class="now" id="now" aria-live="polite">読み込み中…</div>
     <div class="ctrl">
       <button id="prev" aria-label="前の曲">⏮</button>
@@ -66,6 +71,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       <button id="next" aria-label="次の曲">⏭</button>
       <button id="shuf" aria-pressed="false">シャッフル</button>
       <button id="quick" aria-pressed="false">15秒ずつ</button>
+      <button id="dj" aria-pressed="false">DJモード</button>
     </div>
   </section>
 
@@ -172,11 +178,12 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   }
   function playAt(i) {
     if (!items[i]) return;
-    current = i; quickStart = null; player.loadVideoById(items[i].id);
-    now.innerHTML = esc(items[i].t || '♪') + badge(items[i]); render();
+    current = i; quickStart = null; djStart = null; djWhoosh = false; djQueued = null; player.loadVideoById(items[i].id);
+    render(); setNow();
   }
   function step(d) {
     if (!items.length) return;
+    if (dj && d === 1) { const j = djPick(); if (j != null) return playAt(j); }
     const pool = view().map(o => o.i); if (!pool.length) return;
     if (shuffle) { let j; do { j = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && j === current); return playAt(j); }
     const at = pool.indexOf(current);
@@ -316,9 +323,82 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   const quickBtn = document.getElementById('quick');
   quickBtn.addEventListener('click', () => {
     quick = !quick; quickBtn.setAttribute('aria-pressed', quick);
+    if (quick && dj) setDj(false);
     quickStart = null;
     if (quick && current < 0 && player && items.length) step(1);
   });
+  // ===== DJモード =====
+  // ・各曲のいちばん盛り上がりやすい位置（曲の3割あたり）から60秒ずつ
+  // ・終わり5秒で音を下げ、つなぎ目に「シュワッ」という効果音と MIX の演出、次の曲は低音のドンで入ってふわっと音量を上げる
+  // ・次の曲は、サブスク／動画／YouTube限定をなるべく交互に、一周するまで同じ曲を流さない
+  const DJ_SECONDS = 60, DJ_FADE = 5;
+  const djBtn = document.getElementById('dj'), mixEl = document.getElementById('mix');
+  let dj = false, djStart = null, djFadeAt = 0, djWhoosh = false, djPlayed = new Set(), djQueued = null, ac = null;
+  function setDj(on) {
+    dj = on; djBtn.setAttribute('aria-pressed', on);
+    if (!on) { try { player.setVolume(100); } catch (e) {} setNow(); return; }
+    if (quick) { quick = false; quickBtn.setAttribute('aria-pressed', false); }
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
+    djPlayed = new Set(); djStart = null;
+    if (current < 0 && items.length) step(1);
+  }
+  djBtn.addEventListener('click', () => setDj(!dj));
+  function djPick() {
+    const pool = view().map(o => o.i).filter(i => i !== current);
+    if (!pool.length) return null;
+    let left = pool.filter(i => !djPlayed.has(items[i].id));
+    if (!left.length) { djPlayed = new Set(); left = pool; }
+    const cur = items[current], other = cur ? left.filter(i => kind(items[i]) !== kind(cur)) : [];
+    const from = other.length ? other : left;
+    return from[Math.floor(Math.random() * from.length)];
+  }
+  function setNow() {
+    const o = items[current]; if (!o) return;
+    const nx = dj && djQueued != null && items[djQueued] ? '<span class="nextup">NEXT ▶ ' + esc(items[djQueued].t || '') + '</span>' : '';
+    now.innerHTML = esc(o.t || '♪') + badge(o) + nx;
+  }
+  function sfx(type) {
+    if (!ac) return;
+    try {
+      const t0 = ac.currentTime, g = ac.createGain(); g.connect(ac.destination);
+      if (type === 'whoosh') {
+        const len = 1.3, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const src = ac.createBufferSource(); src.buffer = buf;
+        const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 3;
+        f.frequency.setValueAtTime(300, t0); f.frequency.exponentialRampToValueAtTime(7000, t0 + len);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + len * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+        src.connect(f); f.connect(g); src.start(t0); src.stop(t0 + len);
+      } else {
+        const o = ac.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(120, t0); o.frequency.exponentialRampToValueAtTime(40, t0 + 0.5);
+        g.gain.setValueAtTime(0.6, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+        o.connect(g); o.start(t0); o.stop(t0 + 0.6);
+      }
+    } catch (e) {}
+  }
+  function flash() { mixEl.classList.remove('go'); void mixEl.offsetWidth; mixEl.classList.add('go'); }
+  setInterval(() => {
+    if (!dj || !playing || !player || current < 0) return;
+    const dur = player.getDuration(), t = player.getCurrentTime();
+    if (!(dur > 0)) return;
+    if (djStart === null) {
+      const target = dur > 100 ? Math.floor(dur * 0.3) : 0;
+      if (t < target - 2) player.seekTo(target, true);
+      djStart = target; djFadeAt = Date.now(); djPlayed.add(items[current].id);
+      player.setVolume(0); sfx('boom');
+      djQueued = djPick(); setNow();
+      return;
+    }
+    const fin = (Date.now() - djFadeAt) / 2500;
+    const end = Math.min(djStart + DJ_SECONDS, dur - 0.5), rest = end - t;
+    let vol = Math.min(1, fin);
+    if (rest < DJ_FADE) vol = Math.min(vol, Math.max(0, rest / DJ_FADE));
+    player.setVolume(Math.round(vol * 100));
+    if (rest <= 1.3 && !djWhoosh) { djWhoosh = true; sfx('whoosh'); flash(); }
+    if (rest <= 0) { const j = djQueued != null && items[djQueued] && !items[djQueued].hide ? djQueued : djPick(); if (j != null) playAt(j); }
+  }, 200);
+
   setInterval(() => {
     if (!quick || !playing || !player || current < 0) return;
     const t = player.getCurrentTime();

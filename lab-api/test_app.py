@@ -36,3 +36,14 @@ def test_kuma_subs(monkeypatch):
     assert {"id": "BBBBBBBBBBB", "title": ""} in d["videos"]
     assert d["playlists"] == ["OLAK5uy_abcdefghijklmnop"]
 
+
+
+def test_iso_seconds():
+    assert m.iso_seconds("PT3M25S") == 205
+    assert m.iso_seconds("PT1H2M") == 3720
+    assert m.iso_seconds("P0D") == 0
+
+
+def test_yt_info_without_key(monkeypatch):
+    monkeypatch.delenv("YOUTUBE_API_KEY", raising=False)
+    assert c().get("/api/yt-info?ids=AAAAAAAAAAA").get_json() == {"info": {}, "api": False}

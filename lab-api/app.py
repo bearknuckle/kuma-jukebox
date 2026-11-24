@@ -118,6 +118,82 @@ def _uniq(items):
     return out
 
 
+YT_API = "https://www.googleapis.com/youtube/v3/"
+
+
+def yt_key():
+    return os.getenv("YOUTUBE_API_KEY", "").strip()
+
+
+def yt_api(path, **params):
+    """YouTube Data API v3（公式）。キーは環境変数 YOUTUBE_API_KEY"""
+    import urllib.parse
+    params["key"] = yt_key()
+    with urllib.request.urlopen(YT_API + path + "?" + urllib.parse.urlencode(params), timeout=10) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def yt_playlist_items(playlist_id, limit=500):
+    out, token = [], ""
+    while len(out) < limit:
+        d = yt_api("playlistItems", part="snippet", playlistId=playlist_id, maxResults=50, pageToken=token)
+        for it in d.get("items", []):
+            sn = it.get("snippet", {})
+            vid = (sn.get("resourceId") or {}).get("videoId")
+            if vid and sn.get("title") not in ("Private video", "Deleted video"):
+                out.append({"id": vid, "title": sn.get("title", "")})
+        token = d.get("nextPageToken")
+        if not token:
+            break
+    return out
+
+
+def fetch_kuma_subs_api(channel, scraped_playlists):
+    """APIで、トピックチャンネルのアルバム・シングルを全部集めて、その中の曲を返す"""
+    playlists, errors = list(scraped_playlists), []
+    # チャンネルの再生リスト
+    try:
+        token = ""
+        for _ in range(10):
+            d = yt_api("playlists", part="id", channelId=channel, maxResults=50, pageToken=token)
+            playlists += [it["id"] for it in d.get("items", [])]
+            token = d.get("nextPageToken")
+            if not token:
+                break
+    except Exception as ex:
+        errors.append("api-playlists:" + type(ex).__name__)
+    # 検索（アルバム・シングルの再生リスト）
+    try:
+        token = ""
+        for _ in range(4):
+            d = yt_api("search", part="id", channelId=channel, type="playlist", maxResults=50, pageToken=token)
+            playlists += [it["id"].get("playlistId") for it in d.get("items", []) if it.get("id", {}).get("playlistId")]
+            token = d.get("nextPageToken")
+            if not token:
+                break
+    except Exception as ex:
+        errors.append("api-search:" + type(ex).__name__)
+    # アップロード一覧
+    uploads = []
+    try:
+        uploads = yt_playlist_items("UU" + channel[2:])
+    except Exception as ex:
+        errors.append("api-uploads:" + type(ex).__name__)
+    playlists = [p for p in _uniq(playlists) if p and not p.startswith("UU")][:100]
+    videos, seen = [], set()
+    for v in uploads:
+        if v["id"] not in seen:
+            seen.add(v["id"]); videos.append(v)
+    for pl in playlists:
+        try:
+            for v in yt_playlist_items(pl, 100):
+                if v["id"] not in seen:
+                    seen.add(v["id"]); videos.append(v)
+        except Exception as ex:
+            errors.append("api-items:" + type(ex).__name__)
+    return {"videos": videos, "playlists": playlists, "errors": errors, "api": True}
+
+
 def fetch_kuma_subs(channel=None):
     channel = channel or KUMA_TOPIC_CHANNEL
     videos, titles, playlists, errors = [], {}, [], []
@@ -146,6 +222,15 @@ def fetch_kuma_subs(channel=None):
             errors.append(tab + ":" + type(ex).__name__)
     playlists = [p for p in _uniq(playlists) if p != "UU" + channel[2:]][:60]
     videos = _uniq(videos)[:300]
+    if yt_key():
+        try:
+            d = fetch_kuma_subs_api(channel, playlists)
+            if d["videos"]:
+                d["errors"] = errors + d["errors"]
+                return d
+            errors += d["errors"]
+        except Exception as ex:
+            errors.append("api:" + type(ex).__name__)
     return {"videos": [{"id": v, "title": titles.get(v, "")} for v in videos],
             "playlists": playlists, "errors": errors}
 
@@ -183,6 +268,40 @@ def kuma_playlists():
                 "playlists": [{"id": k, "title": v} for k, v in found.items()][:50], "errors": errors})
         data = _fpag_cache["data"]
     return jsonify(data)
+
+
+_info_cache = {}
+ONE_VIDEO = re.compile(r"^[A-Za-z0-9_-]{11}$")
+ISO_DUR = re.compile(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?")
+
+
+def iso_seconds(text):
+    m = ISO_DUR.fullmatch(text or "")
+    if not m:
+        return None
+    d, h, mi, se = (int(x or 0) for x in m.groups())
+    return ((d * 24 + h) * 60 + mi) * 60 + se
+
+
+@app.get("/api/yt-info")
+def yt_info():
+    """動画の長さ（秒）・ジャンル（categoryId）・ライブかどうか。APIキーがあるときだけ"""
+    ids = [i for i in request.args.get("ids", "").split(",") if ONE_VIDEO.match(i)][:50]
+    if not yt_key():
+        return jsonify({"info": {}, "api": False})
+    todo = [i for i in ids if i not in _info_cache]
+    if todo:
+        try:
+            d = yt_api("videos", part="contentDetails,snippet", id=",".join(todo), maxResults=50)
+            for it in d.get("items", []):
+                sn = it.get("snippet", {})
+                if len(_info_cache) < 5000:
+                    _info_cache[it["id"]] = {"sec": iso_seconds(it.get("contentDetails", {}).get("duration")),
+                                             "cat": sn.get("categoryId", ""), "title": sn.get("title", ""),
+                                             "live": sn.get("liveBroadcastContent", "none")}
+        except Exception:
+            app.logger.exception("yt-info failed")
+    return jsonify({"info": {i: _info_cache[i] for i in ids if i in _info_cache}, "api": True})
 
 
 @app.get("/healthz")

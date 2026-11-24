@@ -165,6 +165,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
   const MAX_SECONDS = 10 * 60;  // YouTube限定曲は、これより長い動画を入れない（ショートは最初から除く）
   // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）。曲以外の動画もここに足す
+  const INFO_API = 'https://game-lab-api.onrender.com/api/yt-info';
   const EXCLUDE_WORDS = ['MC'];
   // 自動で入らなかった曲を、動画IDで直接足す（YouTubeのURLの v= や youtu.be/ のあとの11文字）
   const INCLUDE_IDS = [];
@@ -294,8 +295,23 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     render();
     now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
     await addSubs(fpag);
-    // 長い動画を外す（YouTube限定のみ）。まだ何も再生していない間に、1本ずつプレーヤーに読み込んで長さを調べる
-    for (const o of items.slice()) {
+    // 長い動画・ショート・ライブを外す（YouTube限定のみ）。まずはラボのサーバー（YouTube公式API）で長さを調べる
+    const targets = items.filter(o => !o.fromTopic && !o.sub && !o.hide && !INCLUDE_IDS.includes(o.id));
+    let apiOk = false;
+    for (let i = 0; i < targets.length; i += 50) {
+      try {
+        const r = await fetch(INFO_API + '?ids=' + targets.slice(i, i + 50).map(o => o.id).join(','));
+        const d = await r.json(); if (!d.api) break; apiOk = true;
+        targets.slice(i, i + 50).forEach(o => {
+          const f = d.info[o.id]; if (!f) return;
+          if (f.sec > MAX_SECONDS || (f.sec > 0 && f.sec <= 60) || f.live !== 'none') o.hide = true;
+          o.cat = f.cat;
+        });
+      } catch (e) { break; }
+    }
+    if (apiOk) render();
+    // APIが使えないときは、まだ何も再生していない間に、1本ずつプレーヤーに読み込んで長さを調べる
+    for (const o of (apiOk ? [] : items.slice())) {
       if (current >= 0) break;
       if (o.fromTopic || o.sub || o.hide || INCLUDE_IDS.includes(o.id)) continue;
       const sec = await cueDuration(o.id);
@@ -371,7 +387,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (current < 0) now.textContent = '好きな曲を選んでください';
     // まだ何も再生していなければ、アルバム（再生リスト）の中の残りの曲も取り出す
     let prev = prevList;
-    for (const pl of [...new Set(EXTRA_SUB_PLAYLISTS.concat(data.playlists || []))]) {
+    for (const pl of (data.api ? EXTRA_SUB_PLAYLISTS : [...new Set(EXTRA_SUB_PLAYLISTS.concat(data.playlists || []))])) {
       if (current >= 0) break;
       if (!/^[\w-]{10,70}$/.test(pl)) continue;
       const l = await cueList(pl, prev, 12);

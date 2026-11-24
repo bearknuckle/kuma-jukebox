@@ -415,8 +415,8 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   }
   setInterval(captionsOff, 2000);
 
-  // ===== 待ち受け：再生していない間は、音なしの動画を10秒ずつ順番に流す =====
-  const ATTRACT_SECONDS = 10;
+  // ===== 待ち受け：再生していない間は、音なしの動画を15秒ずつ順番に流す =====
+  const ATTRACT_SECONDS = 15;
   let attract = false, attractTimer = null, attractPos = -1, ready = false, pauseTimer = null, resumeAt = 0;
   function startAttract() {
     if (!player || !items.length) return;

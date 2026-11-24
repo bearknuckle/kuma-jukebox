@@ -87,7 +87,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 {
   /* ===== 設定 ===== */
   const FPAG_CHANNEL = 'UCFvOwDfHVEBwu-GTv81da1g';   // F-Pag（全曲の動画）
-  const TOPIC_CHANNEL = 'UCRlaIisipjF9qL1zYkMMCug';  // KUMA MUSIC - Topic（サブスク配信曲）
+  const SUBS_API = 'https://game-lab-api.onrender.com/api/kuma-subs';  // KUMA MUSIC - Topic（サブスク配信曲）の一覧
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
   const EXTRA_SUB_TITLES = [
     '小さな街は未完成', 'ボードゲームと猫', 'あの卓にまた帰る日', 'あと１ゲームだけ', 'また買っちゃった',
@@ -150,7 +150,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + esc(o.id) + '/mqdefault.jpg">' +
       '<span><span class="num">No.' + String(o.i + 1).padStart(2, '0') + '</span>' + badge(o.sub) +
       '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span></span></button></li>').join('');
-    document.getElementById('spot').hidden = filter !== 'sub';
+    document.getElementById('spot').hidden = filter !== 'sub' || items.some(o => o.sub);
     msg.hidden = list.length > 0 || (filter === 'sub' && items.length > 0);
     if (!list.length && items.length) msg.textContent = 'この棚にはまだ曲がありません';
   }
@@ -169,21 +169,46 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 
   async function build() {
     const fpag = await cueList(uploads(FPAG_CHANNEL), null);
-    let topic = await cueList(uploads(TOPIC_CHANNEL), fpag);
-    if (!topic.length) topic = await getList(uploads(TOPIC_CHANNEL));
     try { player.stopVideo(); } catch (e) {}
-    if (!fpag.length && !topic.length) { msg.textContent = '曲リストを読み込めませんでした。時間をおいて再読み込みしてください'; now.textContent = ''; return; }
-    const [ft, tt] = await Promise.all([titlesFor(fpag), titlesFor(topic)]);
-    const subKeys = topic.map(id => norm(tt[id])).concat(EXTRA_SUB_TITLES.map(norm)).filter(k => k.length >= 2);
-    const used = new Set();
-    items = fpag.map(id => {
-      const n = norm(ft[id]); const hit = subKeys.findIndex(k => n.includes(k));
-      if (hit >= 0 && hit < topic.length) used.add(hit);
-      return {id, t: ft[id], sub: hit >= 0};
+    const ft = await titlesFor(fpag);
+    const extra = EXTRA_SUB_TITLES.map(norm).filter(k => k.length >= 2);
+    items = fpag.map(id => ({id, t: ft[id], sub: extra.some(k => norm(ft[id]).includes(k))}));
+    render();
+    now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
+    addSubs(fpag);
+  }
+
+  // サブスク配信曲：ラボのサーバーがトピックチャンネルから集めた一覧を読み込む
+  async function addSubs(prevList) {
+    let data = null;
+    for (let t = 0; t < 3 && !data; t++) {
+      try {
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 70000);
+        const r = await fetch(SUBS_API, {signal: ctl.signal}); clearTimeout(tm);
+        if (r.ok) data = await r.json();
+      } catch (e) {}
+    }
+    if (!data) { if (!items.length) msg.textContent = '曲リストを読み込めませんでした。時間をおいて再読み込みしてください'; return; }
+    let ids = (data.videos || []).map(v => v.id).filter(id => /^[\w-]{11}$/.test(id));
+    // まだ何も再生していなければ、アルバム（再生リスト）の中の曲も取り出す
+    let prev = prevList;
+    for (const pl of (data.playlists || [])) {
+      if (current >= 0) break;
+      if (!/^[\w-]{10,70}$/.test(pl)) continue;
+      const l = await cueList(pl, prev);
+      if (l.length) { ids = ids.concat(l); prev = l; }
+    }
+    if (current < 0) { try { player.stopVideo(); } catch (e) {} }
+    ids = [...new Set(ids)].filter(id => !items.some(o => o.id === id));
+    const tt = await titlesFor(ids);
+    ids.forEach(id => {
+      const k = norm(tt[id]);
+      const same = k.length >= 2 && items.find(o => !o.fromTopic && norm(o.t).includes(k));
+      if (same) same.sub = true;
+      else items.push({id, t: tt[id], sub: true, fromTopic: true});
     });
-    // F-Pagに見つからなかったサブスク曲は、配信音源のまま追加
-    topic.forEach((id, i) => { if (!used.has(i)) items.push({id, t: tt[id], sub: true}); });
-    render(); now.textContent = '好きな曲を選んでください';
+    render();
+    if (current < 0) now.textContent = '好きな曲を選んでください';
   }
 
   window.onYouTubeIframeAPIReady = () => {

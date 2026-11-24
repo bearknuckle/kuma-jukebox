@@ -90,7 +90,8 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   const SUBS_API = 'https://game-lab-api.onrender.com/api/kuma-subs';  // KUMA MUSIC - Topic（サブスク配信曲）の一覧
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
   const MAX_SECONDS = 10 * 60;  // YouTube限定曲は、これより長い動画を入れない（ショートは最初から除く）
-  const EXCLUDE_WORDS = ['MC'];
+  // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）。曲以外の動画もここに足す
+  const EXCLUDE_WORDS = ['MC', '十王坂の審理を体験', 'きせつのおくりもの'];
   // 長時間の流しっぱなし動画によく入る言葉（YouTube限定のみ外す）
   const LONG_WORDS = ['1時間', '１時間', '2時間', '２時間', '3時間', '３時間', '時間耐久', '耐久', '作業用', 'メドレー', 'hour', 'loop'];  // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）
   const EXTRA_SUB_TITLES = [

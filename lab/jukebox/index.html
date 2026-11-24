@@ -233,9 +233,9 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t)))).filter(o => filter === 'all' || filter === kind(o)).filter(o => !query || norm(o.t).includes(query)); }
   function render() {
     const list = view();
-    grid.innerHTML = list.map(o => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
+    grid.innerHTML = list.map((o, n) => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
       '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + esc(o.id) + '/mqdefault.jpg">' +
-      '<span><span class="num">No.' + String(o.i + 1).padStart(2, '0') + '</span>' + badge(o) +
+      '<span><span class="num">No.' + String(n + 1).padStart(2, '0') + '</span>' + badge(o) +
       '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span></span></button></li>').join('');
     msg.hidden = list.length > 0;
     if (!list.length && items.length) msg.textContent = query ? '「' + qInput.value + '」に合う曲はありません' : 'この棚にはまだ曲がありません';

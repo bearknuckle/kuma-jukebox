@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KUMA MUSIC ジュークボックス</title>
-<!-- KUMA MUSIC ジュークボックス: 試作ゲームラボのホームには載せない独立ページ。F-PagとKUMA MUSIC - Topicの動画を自動で読み込む -->
+<!-- KUMA MUSIC ジュークボックス（Render「KUMA MUSIC JUKEBOX」）。F-PagとKUMA MUSIC - Topicの動画を自動で読み込む -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="KUMA MUSIC ジュークボックス">
 <meta property="og:description" content="KUMA MUSICの曲を、ボタンひとつで。サブスク配信曲もYouTube限定曲も聴けます。">
-<meta property="og:url" content="https://game-lab-oj9t.onrender.com/jukebox/">
+<meta property="og:url" content="https://kuma-jukebox.onrender.com/">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="KUMA JUKEBOX">
@@ -161,11 +161,11 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
 {
   /* ===== 設定 ===== */
   const FPAG_CHANNEL = 'UCFvOwDfHVEBwu-GTv81da1g';   // F-Pag（全曲の動画）
-  const SUBS_API = 'https://game-lab-api.onrender.com/api/kuma-subs';  // KUMA MUSIC - Topic（サブスク配信曲）の一覧
+  const SUBS_API = 'https://kuma-jukebox-api.onrender.com/api/kuma-subs';  // KUMA MUSIC - Topic（サブスク配信曲）の一覧
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
   const MAX_SECONDS = 10 * 60;  // YouTube限定曲は、これより長い動画を入れない（ショートは最初から除く）
   // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）。曲以外の動画もここに足す
-  const INFO_API = 'https://game-lab-api.onrender.com/api/yt-info';
+  const INFO_API = 'https://kuma-jukebox-api.onrender.com/api/yt-info';
   const EXCLUDE_WORDS = ['MC'];
   // 自動で入らなかった曲を、動画IDで直接足す（YouTubeのURLの v= や youtu.be/ のあとの11文字）
   const INCLUDE_IDS = [];

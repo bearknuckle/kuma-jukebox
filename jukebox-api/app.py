@@ -173,6 +173,23 @@ def fetch_kuma_subs_api(channel, scraped_playlists):
                 break
     except Exception as ex:
         errors.append("api-search:" + type(ex).__name__)
+    # 検索（曲そのもの）：トピックチャンネルの曲を新しい順・人気順・名前順で拾う
+    searched = []
+    for order in ("date", "viewCount", "title"):
+        try:
+            token = ""
+            for _ in range(6):
+                d = yt_api("search", part="snippet", channelId=channel, type="video", order=order,
+                           maxResults=50, pageToken=token)
+                for it in d.get("items", []):
+                    vid = it.get("id", {}).get("videoId")
+                    if vid:
+                        searched.append({"id": vid, "title": (it.get("snippet") or {}).get("title", "")})
+                token = d.get("nextPageToken")
+                if not token:
+                    break
+        except Exception as ex:
+            errors.append("api-search-video:" + type(ex).__name__)
     # アップロード一覧
     uploads = []
     try:
@@ -182,6 +199,9 @@ def fetch_kuma_subs_api(channel, scraped_playlists):
     playlists = [p for p in _uniq(playlists) if p and not p.startswith("UU")][:100]
     videos, seen = [], set()
     for v in uploads:
+        if v["id"] not in seen:
+            seen.add(v["id"]); videos.append(v)
+    for v in searched:
         if v["id"] not in seen:
             seen.add(v["id"]); videos.append(v)
     for pl in playlists:

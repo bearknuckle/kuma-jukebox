@@ -63,6 +63,12 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .card img{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;flex:none;background:#000}
 .num{font-size:13px;color:var(--sub);font-weight:800}
 .ttl{font-size:15px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.search{position:relative;max-width:760px;margin:0 auto 16px}
+.search input{width:100%;min-height:48px;padding:0 48px 0 44px;border-radius:99px;border:2px solid var(--line);background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9c9b4' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E") no-repeat 16px center/20px;color:var(--ink);font:inherit;font-size:16px;-webkit-appearance:none;appearance:none}
+.search input::placeholder{color:#b8909a}
+.search input:focus{outline:none;border-color:#ffd36e;box-shadow:0 0 0 3px #ffd36e44}
+.search input::-webkit-search-cancel-button{display:none}
+.search button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:0;background:#5c2433;color:var(--ink);font-size:20px;line-height:1}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
 .links{text-align:center;margin-top:34px;font-size:14px;color:var(--sub)}
 .links a{color:var(--mint)}
@@ -140,7 +146,11 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     <button role="tab" data-f="vid" aria-selected="false">サブスク曲の動画</button>
     <button role="tab" data-f="yt" aria-selected="false">YouTube限定</button>
   </div>
-    <ul class="grid" id="grid"></ul>
+    <div class="search">
+    <input id="q" type="search" placeholder="曲名で探す" aria-label="曲名で探す" autocomplete="off" enterkeyhint="search">
+    <button id="qclear" type="button" aria-label="検索をクリア" hidden>×</button>
+  </div>
+  <ul class="grid" id="grid"></ul>
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
   <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
@@ -220,7 +230,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       setTimeout(poll, 300);
     });
   }
-  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t)))).filter(o => filter === 'all' || filter === kind(o)); }
+  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t)))).filter(o => filter === 'all' || filter === kind(o)).filter(o => !query || norm(o.t).includes(query)); }
   function render() {
     const list = view();
     grid.innerHTML = list.map(o => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
@@ -228,7 +238,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       '<span><span class="num">No.' + String(o.i + 1).padStart(2, '0') + '</span>' + badge(o) +
       '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span></span></button></li>').join('');
     msg.hidden = list.length > 0;
-    if (!list.length && items.length) msg.textContent = 'この棚にはまだ曲がありません';
+    if (!list.length && items.length) msg.textContent = query ? '「' + qInput.value + '」に合う曲はありません' : 'この棚にはまだ曲がありません';
     try { updateOut(); } catch (e) {}
   }
   function playAt(i) {
@@ -386,6 +396,13 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     quickStart = null;
     if (quick && current < 0 && player && items.length) step(1);
   });
+  // ===== 検索 =====
+  const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');
+  let query = '';
+  qInput.addEventListener('input', () => { query = norm(qInput.value); qClear.hidden = !qInput.value; render(); });
+  qInput.addEventListener('keydown', e => { if (e.key === 'Enter') qInput.blur(); });
+  qClear.addEventListener('click', () => { qInput.value = ''; query = ''; qClear.hidden = true; render(); qInput.focus(); });
+
   // ===== 画面をつけたまま／アプリで続きを聴く =====
   const wakeBtn = document.getElementById('wake'), wakeMsg = document.getElementById('wakemsg');
   let wakeOn = false, wakeLock = null;

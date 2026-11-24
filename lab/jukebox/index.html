@@ -70,6 +70,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .search input::-webkit-search-cancel-button{display:none}
 .search button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:0;background:#5c2433;color:var(--ink);font-size:20px;line-height:1}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
+.stat{text-align:center;color:#b8909a;font-size:12px;margin:24px 0 0}
 .links{text-align:center;margin-top:34px;font-size:14px;color:var(--sub)}
 .links a{color:var(--mint)}
 @media(prefers-reduced-motion:reduce){.card{transition:none}.card:hover{transform:none}}
@@ -152,6 +153,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   <ul class="grid" id="grid"></ul>
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
+  <p class="stat" id="stat"></p>
   <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
 </div>
 
@@ -218,10 +220,10 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   }
 
   // メインのプレーヤーに再生リストを順番に読み込ませて、動画IDを取り出す
-  function cueList(listId, prev, tries) {
+  function cueList(listId, prev, tries, index) {
     return new Promise(res => {
       let n = tries || 40;
-      try { player.cuePlaylist({listType: 'playlist', list: listId}); } catch (e) { return res([]); }
+      try { player.cuePlaylist({listType: 'playlist', list: listId, index: index || 0}); } catch (e) { return res([]); }
       const poll = () => {
         const l = player.getPlaylist && player.getPlaylist();
         const fresh = l && l.length && !(prev && prev.length && l[0] === prev[0] && l.length === prev.length);
@@ -240,6 +242,8 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     msg.hidden = list.length > 0;
     if (!list.length && items.length) msg.textContent = query ? '「' + qInput.value + '」に合う曲はありません' : 'この棚にはまだ曲がありません';
     try { updateOut(); } catch (e) {}
+    const st = document.getElementById('stat');
+    if (st && items.length) st.textContent = '読み込んだ動画・曲 ' + items.length + '本（表示中 ' + view().length + '本）';
   }
   function playAt(i) {
     if (!items[i]) return;
@@ -259,7 +263,15 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   async function build() {
     // 'UULF' はショートを除いた動画だけの一覧。読めなければ全動画（UU）にする
     let fpag = await cueList('UULF' + FPAG_CHANNEL.slice(2), null);
-    if (!fpag.length) fpag = await cueList(uploads(FPAG_CHANNEL), null);
+    let fpagList = 'UULF' + FPAG_CHANNEL.slice(2);
+    if (!fpag.length) { fpagList = uploads(FPAG_CHANNEL); fpag = await cueList(fpagList, null); }
+    // 再生リストは一度に200本ずつしか取れないことがあるので、古い動画も続けて取りに行く
+    for (let guard = 0; guard < 10 && fpag.length >= 190; guard++) {
+      const more = await cueList(fpagList, fpag.slice(-200), 20, fpag.length);
+      const add = more.filter(id => !fpag.includes(id));
+      if (!add.length) break;
+      fpag = fpag.concat(add);
+    }
     try { player.stopVideo(); } catch (e) {}
     const ft = await titlesFor(fpag);
     const extra = EXTRA_SUB_TITLES.map(norm).filter(k => k.length >= 2);

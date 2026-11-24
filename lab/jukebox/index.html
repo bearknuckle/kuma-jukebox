@@ -290,13 +290,15 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 
   window.onYouTubeIframeAPIReady = () => {
     player = new YT.Player('player', {
-      playerVars: {playsinline: 1, rel: 0},
+      playerVars: {playsinline: 1, rel: 0, cc_load_policy: 0, iv_load_policy: 3},
       events: {
         onReady: build,
         onStateChange: e => {
           playing = e.data === YT.PlayerState.PLAYING;
           playBtn.textContent = playing ? '⏸' : '▶';
           if (e.data === YT.PlayerState.ENDED) step(1);
+          // 字幕はオフ
+          if (playing) { try { player.setOption('captions', 'track', {}); player.unloadModule('captions'); player.unloadModule('cc'); } catch (err) {} }
           // 再生してみて長すぎたYouTube限定の動画は、外して次の曲へ
           if (playing) {
             const o = items[current], sec = player.getDuration();

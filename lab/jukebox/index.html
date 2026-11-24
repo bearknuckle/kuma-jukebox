@@ -90,7 +90,9 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   const SUBS_API = 'https://game-lab-api.onrender.com/api/kuma-subs';  // KUMA MUSIC - Topic（サブスク配信曲）の一覧
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
   const MAX_SECONDS = 10 * 60;  // YouTube限定曲は、これより長い動画を入れない（ショートは最初から除く）
-  const EXCLUDE_WORDS = ['MC'];  // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）
+  const EXCLUDE_WORDS = ['MC'];
+  // 長時間の流しっぱなし動画によく入る言葉（YouTube限定のみ外す）
+  const LONG_WORDS = ['1時間', '１時間', '2時間', '２時間', '3時間', '３時間', '時間耐久', '耐久', '作業用', 'メドレー', 'hour', 'loop'];  // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）
   const EXTRA_SUB_TITLES = [
     '小さな街は未完成', 'ボードゲームと猫', 'あの卓にまた帰る日', 'あと１ゲームだけ', 'また買っちゃった',
     '盤上のチキンレース', '６点狙いに行く', '軍資金と戦利品', '試作ゲームラボ'
@@ -177,6 +179,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     const ft = await titlesFor(fpag);
     const extra = EXTRA_SUB_TITLES.map(norm).filter(k => k.length >= 2);
     items = fpag.map(id => ({id, t: ft[id], sub: extra.some(k => norm(ft[id]).includes(k))}));
+    items.forEach(o => { if (!o.sub && LONG_WORDS.some(w => (o.t || '').toLowerCase().includes(w.toLowerCase()))) o.hide = true; });
 
     render();
     now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
@@ -257,6 +260,11 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
           playing = e.data === YT.PlayerState.PLAYING;
           playBtn.textContent = playing ? '⏸' : '▶';
           if (e.data === YT.PlayerState.ENDED) step(1);
+          // 再生してみて長すぎたYouTube限定の動画は、外して次の曲へ
+          if (playing) {
+            const o = items[current], sec = player.getDuration();
+            if (o && !o.sub && sec > MAX_SECONDS) { o.hide = true; render(); step(1); }
+          }
         },
         onError: () => setTimeout(() => step(1), 800)
       }

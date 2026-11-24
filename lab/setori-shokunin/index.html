@@ -100,6 +100,11 @@
   .neg{color:var(--bad)} .pos{color:var(--good)}
   .setlist-mini{font-size:13px;margin:6px 0 0;padding-left:1.2em}
   .setlist-mini li{margin:2px 0}
+  .report{margin:6px 0 0;padding:12px 14px;border-left:4px solid var(--accent);background:var(--panel2);border-radius:0 10px 10px 0}
+  .report .rhead{font-weight:800;font-size:15.5px;margin:0 0 6px}
+  .report p{margin:0 0 4px;font-size:13.5px;line-height:1.7}
+  .report.small .rhead{font-size:14px}
+  .report.small p{font-size:12.5px}
   details.rules{margin-top:4px}
   details.rules summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
   .rules ul{margin:6px 0 4px;padding-left:1.3em;font-size:13.5px}
@@ -213,6 +218,11 @@
     </div>
 
     <div class="panel">
+      <h2>ライブレポ</h2>
+      <div class="report" id="report-player"></div>
+    </div>
+
+    <div class="panel">
       <h2>スコア内訳</h2>
       <table class="scoretable">
         <thead><tr><th>項目</th><th>あなた</th><th>CPU店長</th></tr></thead>
@@ -228,6 +238,7 @@
       <h2>CPU店長のセトリ</h2>
       <p class="muted" id="cpu-swap-note" style="margin:0"></p>
       <ol class="setlist-mini" id="list-cpu"></ol>
+      <div class="report small" id="report-cpu"></div>
     </div>
 
     <div class="btnrow">
@@ -587,6 +598,92 @@ document.getElementById("btn-undo").addEventListener("click", function(){
 });
 document.getElementById("btn-finish").addEventListener("click", showResult);
 
+/* ============ ライブレポ ============ */
+// セトリの内容から、ライブの様子を短い文章にする（点数には関係しない）
+function pickOne(a){ return a[Math.floor(Math.random() * a.length)]; }
+function q(c){ return "「" + c.title + "」"; }
+function liveReport(list, sc){
+  var lines = [], i;
+  // 幕開け
+  var first = list[0];
+  if (sc.tsukami && first.genre === "ballad"){
+    lines.push("バラード" + q(first) + "で始まる意外な幕開け。それでも歌い出しから会場の心をしっかりつかんだ。");
+  } else if (sc.tsukami){
+    lines.push(pickOne([
+      "1曲目" + q(first) + "のイントロが鳴った瞬間、客席は総立ちに。",
+      "幕が上がるなり" + q(first) + "。いきなりの全開に、会場から悲鳴のような歓声が上がった。"
+    ]));
+  } else {
+    lines.push(pickOne([
+      "幕開けは" + q(first) + "。客席はまだ様子を見ながら、ゆっくりと温まっていった。",
+      q(first) + "で静かに始まったステージ。立ち上がりは少しおとなしめ。"
+    ]));
+  }
+  // 同じジャンルのかたまり（一番長いもの）
+  var bestRun = 1, bestEnd = 0, run = 1;
+  for (i = 1; i < list.length; i++){
+    run = (list[i].genre === list[i-1].genre) ? run + 1 : 1;
+    if (run > bestRun){ bestRun = run; bestEnd = i; }
+  }
+  if (bestRun >= 3){
+    var g = list[bestEnd].genreName, from = (bestEnd - bestRun + 2) + "曲目から";
+    if (list[bestEnd].genre === "ballad"){
+      lines.push(from + "のバラード" + bestRun + "連発に、客席はじっくり聴き入った。" + (bestRun >= 4 ? "少ししんみりしすぎたかも。" : ""));
+    } else {
+      lines.push(pickOne([
+        g + "が" + bestRun + "曲続く" + from + "のブロックは圧巻で、ファンにはたまらない時間に。",
+        from + "の" + g + bestRun + "連発に、客席は大合唱。"
+      ]));
+    }
+  }
+  // ギアチェンジ（最初の1回）
+  for (i = 1; i < list.length; i++){
+    if (list[i-1].tempo === "遅い" && list[i].tempo === "速い"){
+      lines.push(q(list[i-1]) + "から" + q(list[i]) + "への急加速に、どっと歓声が上がった。");
+      break;
+    }
+  }
+  // 中盤の流れ
+  if (sc.kiki){
+    var k = list[sc.kikiPos];
+    if (sc.kikiBallad){
+      lines.push(pickOne([
+        (sc.kikiPos+1) + "曲目、バラード" + q(k) + "で会場が静まり返る。ハンカチを取り出す人の姿も。",
+        "照明が落ちて" + q(k) + "。さっきまでの熱気がうそのように、会場が息をのんだ。"
+      ]));
+    } else {
+      lines.push((sc.kikiPos+1) + "曲目の" + q(k) + "で一息。ここから再び熱が上がっていく。");
+    }
+  } else if (sc.drops.length === 0){
+    lines.push("最初から最後まで上がり続ける、息つく暇のないステージ。");
+  } else if (sc.drops.length >= 3){
+    lines.push("上がっては下がる展開が続き、客席は少し戸惑い気味だった。");
+  } else if (sc.drops.length === 2){
+    lines.push("途中で何度か流れが途切れ、客席がざわつく場面も。");
+  }
+  if (sc.mono <= -2) lines.push("同じテンポの曲が続いた時間帯は、少し単調に感じられた。");
+  // アンコール
+  var last = list[list.length-1];
+  if (sc.encore && last.genre === "ballad"){
+    lines.push("アンコールはバラード" + q(last) + "。会場全体が歌声に包まれる、感動のフィナーレ。");
+  } else if (sc.encore){
+    lines.push(pickOne([
+      "そしてアンコールの" + q(last) + "。この日一番の爆発で、会場は揺れた。",
+      "鳴りやまない拍手に応えて" + q(last) + "。最後の最後に最高潮を持ってくる、完璧な締めくくり。"
+    ]));
+  } else {
+    lines.push("アンコールは" + q(last) + "。いい曲だったが、もうひと山ほしかったという声も。");
+  }
+  // 見出し
+  var t = sc.total, head;
+  if (t >= 28) head = "伝説の一夜";
+  else if (t >= 22) head = "満員御礼の大成功";
+  else if (t >= 16) head = "満足度の高いライブ";
+  else if (t >= 10) head = "まずまずの夜";
+  else head = "次のツアーに期待";
+  return "<p class='rhead'>" + head + "（" + t + "点）</p>" + lines.map(function(x){ return "<p>" + x + "</p>"; }).join("");
+}
+
 /* ============ フェーズ3：結果 ============ */
 function fmt(n){ return (n > 0 ? "+" + n : "" + n); }
 function listHTML(list, sc){
@@ -636,6 +733,8 @@ function showResult(){
   document.getElementById("list-player").innerHTML = listHTML(state.slots, ps);
   document.getElementById("list-cpu").innerHTML = listHTML(state.cpuSlots, cs);
   document.getElementById("cpu-swap-note").textContent = note;
+  document.getElementById("report-player").innerHTML = liveReport(state.slots, ps);
+  document.getElementById("report-cpu").innerHTML = liveReport(state.cpuSlots, cs);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 document.getElementById("btn-again").addEventListener("click", function(){

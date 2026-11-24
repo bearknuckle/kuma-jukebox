@@ -323,6 +323,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   const quickBtn = document.getElementById('quick');
   quickBtn.addEventListener('click', () => {
     quick = !quick; quickBtn.setAttribute('aria-pressed', quick);
+    quickBtn.textContent = '15秒ずつ';
     if (quick && dj) setDj(false);
     quickStart = null;
     if (quick && current < 0 && player && items.length) step(1);
@@ -337,7 +338,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   function setDj(on) {
     dj = on; djBtn.setAttribute('aria-pressed', on);
     if (!on) { try { player.setVolume(100); } catch (e) {} setNow(); return; }
-    if (quick) { quick = false; quickBtn.setAttribute('aria-pressed', false); }
+    if (quick) { quick = false; quickBtn.setAttribute('aria-pressed', false); quickBtn.textContent = '15秒ずつ'; }
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
     djPlayed = new Set(); djStart = null;
     if (current < 0 && items.length) step(1);
@@ -403,6 +404,8 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     if (!quick || !playing || !player || current < 0) return;
     const t = player.getCurrentTime();
     if (quickStart === null || t < quickStart) quickStart = t;
+    const left = Math.max(0, Math.ceil(QUICK_SECONDS - (t - quickStart)));
+    quickBtn.textContent = '15秒ずつ（あと' + left + '秒）';
     if (t - quickStart >= QUICK_SECONDS) { quickStart = null; step(1); }
   }, 300);
   document.querySelector('.tabs').addEventListener('click', e => {

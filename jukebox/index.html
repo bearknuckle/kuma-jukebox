@@ -699,13 +699,29 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (current < 0 && items.length) step(1);
   }
   djBtn.addEventListener('click', () => setDj(!dj));
+  // 曲名の「元の名前」（バージョン違いを同じ曲とみなす）
+  // 例：「ボードゲームと猫 (BGM ver.)」「ボードゲームと猫 (8-bit Instrumental)」→「ボードゲームと猫」
+  function baseTitle(t) {
+    let x = String(t || '').normalize('NFKC').toLowerCase();
+    x = x.split(' / ')[0];
+    x = x.replace(/song by.*$/, '');
+    x = x.replace(/[(（\[【].*?[)）\]】]/g, '').replace(/[〜~].*?([〜~]|$)/g, '').replace(/\s-.*?(-|$)/g, '');
+    return x.replace(/[\s　・\-_/|｜:："'「」『』!！?？.,、。]/g, '');
+  }
+  const djRecent = [];  // 最近流した曲の元の名前（同じ曲名が続かないように）
   function djPick() {
     const pool = view().map(o => o.i).filter(i => i !== current);
     if (!pool.length) return null;
     let left = pool.filter(i => !djPlayed.has(items[i].id));
     if (!left.length) { djPlayed = new Set(); left = pool; }
-    const cur = items[current], other = cur ? left.filter(i => kind(items[i]) !== kind(cur)) : [];
-    const from = other.length ? other : left;
+    const cur = items[current];
+    const avoid = new Set(djRecent.concat(cur ? [baseTitle(cur.t)] : []));
+    // 同じ曲名（バージョン違い）を避ける。足りなければ直前の曲だけ避ける
+    let cand = left.filter(i => !avoid.has(baseTitle(items[i].t)));
+    if (!cand.length && cur) cand = left.filter(i => baseTitle(items[i].t) !== baseTitle(cur.t));
+    if (!cand.length) cand = left;
+    const other = cur ? cand.filter(i => kind(items[i]) !== kind(cur)) : [];
+    const from = other.length ? other : cand;
     return from[Math.floor(Math.random() * from.length)];
   }
   function setNow() {
@@ -761,6 +777,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       const target = dur > 100 ? Math.floor(dur * 0.3) : 0;
       if (Math.abs(t - target) > 2) player.seekTo(target, true);
       djStart = target; djPlayed.add(items[current].id);
+      djRecent.push(baseTitle(items[current].t)); if (djRecent.length > 5) djRecent.shift();
       djQueued = djPick(); setNow();
       return;
     }

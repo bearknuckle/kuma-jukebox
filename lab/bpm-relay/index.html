@@ -95,7 +95,7 @@ td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}
     <div class="ctrl">
       <div class="eq" id="eq"><i></i><i></i><i></i><i></i><i></i></div>
       <label><input type="checkbox" id="hint" checked> ヒント</label>
-      <label><input type="checkbox" id="sound" checked> 音</label>
+      <select id="sound" title="音"><option value="loop" selected>🔊 ずっと流す</option><option value="short">🔉 出したときだけ</option><option value="off">🔇 音なし</option></select>
       <button class="btn small" id="rulesBtn">ルール</button>
     </div>
   </header>
@@ -206,23 +206,74 @@ function initAudio(){
     if(AC.state==='suspended')AC.resume();
   }catch(e){AC=null}
 }
-function soundOn(){return AC&&document.getElementById('sound').checked}
+function soundMode(){return document.getElementById('sound').value}
+function soundOn(){return AC&&soundMode()!=='off'}
 function kick(t){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.28);o.connect(g);g.connect(master);o.start(t);o.stop(t+.3)}
 function hat(t,v=.25){const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=7000;const g=AC.createGain();g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+.06)}
 function bassNote(t,key,dur){const o=AC.createOscillator(),g=AC.createGain(),f=AC.createBiquadFilter();o.type='sawtooth';o.frequency.value=55*Math.pow(2,((key*7)%12)/12);f.type='lowpass';f.frequency.value=500;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(f);f.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.02)}
-function beat(bpm,key){
-  pulse(bpm);
-  if(!soundOn())return;const t=AC.currentTime+.03,spb=60/bpm;
-  for(let i=0;i<4;i++){kick(t+i*spb);hat(t+i*spb+spb/2);if(key)bassNote(t+i*spb+spb/2,key,spb*.45)}
-}
 function scratchSfx(){if(!soundOn())return;const t=AC.currentTime;const s=AC.createBufferSource();s.buffer=noiseBuf;s.playbackRate.setValueAtTime(.3,t);s.playbackRate.linearRampToValueAtTime(1.6,t+.08);s.playbackRate.linearRampToValueAtTime(.4,t+.18);const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=1500;f.Q.value=2;const g=AC.createGain();g.gain.value=.6;s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+.2)}
 function riser(){if(!soundOn())return;const t=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';o.frequency.setValueAtTime(200,t);o.frequency.exponentialRampToValueAtTime(1600,t+.6);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.3);g.gain.exponentialRampToValueAtTime(.001,t+.7);o.connect(g);g.connect(master);o.start(t);o.stop(t+.75)}
 function blip(f=880){if(!soundOn())return;const t=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.08,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(g);g.connect(master);o.start(t);o.stop(t+.13)}
-let pulseTimer=null;
-function pulse(bpm){
-  const bars=[...document.querySelectorAll('#eq i')];clearInterval(pulseTimer);let n=0;
-  pulseTimer=setInterval(()=>{bars.forEach(b=>b.style.height=(4+Math.random()*14)+'px');if(++n>=8){clearInterval(pulseTimer);bars.forEach(b=>b.style.height='4px')}},30000/bpm);
+// ---------- DJデッキ（かかっている曲をループ再生。次の曲が出たら1小節かけてテンポを寄せてつなぐ） ----------
+function keyHz(key,oct=0){return 55*Math.pow(2,(((key-1)*7)%12)/12+oct)}
+function snare(t,v=.35){const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=1800;f.Q.value=.8;const g=AC.createGain();g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.16);s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+.18);
+  const o=AC.createOscillator(),og=AC.createGain();o.type='triangle';o.frequency.value=190;og.gain.setValueAtTime(v*.5,t);og.gain.exponentialRampToValueAtTime(.001,t+.08);o.connect(og);og.connect(master);o.start(t);o.stop(t+.1)}
+function clap(t,v=.3){for(const d of [0,.012,.024])snare(t+d,v*.5)}
+function bass(t,key,dur,v=.18,oct=0){const o=AC.createOscillator(),g=AC.createGain(),f=AC.createBiquadFilter();o.type='sawtooth';o.frequency.value=keyHz(key,oct);f.type='lowpass';f.frequency.value=420;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(f);f.connect(g);g.connect(deckBus());o.start(t);o.stop(t+dur+.02)}
+function stab(t,key,dur,v=.05,minor=false){const r=keyHz(key,2);for(const m of [1,minor?Math.pow(2,3/12):Math.pow(2,4/12),Math.pow(2,7/12)]){const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=r*m;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g);g.connect(deckBus());o.start(t);o.stop(t+dur+.02)}}
+let busF=null;
+function deckBus(){if(!busF){busF=AC.createBiquadFilter();busF.type='lowpass';busF.frequency.value=18000;busF.connect(master)}return busF}
+// 16分音符のパターン（k=キック s=スネア c=クラップ h=ハット b=ベース p=コード）
+const PAT=[
+  {k:[0,4,8,12],c:[4,12],h:[2,6,10,14],b:[2,6,10,14],p:[3,11]},               // ハウス
+  {k:[0,7,10],s:[4,12],h:[0,2,4,6,8,10,12,14],b:[0,7,10],p:[0],swing:.18},     // ヒップホップ
+  {k:[0,4,8,12],c:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],b:[1,3,5,7,9,11,13,15],p:[]}, // テクノ
+  {k:[0,8,10],s:[4,12],h:[0,2,4,6,8,10,12,14],b:[0,3,8,11],p:[0,8]}           // ポップ
+];
+const DK={on:false,g:0,bpm:120,target:120,key:1,step:0,next:0,timer:null,stopAt:Infinity,glide:0,drop:0,pending:null};
+function deckStart(g,bpm,key){
+  if(!AC)return;DK.g=g;DK.bpm=DK.target=bpm;DK.key=key;DK.pending=null;DK.glide=0;DK.drop=0;
+  if(!DK.on){DK.on=true;DK.step=0;DK.next=AC.currentTime+.06;clearInterval(DK.timer);DK.timer=setInterval(deckTick,25)}
+  DK.stopAt=soundMode()==='short'?DK.next+barSec()*2:Infinity;
 }
+function barSec(){return 240/DK.bpm}
+function deckTo(g,bpm,key){
+  if(!AC)return;
+  if(!DK.on){deckStart(g,bpm,key);return}
+  DK.pending={g,key};DK.target=bpm;DK.glide=16;   // 1小節かけてテンポを寄せ、次の小節頭で曲が切りかわる
+  if(soundMode()==='short')DK.stopAt=Infinity;
+  sweep();
+}
+function deckBreak(){DK.drop=16}                    // ブレイク：1小節キックとベースを抜く
+function deckStop(){DK.on=false;clearInterval(DK.timer);DK.timer=null}
+function sweep(){if(!soundOn()||!busF)return;const t=AC.currentTime;busF.frequency.cancelScheduledValues(t);busF.frequency.setValueAtTime(18000,t);busF.frequency.exponentialRampToValueAtTime(700,t+barSec()*.5);busF.frequency.exponentialRampToValueAtTime(18000,t+barSec())}
+function deckTick(){
+  if(!AC||!DK.on)return;
+  if(document.hidden)return;
+  if(AC.currentTime>DK.next+.5)DK.next=AC.currentTime+.05;   // 画面を離れていたら時間を合わせ直す
+  while(DK.next<AC.currentTime+.12){
+    const st=DK.step%16;
+    if(st===0&&DK.pending){DK.g=DK.pending.g;DK.key=DK.pending.key;DK.pending=null}
+    if(DK.next>=DK.stopAt&&st===0){deckStop();return}
+    if(soundOn())playStep(st,DK.next);
+    if(DK.glide>0){DK.bpm+=(DK.target-DK.bpm)/DK.glide;DK.glide--}else DK.bpm=DK.target;
+    if(DK.drop>0)DK.drop--;
+    const six=15/DK.bpm,P=PAT[DK.g];
+    DK.next+=P.swing?(st%2===0?six*(1+P.swing):six*(1-P.swing)):six;DK.step++;
+  }
+}
+function playStep(st,t){
+  const P=PAT[DK.g],key=DK.key,six=15/DK.bpm,dropped=DK.drop>0;
+  if(!dropped&&P.k.includes(st)){kick(t);eqHit(t)}
+  if(P.s&&P.s.includes(st))snare(t);
+  if(P.c&&P.c.includes(st))clap(t,DK.g===2?.18:.3);
+  if(P.h.includes(st))hat(t,DK.g===2?(st%4===2?.22:.08):(DK.g===0?.2:.12));
+  if(!dropped&&P.b.includes(st))bass(t,key,six*(DK.g===2?.9:1.6),DK.g===2?.14:.18);
+  if(P.p.includes(st))stab(t,key,six*(DK.g===1?6:3),DK.g===3?.05:.035,DK.g===1);
+}
+function eqHit(t){const ms=Math.max(0,(t-AC.currentTime)*1000);setTimeout(()=>{document.querySelectorAll('#eq i').forEach(b=>{b.style.height=(6+Math.random()*12)+'px';setTimeout(()=>b.style.height='4px',90)})},ms)}
+function cue(c){if(!soundOn())return;const t=AC.currentTime+.02;bass(t,c.key,.35,.12,1);stab(t,c.key,.4,.03)}
+document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidden)AC.suspend();else AC.resume()});
 
 // ---------- state ----------
 const S={players:[],deck:[],discard:[],top:null,topCard:null,cur:0,phase:'setup',log:[],sel:null,round:1,chained:false,skip:false,passes:0,W:10,floor:false,choose:null,drawnId:null,first:0};
@@ -273,7 +324,7 @@ function startRound(){
   S.topCard=c;S.top={g:c.g,bpm:c.bpm,key:c.key};S.hist=[c];
   S.cur=(S.round-1)%S.players.length;
   log(`<b>ラウンド ${S.round}/${ROUNDS}</b> 開始。最初の曲は ${cdesc(c)}`);
-  beat(c.bpm,c.key);
+  deckStart(c.g,c.bpm,c.key);
   if(S.players[S.cur].human){S.phase='human';render()}else{render();cpuTurn(S.cur)}
 }
 
@@ -285,7 +336,7 @@ async function doPlay(pi,card,choice){
   if(card.t==='song'){
     harm=isHarm(card,top);const cross=isCross(card,top);const second=S.chained;
     const why=top.bpm===null?'指定ジャンル':(card.g===top.g?`同じジャンル・BPM差${Math.abs(card.bpm-top.bpm)}`:`ジャンル越え・BPM差${Math.abs(card.bpm-top.bpm)}`);
-    S.top={g:card.g,bpm:card.bpm,key:card.key};S.hist.push(card);beat(card.bpm,card.key);bpmEvent=true;
+    S.top={g:card.g,bpm:card.bpm,key:card.key};S.hist.push(card);deckTo(card.g,card.bpm,card.key);bpmEvent=true;
     log(`${P.name}：${cdesc(card)}（${why}${harm?'・キーも合う':''}）`);
     if(cross){P.chips++;log(`🪙 ジャンル越え：${P.name}がチップ1枚`)}
     const got=S.floorOpen.filter(f=>f.ok(S.hist,{second}));
@@ -295,13 +346,13 @@ async function doPlay(pi,card,choice){
     }
     if(got.length)flash(`🎉 ${got.map(f=>f.n).join('・')}！<br><span style="font-size:15px">${P.name} −${FLOOR_PTS*got.length}点</span>`);
   }else if(card.s==='scratch'){
-    S.top={g:choice,bpm:null,key:top.key};scratchSfx();
+    S.top={g:choice,bpm:null,key:top.key};scratchSfx();deckTo(choice,DK.target,top.key);
     log(`${P.name}：💿 スクラッチ！ 次は <b>${GEN[choice].n}</b> をどうぞ`);
   }else if(card.s==='pitch'){
-    S.top={...top,bpm:top.bpm+choice};beat(S.top.bpm,S.top.key);bpmEvent=true;
+    S.top={...top,bpm:top.bpm+choice};deckTo(S.top.g,S.top.bpm,S.top.key);bpmEvent=true;
     log(`${P.name}：🎚️ ピッチフェーダーで BPM ${top.bpm} → <b>${S.top.bpm}</b>`);
   }else if(card.s==='brk'){
-    S.skip=true;blip(440);
+    S.skip=true;blip(440);deckBreak();
     log(`${P.name}：⏸️ ブレイク！ 次の人はお休み`);
   }else if(card.s==='req'){
     const got=drawTo(choice,2);blip(660);
@@ -451,10 +502,11 @@ drawTo=function(pi,n){const before=new Set(S.players[pi].hand.map(c=>c.id));cons
 function roundEnd(wi){
   S.phase='roundover';
   S.players.forEach(p=>p.scores.push(roundPts(p)));
-  if(wi!==null){flash(S.players[wi].human?'🏆 出し切った！':`${S.players[wi].name}が出し切った`);beat(128,S.top.key||1)}
+  if(wi!==null){flash(S.players[wi].human?'🏆 出し切った！':`${S.players[wi].name}が出し切った`)}
   log(`<b>ラウンド${S.round} 終了${wi!==null?`（${S.players[wi].name}が手札を出し切り）`:''}</b><br>`+S.players.map(p=>`${p.name}：手札${penalty(p)}−🪙${chipPts(p)}（${p.chips}枚）−お題${FLOOR_PTS*p.floors.length}＝<b>${sgn(p.scores.at(-1))}点</b>（合計 ${sgn(total(p))}）`).join('<br>'));
   if(S.round>=ROUNDS){
     S.phase='over';
+    if(DK.on)DK.stopAt=DK.next+barSec()*4;
     const rank=[...S.players].sort((a,b)=>total(a)-total(b));
     const tie=rank[1]&&total(rank[1])===total(rank[0]);
     log(`<b>🏁 最終結果</b><br>${rank.map((p,i)=>`${i+1}位 ${p.name}（${sgn(total(p))}点）`).join('<br>')}`);
@@ -537,8 +589,8 @@ document.addEventListener('click',e=>{
   if(c){initAudio();const i=+c.dataset.i;const card=S.players[0].hand[i];
     if(S.phase==='human'||S.phase==='human2'){
       if(S.sel===i){tryHumanPlay();return}
-      S.sel=i;if(card.t==='song')beat(card.bpm,card.key);render()}
-    else if(card.t==='song')beat(card.bpm,card.key);
+      S.sel=i;if(card.t==='song')cue(card);render()}
+    else if(card.t==='song')cue(card);
     return}
   const a=e.target.closest('[data-act]');if(!a)return;initAudio();
   const act=a.dataset.act;
@@ -555,10 +607,13 @@ document.addEventListener('click',e=>{
   else if(act==='call'){if(callTap===null){callTap=performance.now();blip(1200);render();if(callResolve)setTimeout(()=>callResolve&&callResolve(),250)}}
   else if(act==='catch'){if(callResolve)callResolve()}
   else if(act==='next'){S.round++;startRound()}
-  else if(act==='again'){document.getElementById('setup').classList.remove('hidden');document.getElementById('game').classList.add('hidden');S.phase='setup'}
+  else if(act==='again'){document.getElementById('setup').classList.remove('hidden');document.getElementById('game').classList.add('hidden');S.phase='setup';deckStop()}
 });
 document.getElementById('hint').onchange=()=>{if(S.phase!=='setup')render()};
 document.getElementById('startBtn').onclick=startGame;
+document.getElementById('sound').onchange=()=>{initAudio();if(!S.top||S.phase==='setup')return;
+  if(soundMode()==='loop'){if(DK.on)DK.stopAt=Infinity;else deckStart(S.top.g,S.top.bpm||DK.target,S.top.key)}
+  else if(soundMode()==='short'&&DK.on)DK.stopAt=DK.next+barSec()*2};
 document.getElementById('rulesBtn').onclick=()=>document.getElementById('rules').classList.add('show');
 document.getElementById('closeRules').onclick=()=>document.getElementById('rules').classList.remove('show');
 document.getElementById('rules').onclick=e=>{if(e.target.id==='rules')e.currentTarget.classList.remove('show')};

@@ -166,6 +166,8 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   const MAX_SECONDS = 10 * 60;  // YouTube限定曲は、これより長い動画を入れない（ショートは最初から除く）
   // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）。曲以外の動画もここに足す
   const EXCLUDE_WORDS = ['MC'];
+  // 自動で入らなかった曲を、動画IDで直接足す（YouTubeのURLの v= や youtu.be/ のあとの11文字）
+  const INCLUDE_IDS = ['qFMHPsDZnao'];
   // 曲以外の動画を1本ずつ外す（タイトルがこの文で始まる動画だけ）
   const EXCLUDE_TITLES = [
     '十王坂の審理を体験していただきました',
@@ -261,22 +263,31 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   }
 
   async function build() {
-    // 'UULF' はショートを除いた動画だけの一覧。読めなければ全動画（UU）にする
-    let fpag = await cueList('UULF' + FPAG_CHANNEL.slice(2), null);
-    let fpagList = 'UULF' + FPAG_CHANNEL.slice(2);
-    if (!fpag.length) { fpagList = uploads(FPAG_CHANNEL); fpag = await cueList(fpagList, null); }
-    // 再生リストは一度に200本ずつしか取れないことがあるので、古い動画も続けて取りに行く
-    for (let guard = 0; guard < 10 && fpag.length >= 190; guard++) {
-      const more = await cueList(fpagList, fpag.slice(-200), 20, fpag.length);
-      const add = more.filter(id => !fpag.includes(id));
-      if (!add.length) break;
-      fpag = fpag.concat(add);
-    }
+    // F-Pagの動画一覧：全動画（UU）と通常動画（UULF）の両方を読み、ショート（UUSH）だけ除く
+    // （UULFだけだと古い動画が入らないことがあるため）
+    const loadAll = async (listId, prev) => {
+      let l = await cueList(listId, prev);
+      // 再生リストは一度に200本ずつしか取れないことがあるので、古い動画も続けて取りに行く
+      for (let guard = 0; guard < 10 && l.length >= 190; guard++) {
+        const more = await cueList(listId, l.slice(-200), 20, l.length);
+        const add = more.filter(id => !l.includes(id));
+        if (!add.length) break;
+        l = l.concat(add);
+      }
+      return l;
+    };
+    const longs = await loadAll('UULF' + FPAG_CHANNEL.slice(2), null);
+    const all = await loadAll(uploads(FPAG_CHANNEL), longs);
+    const shorts = all.length > longs.length ? await loadAll('UUSH' + FPAG_CHANNEL.slice(2), all) : [];
+    const shortSet = new Set(shorts.filter(id => !longs.includes(id)));
+    let fpag = [...new Set(all.concat(longs))].filter(id => !shortSet.has(id));
+    // 自動で入らなかった曲を、動画IDで直接足す
+    INCLUDE_IDS.forEach(id => { if (!fpag.includes(id)) fpag.push(id); });
     try { player.stopVideo(); } catch (e) {}
     const ft = await titlesFor(fpag);
     const extra = EXTRA_SUB_TITLES.map(norm).filter(k => k.length >= 2);
     items = fpag.map(id => ({id, t: ft[id], sub: false, subvid: extra.some(k => norm(ft[id]).includes(k))}));
-    items.forEach(o => { if (!o.sub && LONG_WORDS.some(w => (o.t || '').toLowerCase().includes(w.toLowerCase()))) o.hide = true; });
+    items.forEach(o => { if (INCLUDE_IDS.includes(o.id)) return; if (!o.sub && LONG_WORDS.some(w => (o.t || '').toLowerCase().includes(w.toLowerCase()))) o.hide = true; });
 
     render();
     now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
@@ -284,7 +295,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     // 長い動画を外す（YouTube限定のみ）。まだ何も再生していない間に、1本ずつプレーヤーに読み込んで長さを調べる
     for (const o of items.slice()) {
       if (current >= 0) break;
-      if (o.fromTopic || o.sub || o.hide) continue;
+      if (o.fromTopic || o.sub || o.hide || INCLUDE_IDS.includes(o.id)) continue;
       const sec = await cueDuration(o.id);
       if (sec > MAX_SECONDS) { o.hide = true; render(); }
     }

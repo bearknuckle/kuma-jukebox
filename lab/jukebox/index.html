@@ -28,7 +28,7 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 4px;text-align:cen
 .screen iframe,#player{position:absolute;inset:0;width:100%;height:100%}
 .now{text-align:center;margin:16px 0 4px;font-weight:800;font-size:19px;min-height:1.6em}
 .badge{display:inline-block;font-size:13px;padding:1px 9px;border-radius:99px;vertical-align:2px;margin-left:6px;font-weight:800}
-.b-sub{background:var(--mint);color:#12382c}.b-yt{background:var(--coral);color:#3a0f06}
+.b-sub{background:var(--mint);color:#12382c}.b-vid{background:#ffd36e;color:#3a2a00}.b-yt{background:var(--coral);color:#3a0f06}
 .ctrl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
 button{font:inherit;color:inherit;cursor:pointer}
 .ctrl button{min-width:64px;min-height:48px;padding:0 16px;border-radius:99px;border:2px solid #c98b5a;background:#5a1d2c;font-weight:800;font-size:16px}
@@ -71,6 +71,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   <div class="tabs" role="tablist">
     <button role="tab" data-f="all" aria-selected="true">すべて</button>
     <button role="tab" data-f="sub" aria-selected="false">サブスク配信</button>
+    <button role="tab" data-f="vid" aria-selected="false">サブスク曲の動画</button>
     <button role="tab" data-f="yt" aria-selected="false">YouTube限定</button>
   </div>
   <div id="spot" class="spot" hidden>
@@ -114,7 +115,8 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/[【\[(（].*?[】\])）]/g, '').replace(/[\s　・\-_/|｜:："'「」『』!！?？.,、。~〜]/g, '');
-  const badge = sub => sub ? '<span class="badge b-sub">サブスク</span>' : '<span class="badge b-yt">YouTube限定</span>';
+  const badge = o => o.sub ? '<span class="badge b-sub">サブスク</span>' : o.subvid ? '<span class="badge b-vid">サブスク曲の動画</span>' : '<span class="badge b-yt">YouTube限定</span>';
+  const kind = o => o.sub ? 'sub' : o.subvid ? 'vid' : 'yt';
 
   async function title(id) {
     try {
@@ -155,12 +157,12 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       setTimeout(poll, 300);
     });
   }
-  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t)))).filter(o => filter === 'all' || (filter === 'sub') === o.sub); }
+  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t)))).filter(o => filter === 'all' || filter === kind(o)); }
   function render() {
     const list = view();
     grid.innerHTML = list.map(o => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
       '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + esc(o.id) + '/mqdefault.jpg">' +
-      '<span><span class="num">No.' + String(o.i + 1).padStart(2, '0') + '</span>' + badge(o.sub) +
+      '<span><span class="num">No.' + String(o.i + 1).padStart(2, '0') + '</span>' + badge(o) +
       '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span></span></button></li>').join('');
     document.getElementById('spot').hidden = filter !== 'sub' || items.some(o => o.sub);
     msg.hidden = list.length > 0 || (filter === 'sub' && items.length > 0);
@@ -169,7 +171,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   function playAt(i) {
     if (!items[i]) return;
     current = i; player.loadVideoById(items[i].id);
-    now.innerHTML = esc(items[i].t || '♪') + badge(items[i].sub); render();
+    now.innerHTML = esc(items[i].t || '♪') + badge(items[i]); render();
   }
   function step(d) {
     if (!items.length) return;
@@ -186,7 +188,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     try { player.stopVideo(); } catch (e) {}
     const ft = await titlesFor(fpag);
     const extra = EXTRA_SUB_TITLES.map(norm).filter(k => k.length >= 2);
-    items = fpag.map(id => ({id, t: ft[id], sub: extra.some(k => norm(ft[id]) === k)}));
+    items = fpag.map(id => ({id, t: ft[id], sub: false, subvid: extra.some(k => norm(ft[id]).includes(k))}));
     items.forEach(o => { if (!o.sub && LONG_WORDS.some(w => (o.t || '').toLowerCase().includes(w.toLowerCase()))) o.hide = true; });
 
     render();
@@ -256,9 +258,9 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       const tt = await titlesFor(ids);
       ids.forEach(id => {
         const k = norm(tt[id]);
-        const same = k.length >= 2 && items.find(o => !o.fromTopic && norm(o.t) === k);
-        if (same) { same.sub = true; same.topicId = id; }
-        else if (!items.some(o => o.topicId === id)) items.push({id, t: tt[id], sub: true, fromTopic: true});
+        // サブスク曲の名前が入ったF-Pagの動画は「サブスク曲の動画」の枠へ
+        if (k.length >= 2) items.forEach(o => { if (!o.fromTopic && norm(o.t).includes(k)) o.subvid = true; });
+        items.push({id, t: tt[id], sub: true, fromTopic: true});
       });
       render();
     };

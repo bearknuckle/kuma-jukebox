@@ -704,6 +704,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   function baseTitle(t) {
     let x = String(t || '').normalize('NFKC').toLowerCase();
     // YouTubeの動画タイトルの前後につく飾りを外す（【MV】、#タグ、｜チャンネル名 など）
+    const q = x.match(/[「『](.+?)[」』]/); if (q) x = q[1];  // 「曲名」があればそれを使う
     x = x.replace(/#\S+/g, ' ');
     x = x.replace(/[(（\[【「『].*?[)）\]】」』]/g, m => /[「『]/.test(m[0]) ? ' ' + m.slice(1, -1) + ' ' : ' ');
     const parts = x.split(/\s[\/|｜]\s|[|｜]/).map(p => p.trim()).filter(Boolean);

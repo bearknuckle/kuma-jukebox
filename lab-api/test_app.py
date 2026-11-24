@@ -23,3 +23,15 @@ def test_cors():
     t = c()
     assert t.get("/api/plays", headers={"Origin": "https://game-lab-oj9t.onrender.com"}).headers["Access-Control-Allow-Origin"]
     assert "Access-Control-Allow-Origin" not in t.get("/api/plays", headers={"Origin": "https://x.example"}).headers
+
+
+def test_kuma_subs(monkeypatch):
+    rss = """<feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
+<entry><yt:videoId>AAAAAAAAAAA</yt:videoId><title>ボードゲームと猫</title></entry></feed>"""
+    page = 'var ytInitialData = {"a":{"playlistId":"OLAK5uy_abcdefghijklmnop"},"b":{"videoId":"BBBBBBBBBBB"}};</script>'
+    monkeypatch.setattr(m, "_get", lambda url: rss if "feeds" in url else page)
+    m._kuma_cache.update(at=0, data=None)
+    d = c().get("/api/kuma-subs").get_json()
+    assert d["videos"][0] == {"id": "AAAAAAAAAAA", "title": "ボードゲームと猫"}
+    assert {"id": "BBBBBBBBBBB", "title": ""} in d["videos"]
+    assert d["playlists"] == ["OLAK5uy_abcdefghijklmnop"]

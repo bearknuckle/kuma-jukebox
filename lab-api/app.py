@@ -160,6 +160,29 @@ def kuma_subs():
     return jsonify(data)
 
 
+KUMA_FPAG_CHANNEL = os.getenv("KUMA_FPAG_CHANNEL", "UCFvOwDfHVEBwu-GTv81da1g")
+_fpag_cache = {"at": 0, "data": None}
+PL_WITH_TITLE = re.compile(r'"playlistId":"((?:PL|OLAK5uy_)[A-Za-z0-9_-]{10,60})".{0,800}?"title":\{(?:"simpleText":"([^"]+)"|"runs":\[\{"text":"([^"]+)")', re.S)
+
+
+@app.get("/api/kuma-playlists")
+def kuma_playlists():
+    """F-Pagチャンネルの再生リスト（ID・名前）。ジュークボックスで曲だけのリストを使うため"""
+    with _kuma_lock:
+        if _fpag_cache["data"] is None or time.time() - _fpag_cache["at"] > KUMA_CACHE_SEC:
+            found, errors = {}, []
+            try:
+                html = _get("https://www.youtube.com/channel/%s/playlists" % KUMA_FPAG_CHANNEL)
+                for pid, t1, t2 in PL_WITH_TITLE.findall(html):
+                    found.setdefault(pid, t1 or t2)
+            except Exception as ex:
+                errors.append(type(ex).__name__)
+            _fpag_cache.update(at=time.time(), data={
+                "playlists": [{"id": k, "title": v} for k, v in found.items()][:50], "errors": errors})
+        data = _fpag_cache["data"]
+    return jsonify(data)
+
+
 @app.get("/healthz")
 def health():
     return "ok"

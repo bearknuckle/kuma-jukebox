@@ -75,7 +75,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   <ul class="grid" id="grid"></ul>
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
-  <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
+  <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a> ・ <a href="https://open.spotify.com/artist/4dcIO2stF5F6oFRWEWbGd0" target="_blank" rel="noopener">Spotifyで聴く</a></p>
 </div>
 
 <script>
@@ -84,7 +84,10 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   const FPAG_CHANNEL = 'UCFvOwDfHVEBwu-GTv81da1g';   // F-Pag（全曲の動画）
   const TOPIC_CHANNEL = 'UCRlaIisipjF9qL1zYkMMCug';  // KUMA MUSIC - Topic（サブスク配信曲）
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
-  const EXTRA_SUB_TITLES = [];
+  const EXTRA_SUB_TITLES = [
+    '小さな街は未完成', 'ボードゲームと猫', 'あの卓にまた帰る日', 'あと１ゲームだけ', 'また買っちゃった',
+    '盤上のチキンレース', '６点狙いに行く', '軍資金と戦利品', '試作ゲームラボ'
+  ];
   /* ================== */
 
   const uploads = c => 'UU' + c.slice(2);
@@ -93,7 +96,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   let player, items = [], filter = 'all', shuffle = false, current = -1, playing = false;
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const norm = s => String(s || '').toLowerCase().replace(/[【\[(（].*?[】\])）]/g, '').replace(/[\s　・\-_/|｜:："'「」『』!！?？.,、。~〜]/g, '');
+  const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/[【\[(（].*?[】\])）]/g, '').replace(/[\s　・\-_/|｜:："'「」『』!！?？.,、。~〜]/g, '');
   const badge = sub => sub ? '<span class="badge b-sub">サブスク</span>' : '<span class="badge b-yt">YouTube限定</span>';
 
   async function title(id) {

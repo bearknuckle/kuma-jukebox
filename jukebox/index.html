@@ -172,6 +172,9 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   // 自動で入らなかったサブスク配信のアルバム・シングル（再生リストのURLの list= のあと）
   const EXTRA_SUB_PLAYLISTS = ['OLAK5uy_mQB36oRVROyJEfmYzx-OJLQ17OGOCRkXw'];
   // 曲以外の動画を1本ずつ外す（タイトルがこの文で始まる動画だけ）
+  // この曲名と完全に同じ曲だけ外す（かっこの中まで見る）
+  const EXCLUDE_EXACT = ['どれで遊ぼうか', '神引きしたいだけなのに (再録)'];
+  const exact = t => String(t || '').normalize('NFKC').toLowerCase().replace(/[\s　]/g, '');
   const EXCLUDE_TITLES = [
     '十王坂の審理を体験していただきました',
     'きせつのおくりもの　アレンジルール　ナンジャモンジャ風？',
@@ -237,7 +240,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       setTimeout(poll, 300);
     });
   }
-  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t)))).filter(o => filter === 'all' || filter === kind(o)).filter(o => !query || norm(o.t).includes(query)); }
+  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || filter === kind(o)).filter(o => !query || norm(o.t).includes(query)); }
   function render() {
     const list = view();
     grid.innerHTML = list.map((o, n) => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +

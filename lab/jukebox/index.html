@@ -90,7 +90,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   const SUBS_API = 'https://game-lab-api.onrender.com/api/kuma-subs';  // KUMA MUSIC - Topic（サブスク配信曲）の一覧
   // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
   const MAX_SECONDS = 10 * 60;  // YouTube限定曲は、これより長い動画を入れない（ショートは最初から除く）
-  const DURATION_API = 'https://game-lab-api.onrender.com/api/yt-durations';
+  const EXCLUDE_WORDS = ['MC'];  // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）
   const EXTRA_SUB_TITLES = [
     '小さな街は未完成', 'ボードゲームと猫', 'あの卓にまた帰る日', 'あと１ゲームだけ', 'また買っちゃった',
     '盤上のチキンレース', '６点狙いに行く', '軍資金と戦利品', '試作ゲームラボ'
@@ -145,7 +145,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       setTimeout(poll, 300);
     });
   }
-  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide).filter(o => filter === 'all' || (filter === 'sub') === o.sub); }
+  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase()))).filter(o => filter === 'all' || (filter === 'sub') === o.sub); }
   function render() {
     const list = view();
     grid.innerHTML = list.map(o => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
@@ -187,16 +187,27 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     render();
   }
 
-  async function durationsFor(ids) {
-    const out = {};
-    for (let i = 0; i < ids.length; i += 25) {
-      try {
-        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 70000);
-        const r = await fetch(DURATION_API + '?ids=' + ids.slice(i, i + 25).join(','), {signal: ctl.signal}); clearTimeout(tm);
-        if (r.ok) Object.assign(out, (await r.json()).durations || {});
-      } catch (e) {}
-    }
-    return out;
+  // 動画の長さ（秒）を、見えないプレーヤーに1本ずつ読み込ませて調べる
+  function durationsFor(ids) {
+    return new Promise(res => {
+      const out = {};
+      const d = document.createElement('div'); d.style.cssText = 'position:absolute;width:200px;height:120px;left:-9999px;top:0';
+      const h = document.createElement('div'); d.appendChild(h); document.body.appendChild(d);
+      let k = 0, p;
+      const done = () => { try { p.destroy(); } catch (e) {} d.remove(); res(out); };
+      const next = () => {
+        if (k >= ids.length) return done();
+        const id = ids[k++]; let n = 20;
+        try { p.cueVideoById(id); } catch (e) { return done(); }
+        const poll = () => {
+          const sec = p.getDuration && p.getDuration();
+          if (sec > 0) { out[id] = sec; next(); } else if (n-- > 0) setTimeout(poll, 200); else next();
+        };
+        setTimeout(poll, 200);
+      };
+      p = new YT.Player(h, {playerVars: {playsinline: 1}, events: {onReady: next, onError: () => {}}});
+      setTimeout(done, 5 * 60 * 1000);
+    });
   }
 
   // サブスク配信曲：ラボのサーバーがトピックチャンネルから集めた一覧を読み込む

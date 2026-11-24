@@ -36,9 +36,3 @@ def test_kuma_subs(monkeypatch):
     assert {"id": "BBBBBBBBBBB", "title": ""} in d["videos"]
     assert d["playlists"] == ["OLAK5uy_abcdefghijklmnop"]
 
-
-def test_yt_durations(monkeypatch):
-    monkeypatch.setattr(m, "_get", lambda url: '{"lengthSeconds":"215"}')
-    m._durations.clear()
-    d = c().get("/api/yt-durations?ids=AAAAAAAAAAA,bad").get_json()
-    assert d == {"durations": {"AAAAAAAAAAA": 215}}

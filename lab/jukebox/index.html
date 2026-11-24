@@ -79,7 +79,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 body{background:radial-gradient(ellipse 120% 70% at 50% 0,#5a1a2a 0,var(--bg) 70%) fixed;background-color:var(--bg)}
 h1{display:flex;align-items:center;justify-content:center;gap:12px}
 .logo{width:clamp(40px,7vw,56px);height:auto;border-radius:12px;flex:none}
-.rainbow{display:flex;flex-direction:column;gap:3px;width:min(240px,60%);margin:10px auto 8px}
+.rainbow{display:flex;flex-direction:column;gap:3px;width:min(240px,60%);margin:10px auto 0}
 .rainbow i{height:4px;border-radius:4px;background:#ff7a5c}.rainbow i:nth-child(2){background:#ffd36e;margin:0 14px}.rainbow i:nth-child(3){background:#5fe0b5;margin:0 28px}
 .cab{position:relative;margin-top:64px;background:linear-gradient(#8a2b3f,#4a1826 70%);border:8px solid #c98b5a;border-bottom:none;border-radius:300px 300px 0 0;box-shadow:0 24px 60px #0008;padding-top:clamp(18px,4vw,34px)}
 .ear{position:absolute;top:-34px;width:clamp(70px,13vw,104px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#ff7a5c 0 48%,#c98b5a 49%);z-index:-1}
@@ -110,7 +110,6 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
 <div class="wrap">
   <h1><img src="icon.svg" alt="" class="logo">KUMA MUSIC Jukebox</h1>
   <div class="rainbow" aria-hidden="true"><i></i><i></i><i></i></div>
-  <p class="lead">曲札を押すとすぐ流れます</p>
 
   <section class="cab" aria-label="プレーヤー">
     <span class="ear l" aria-hidden="true"></span><span class="ear r" aria-hidden="true"></span>

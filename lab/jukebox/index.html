@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KUMA MUSIC ジュークボックス</title>
+<!-- KUMA MUSIC ジュークボックス: 試作ゲームラボのホームには載せない独立ページ。F-PagとKUMA MUSIC - Topicの動画を自動で読み込む -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="KUMA MUSIC ジュークボックス">
+<meta property="og:description" content="KUMA MUSICの曲を、ボタンひとつで。サブスク配信曲もYouTube限定曲も聴けます。">
+<meta property="og:url" content="https://game-lab-oj9t.onrender.com/jukebox/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 楽しい・夜の店先のジュークボックス
+   IDEA: 本物のジュークボックスの選曲パネル（番号つきの曲札を押すと鳴る）
+   PICTURE: 上部に丸いアーチ枠の中で動画（ビジュアライザー）が流れる
+   COLOUR/TYPE: 深いワインレッド地、クリーム文字、ミントとコーラルのアクセント / M PLUS Rounded 1c
+   LAYOUT: アーチ型の画面 → 操作ボタン → 絞り込み → 曲札グリッド */
+:root{--bg:#2b0d16;--panel:#3d1420;--ink:#fbefe0;--sub:#e9c9b4;--mint:#5fe0b5;--coral:#ff7a5c;--line:#5c2433}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:radial-gradient(ellipse at 50% -10%,#5a1a2a 0,var(--bg) 60%);background-color:var(--bg);color:var(--ink);font:16px/1.55 "M PLUS Rounded 1c",system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:clamp(18px,4vw,40px) max(4vw,14px) 60px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 4px;text-align:center;font-weight:800;letter-spacing:.02em}
+.lead{text-align:center;color:var(--sub);margin:0 0 22px;font-size:15px}
+.cab{background:linear-gradient(#4a1826,#33101b);border:3px solid #c98b5a;border-radius:220px 220px 26px 26px;padding:clamp(26px,6vw,56px) clamp(14px,3vw,30px) 22px;box-shadow:0 0 0 6px #2b0d16,0 0 0 9px #7a3a2c,0 24px 60px #0008}
+.screen{position:relative;aspect-ratio:16/9;max-width:760px;margin:0 auto;border-radius:18px;overflow:hidden;background:#000;box-shadow:inset 0 0 0 2px #0006}
+.screen iframe,#player{position:absolute;inset:0;width:100%;height:100%}
+.now{text-align:center;margin:16px 0 4px;font-weight:800;font-size:19px;min-height:1.6em}
+.badge{display:inline-block;font-size:13px;padding:1px 9px;border-radius:99px;vertical-align:2px;margin-left:6px;font-weight:800}
+.b-sub{background:var(--mint);color:#12382c}.b-yt{background:var(--coral);color:#3a0f06}
+.ctrl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+button{font:inherit;color:inherit;cursor:pointer}
+.ctrl button{min-width:64px;min-height:48px;padding:0 16px;border-radius:99px;border:2px solid #c98b5a;background:#5a1d2c;font-weight:800;font-size:16px}
+.ctrl button[aria-pressed=true]{background:var(--mint);color:#12382c;border-color:var(--mint)}
+button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+.tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:28px 0 16px}
+.tabs button{min-height:44px;padding:0 18px;border-radius:12px;border:2px solid var(--line);background:var(--panel);font-weight:800}
+.tabs button[aria-selected=true]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:12px;list-style:none;padding:0;margin:0}
+.card{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:8px;min-height:72px;transition:transform .15s}
+.card:hover{transform:translateY(-2px);border-color:#c98b5a}
+.card.on{border-color:var(--mint);box-shadow:0 0 0 2px var(--mint)}
+.card img{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;flex:none;background:#000}
+.num{font-size:13px;color:var(--sub);font-weight:800}
+.ttl{font-size:15px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.msg{text-align:center;color:var(--sub);padding:30px 0}
+.links{text-align:center;margin-top:34px;font-size:14px;color:var(--sub)}
+.links a{color:var(--mint)}
+@media(prefers-reduced-motion:reduce){.card{transition:none}.card:hover{transform:none}}
+@media(max-width:600px){.cab{border-radius:120px 120px 20px 20px}.card img{width:84px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>KUMA MUSIC Jukebox</h1>
+  <p class="lead">曲札を押すとすぐ流れます</p>
+
+  <section class="cab" aria-label="プレーヤー">
+    <div class="screen"><div id="player"></div></div>
+    <div class="now" id="now" aria-live="polite">読み込み中…</div>
+    <div class="ctrl">
+      <button id="prev" aria-label="前の曲">⏮</button>
+      <button id="play" aria-label="再生 / 一時停止">▶</button>
+      <button id="next" aria-label="次の曲">⏭</button>
+      <button id="shuf" aria-pressed="false">シャッフル</button>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-f="all" aria-selected="true">すべて</button>
+    <button role="tab" data-f="sub" aria-selected="false">サブスク配信</button>
+    <button role="tab" data-f="yt" aria-selected="false">YouTube限定</button>
+  </div>
+  <ul class="grid" id="grid"></ul>
+  <p class="msg" id="msg">曲リストを読み込み中…</p>
+
+  <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
+</div>
+
+<script>
+{
+  /* ===== 設定 ===== */
+  const FPAG_CHANNEL = 'UCFvOwDfHVEBwu-GTv81da1g';   // F-Pag（全曲の動画）
+  const TOPIC_CHANNEL = 'UCRlaIisipjF9qL1zYkMMCug';  // KUMA MUSIC - Topic（サブスク配信曲）
+  // 自動判定がうまくいかない曲は、曲名（の一部）をここに書くと「サブスク」扱いになる
+  const EXTRA_SUB_TITLES = [];
+  /* ================== */
+
+  const uploads = c => 'UU' + c.slice(2);
+  const grid = document.getElementById('grid'), msg = document.getElementById('msg'), now = document.getElementById('now');
+  const playBtn = document.getElementById('play'), shufBtn = document.getElementById('shuf');
+  let player, items = [], filter = 'all', shuffle = false, current = -1, playing = false;
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const norm = s => String(s || '').toLowerCase().replace(/[【\[(（].*?[】\])）]/g, '').replace(/[\s　・\-_/|｜:："'「」『』!！?？.,、。~〜]/g, '');
+  const badge = sub => sub ? '<span class="badge b-sub">サブスク</span>' : '<span class="badge b-yt">YouTube限定</span>';
+
+  async function title(id) {
+    try {
+      const r = await fetch('https://noembed.com/embed?url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id));
+      const j = await r.json(); return (j && j.title) || '';
+    } catch (e) { return ''; }
+  }
+  async function titlesFor(ids) {
+    const out = {}; let k = 0;
+    const w = async () => { while (k < ids.length) { const id = ids[k++]; out[id] = await title(id); } };
+    await Promise.all([w(), w(), w(), w()]); return out;
+  }
+  // 再生リストの動画IDを、見えないプレーヤーで取り出す
+  function getList(listId) {
+    return new Promise(res => {
+      const d = document.createElement('div'); d.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px';
+      const h = document.createElement('div'); d.appendChild(h); document.body.appendChild(d);
+      let n = 25, done = false;
+      const finish = v => { if (done) return; done = true; try { p.destroy(); } catch (e) {} d.remove(); res(v); };
+      const p = new YT.Player(h, {playerVars: {listType: 'playlist', list: listId}, events: {
+        onReady: () => { const poll = () => { const l = p.getPlaylist && p.getPlaylist(); if (l && l.length) finish(l); else if (n-- > 0) setTimeout(poll, 400); else finish([]); }; poll(); },
+        onError: () => finish([])
+      }});
+      setTimeout(() => finish([]), 15000);
+    });
+  }
+
+  function view() { return items.map((o, i) => ({...o, i})).filter(o => filter === 'all' || (filter === 'sub') === o.sub); }
+  function render() {
+    const list = view();
+    grid.innerHTML = list.map(o => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
+      '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + esc(o.id) + '/mqdefault.jpg">' +
+      '<span><span class="num">No.' + String(o.i + 1).padStart(2, '0') + '</span>' + badge(o.sub) +
+      '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span></span></button></li>').join('');
+    msg.hidden = list.length > 0;
+    if (!list.length && items.length) msg.textContent = 'この棚にはまだ曲がありません';
+  }
+  function playAt(i) {
+    if (!items[i]) return;
+    current = i; player.loadVideoById(items[i].id);
+    now.innerHTML = esc(items[i].t || '♪') + badge(items[i].sub); render();
+  }
+  function step(d) {
+    if (!items.length) return;
+    const pool = view().map(o => o.i); if (!pool.length) return;
+    if (shuffle) { let j; do { j = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && j === current); return playAt(j); }
+    const at = pool.indexOf(current);
+    playAt(pool[(at + d + pool.length) % pool.length]);
+  }
+
+  async function build() {
+    const [fpag, topic] = await Promise.all([getList(uploads(FPAG_CHANNEL)), getList(uploads(TOPIC_CHANNEL))]);
+    if (!fpag.length && !topic.length) { msg.textContent = '曲リストを読み込めませんでした。時間をおいて再読み込みしてください'; now.textContent = ''; return; }
+    const [ft, tt] = await Promise.all([titlesFor(fpag), titlesFor(topic)]);
+    const subKeys = topic.map(id => norm(tt[id])).concat(EXTRA_SUB_TITLES.map(norm)).filter(k => k.length >= 2);
+    const used = new Set();
+    items = fpag.map(id => {
+      const n = norm(ft[id]); const hit = subKeys.findIndex(k => n.includes(k));
+      if (hit >= 0 && hit < topic.length) used.add(hit);
+      return {id, t: ft[id], sub: hit >= 0};
+    });
+    // F-Pagに見つからなかったサブスク曲は、配信音源のまま追加
+    topic.forEach((id, i) => { if (!used.has(i)) items.push({id, t: tt[id], sub: true}); });
+    render(); now.textContent = '好きな曲を選んでください';
+  }
+
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player('player', {
+      playerVars: {playsinline: 1, rel: 0},
+      events: {
+        onReady: build,
+        onStateChange: e => {
+          playing = e.data === YT.PlayerState.PLAYING;
+          playBtn.textContent = playing ? '⏸' : '▶';
+          if (e.data === YT.PlayerState.ENDED) step(1);
+        },
+        onError: () => setTimeout(() => step(1), 800)
+      }
+    });
+  };
+
+  grid.addEventListener('click', e => { const b = e.target.closest('.card'); if (b && player) playAt(+b.dataset.i); });
+  playBtn.addEventListener('click', () => {
+    if (!player || !items.length) return;
+    if (current < 0) return step(1);
+    playing ? player.pauseVideo() : player.playVideo();
+  });
+  document.getElementById('next').addEventListener('click', () => step(1));
+  document.getElementById('prev').addEventListener('click', () => step(-1));
+  shufBtn.addEventListener('click', () => { shuffle = !shuffle; shufBtn.setAttribute('aria-pressed', shuffle); });
+  document.querySelector('.tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-f]'); if (!b) return;
+    filter = b.dataset.f;
+    document.querySelectorAll('.tabs [data-f]').forEach(x => x.setAttribute('aria-selected', x === b));
+    render();
+  });
+
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.body.appendChild(s);
+}
+</script>
+</body>
+</html>

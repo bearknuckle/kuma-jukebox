@@ -178,7 +178,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
     try { player.stopVideo(); } catch (e) {}
     const ft = await titlesFor(fpag);
     const extra = EXTRA_SUB_TITLES.map(norm).filter(k => k.length >= 2);
-    items = fpag.map(id => ({id, t: ft[id], sub: extra.some(k => norm(ft[id]).includes(k))}));
+    items = fpag.map(id => ({id, t: ft[id], sub: extra.some(k => norm(ft[id]) === k)}));
     items.forEach(o => { if (!o.sub && LONG_WORDS.some(w => (o.t || '').toLowerCase().includes(w.toLowerCase()))) o.hide = true; });
 
     render();
@@ -230,7 +230,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       const tt = await titlesFor(ids);
       ids.forEach(id => {
         const k = norm(tt[id]);
-        const same = k.length >= 2 && items.find(o => !o.fromTopic && norm(o.t).includes(k));
+        const same = k.length >= 2 && items.find(o => !o.fromTopic && norm(o.t) === k);
         if (same) { same.sub = true; same.topicId = id; }
         else if (!items.some(o => o.topicId === id)) items.push({id, t: tt[id], sub: true, fromTopic: true});
       });

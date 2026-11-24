@@ -99,6 +99,11 @@ footer{margin-top:32px;font-size:12px;color:var(--dim);text-align:center}
 // ゲームを増やすときはここに1件追加する
 const GAMES=[
   {
+    id:'yutai-collection', name:'株主優待コレクション', icon:'🎁', color:'#2e7d32',
+    desc:'同じ会社の株を3枚集めたら優待カードをゲット。場の会社カードを取るか、山札から引くか、優待をもらうか。場に権利確定日が出たら、3枚そろっている会社ごとに全員が優待をもらえる。優待の点数合計で勝負。',
+    players:'1人（CPU 1〜3人）', time:'5〜10分', genre:'株', added:'2026-11-24', version:'0.1', updated:'2026-11-24', isNew:true
+  },
+  {
     id:'oyatsu-wakekko', name:'おやつわけっこ', icon:'🍪', color:'#e8743b',
     desc:'ひとりがおやつカード4まいを2つのおさらにわけて、もうひとりがすきなほうをえらぶ。のこったおさらはわけた人のもの。わける番とえらぶ番をこうたいして6かい。★の数に加えて、しゅるいごとにまい数がおおいと「はかせ」で+3点。「どっちをとられてもいいわけ方」を考えるのがカギ。',
     players:'1人（CPU 1人）', time:'5分', genre:'こども', added:'2026-11-24', version:'0.1', updated:'2026-11-24', isNew:true
@@ -229,6 +234,7 @@ const GAMES=[
 ];
 // 最近の更新（新しい順）。ゲームを更新したら先頭に1件足し、GAMES の version / updated も上げる
 const UPDATES=[
+  {date:'2026-11-24', id:'yutai-collection', version:'0.1', text:'新しく登場（株のゲーム・同じ会社の株を3枚集めて優待カードをゲット）'},
   {date:'2026-11-24', id:'setori-shokunin',  version:'0.7', text:'結果画面に「ライブレポ」を追加。幕開けから聴かせどころ、アンコールまで、自分とCPU店長のライブの様子を短い文章で振り返れるように'},
   {date:'2026-11-24', id:'bpm-relay',       version:'0.4', text:'かかっている曲がずっとループで流れるように。次の曲を出すと1小節かけてテンポを寄せてつなぐ（ジャンルごとにビートが変わる）。音は「ずっと流す／出したときだけ／音なし」から選べる'},
   {date:'2026-11-24', id:'oyatsu-wakekko', version:'0.1', text:'新しく登場（こどものゲーム・ひとりがわけて、もうひとりがえらぶ おやつの分けっこ）'},

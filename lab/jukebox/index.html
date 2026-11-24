@@ -65,6 +65,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       <button id="play" aria-label="再生 / 一時停止">▶</button>
       <button id="next" aria-label="次の曲">⏭</button>
       <button id="shuf" aria-pressed="false">シャッフル</button>
+      <button id="quick" aria-pressed="false">15秒ずつ</button>
     </div>
   </section>
 
@@ -171,7 +172,7 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   }
   function playAt(i) {
     if (!items[i]) return;
-    current = i; player.loadVideoById(items[i].id);
+    current = i; quickStart = null; player.loadVideoById(items[i].id);
     now.innerHTML = esc(items[i].t || '♪') + badge(items[i]); render();
   }
   function step(d) {
@@ -309,6 +310,21 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   document.getElementById('next').addEventListener('click', () => step(1));
   document.getElementById('prev').addEventListener('click', () => step(-1));
   shufBtn.addEventListener('click', () => { shuffle = !shuffle; shufBtn.setAttribute('aria-pressed', shuffle); });
+  // 15秒再生モード：どの曲も15秒流したら次の曲へ
+  const QUICK_SECONDS = 15;
+  let quick = false, quickStart = null;
+  const quickBtn = document.getElementById('quick');
+  quickBtn.addEventListener('click', () => {
+    quick = !quick; quickBtn.setAttribute('aria-pressed', quick);
+    quickStart = null;
+    if (quick && current < 0 && player && items.length) step(1);
+  });
+  setInterval(() => {
+    if (!quick || !playing || !player || current < 0) return;
+    const t = player.getCurrentTime();
+    if (quickStart === null || t < quickStart) quickStart = t;
+    if (t - quickStart >= QUICK_SECONDS) { quickStart = null; step(1); }
+  }, 300);
   document.querySelector('.tabs').addEventListener('click', e => {
     const b = e.target.closest('[data-f]'); if (!b) return;
     filter = b.dataset.f;

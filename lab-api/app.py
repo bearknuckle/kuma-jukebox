@@ -2,6 +2,7 @@
 
 POST /api/plays/<game_id>  回数を1増やす
 GET  /api/plays            全ゲームの回数を返す
+GET  /api/yt-durations?ids=a,b  動画の長さ（秒）を返す（ジュークボックス用）
 GET  /api/kuma-subs        KUMA MUSIC（トピックチャンネル）のサブスク曲の動画ID・再生リストIDを返す（ジュークボックス用）
 
 REDIS_URL があれば Render Key Value に保存、なければプロセス内メモリ。
@@ -158,6 +159,32 @@ def kuma_subs():
                 _kuma_cache.update(at=time.time(), data=data)
         data = _kuma_cache["data"]
     return jsonify(data)
+
+
+_durations = {}
+LENGTH = re.compile(r'"lengthSeconds":"(\d+)"')
+ONE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def _duration(vid):
+    try:
+        m = LENGTH.search(_get("https://www.youtube.com/watch?v=" + vid))
+        return int(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+@app.get("/api/yt-durations")
+def yt_durations():
+    from concurrent.futures import ThreadPoolExecutor
+    ids = [i for i in request.args.get("ids", "").split(",") if ONE_ID.match(i)][:30]
+    todo = [i for i in ids if i not in _durations]
+    if todo:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            for vid, sec in zip(todo, ex.map(_duration, todo)):
+                if sec is not None and len(_durations) < 5000:
+                    _durations[vid] = sec
+    return jsonify({"durations": {i: _durations[i] for i in ids if i in _durations}})
 
 
 @app.get("/healthz")

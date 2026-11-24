@@ -131,9 +131,9 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   }
 
   // メインのプレーヤーに再生リストを順番に読み込ませて、動画IDを取り出す
-  function cueList(listId, prev) {
+  function cueList(listId, prev, tries) {
     return new Promise(res => {
-      let n = 40;
+      let n = tries || 40;
       try { player.cuePlaylist({listType: 'playlist', list: listId}); } catch (e) { return res([]); }
       const poll = () => {
         const l = player.getPlaylist && player.getPlaylist();
@@ -189,25 +189,30 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
       } catch (e) {}
     }
     if (!data) { if (!items.length) msg.textContent = '曲リストを読み込めませんでした。時間をおいて再読み込みしてください'; return; }
-    let ids = (data.videos || []).map(v => v.id).filter(id => /^[\w-]{11}$/.test(id));
-    // まだ何も再生していなければ、アルバム（再生リスト）の中の曲も取り出す
+    const merge = async list => {
+      const ids = [...new Set(list)].filter(id => /^[\w-]{11}$/.test(id) && !items.some(o => o.id === id));
+      if (!ids.length) return;
+      const tt = await titlesFor(ids);
+      ids.forEach(id => {
+        const k = norm(tt[id]);
+        const same = k.length >= 2 && items.find(o => !o.fromTopic && norm(o.t).includes(k));
+        if (same) { same.sub = true; same.topicId = id; }
+        else if (!items.some(o => o.topicId === id)) items.push({id, t: tt[id], sub: true, fromTopic: true});
+      });
+      render();
+    };
+    // まず届いた曲をすぐ並べる
+    await merge((data.videos || []).map(v => v.id));
+    if (current < 0) now.textContent = '好きな曲を選んでください';
+    // まだ何も再生していなければ、アルバム（再生リスト）の中の残りの曲も取り出す
     let prev = prevList;
     for (const pl of (data.playlists || [])) {
       if (current >= 0) break;
       if (!/^[\w-]{10,70}$/.test(pl)) continue;
-      const l = await cueList(pl, prev);
-      if (l.length) { ids = ids.concat(l); prev = l; }
+      const l = await cueList(pl, prev, 12);
+      if (l.length) { prev = l; await merge(l); }
     }
     if (current < 0) { try { player.stopVideo(); } catch (e) {} }
-    ids = [...new Set(ids)].filter(id => !items.some(o => o.id === id));
-    const tt = await titlesFor(ids);
-    ids.forEach(id => {
-      const k = norm(tt[id]);
-      const same = k.length >= 2 && items.find(o => !o.fromTopic && norm(o.t).includes(k));
-      if (same) same.sub = true;
-      else items.push({id, t: tt[id], sub: true, fromTopic: true});
-    });
-    render();
     if (current < 0) now.textContent = '好きな曲を選んでください';
   }
 

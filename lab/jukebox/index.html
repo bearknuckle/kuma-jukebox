@@ -167,7 +167,9 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   // 曲名にこの言葉が入っている動画・曲は入れない（サブスク曲も）。曲以外の動画もここに足す
   const EXCLUDE_WORDS = ['MC'];
   // 自動で入らなかった曲を、動画IDで直接足す（YouTubeのURLの v= や youtu.be/ のあとの11文字）
-  const INCLUDE_IDS = ['qFMHPsDZnao'];
+  const INCLUDE_IDS = [];
+  // 自動で入らなかったサブスク配信のアルバム・シングル（再生リストのURLの list= のあと）
+  const EXTRA_SUB_PLAYLISTS = ['OLAK5uy_mQB36oRVROyJEfmYzx-OJLQ17OGOCRkXw'];
   // 曲以外の動画を1本ずつ外す（タイトルがこの文で始まる動画だけ）
   const EXCLUDE_TITLES = [
     '十王坂の審理を体験していただきました',
@@ -369,7 +371,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (current < 0) now.textContent = '好きな曲を選んでください';
     // まだ何も再生していなければ、アルバム（再生リスト）の中の残りの曲も取り出す
     let prev = prevList;
-    for (const pl of (data.playlists || [])) {
+    for (const pl of [...new Set(EXTRA_SUB_PLAYLISTS.concat(data.playlists || []))]) {
       if (current >= 0) break;
       if (!/^[\w-]{10,70}$/.test(pl)) continue;
       const l = await cueList(pl, prev, 12);

@@ -133,13 +133,15 @@ def fetch_kuma_subs(channel=None):
     except Exception as ex:
         errors.append("rss:" + type(ex).__name__)
     # 2. チャンネルページ（リリース一覧・動画一覧）から再生リストIDと動画IDを拾う
-    for tab in ("releases",):
+    for tab in ("releases", ""):
         try:
             html = _get("https://www.youtube.com/channel/%s/%s" % (channel, tab))
             m = re.search(r"ytInitialData\s*=\s*(\{.*?\});\s*</script>", html, re.S)
             text = m.group(1) if m else html
-            playlists += PLAYLIST_ID.findall(text)
-            videos += VIDEO_ID.findall(text)
+            # アルバム・シングル（OLAK…）はリリース一覧とホームの両方から集める。動画IDはリリース一覧からだけ
+            playlists += [p for p in PLAYLIST_ID.findall(text) if p.startswith("OLAK5uy_") or tab == "releases"]
+            if tab == "releases":
+                videos += VIDEO_ID.findall(text)
         except Exception as ex:
             errors.append(tab + ":" + type(ex).__name__)
     playlists = [p for p in _uniq(playlists) if p != "UU" + channel[2:]][:60]

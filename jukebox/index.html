@@ -96,6 +96,16 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .sortrow{display:flex;align-items:center;justify-content:center;gap:8px;margin:-4px auto 16px;font-size:13px;color:var(--sub)}
 .sortrow button{min-height:38px;padding:0 14px;border-radius:99px;border:2px solid var(--line);background:var(--panel);font-weight:800;font-size:13px}
 .sortrow button[aria-pressed=true]{background:#c98b5a;border-color:#c98b5a;color:#2b0d16}
+.first{max-width:760px;margin:30px auto 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;padding:16px 18px;border-radius:20px;border:2px solid #c98b5a;background:linear-gradient(120deg,#5a1d2c,#3d1420)}
+.first.on{border-color:#ffd36e;box-shadow:0 0 0 2px #ffd36e,0 0 22px #ffd36e44}
+.firstttl{margin:0;font-weight:800;font-size:19px}
+.firstsub{margin:2px 0 0;font-size:13px;color:var(--sub)}
+.firstbtns{display:flex;gap:8px;flex-wrap:wrap}
+.firstplay,.firstspot{min-height:44px;padding:0 16px;border-radius:99px;font-weight:800;font-size:14px;display:inline-flex;align-items:center;text-decoration:none}
+.firstplay{border:0;background:#ff7a5c;color:#2b0d16}
+.firstspot{border:2px solid #1ed76088;color:#9af0bb;background:transparent}
+.first + .tabs{margin-top:14px}
+@media(max-width:600px){.firstbtns{width:100%}.firstplay,.firstspot{flex:1;justify-content:center}}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
 .qrbg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;z-index:50;padding:20px}
 .qrbg[hidden]{display:none}
@@ -198,6 +208,16 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   </section>
   <div class="plinth" aria-hidden="true"></div>
 
+  <section class="first" id="first">
+    <div class="firsttxt">
+      <p class="firstttl">はじめてのKUMA MUSIC</p>
+      <p class="firstsub" id="firstSub">まずはこの曲たちから</p>
+    </div>
+    <div class="firstbtns">
+      <button id="firstPlay" class="firstplay">▶ 聴いてみる</button>
+      <a class="firstspot" href="https://open.spotify.com/playlist/3mmk4OypLfD7lo1MktOP35" target="_blank" rel="noopener">Spotifyで聴く</a>
+    </div>
+  </section>
   <div class="tabs" role="tablist">
     <button role="tab" data-f="all" aria-selected="true">すべて</button>
     <button role="tab" data-f="fav" aria-selected="false">♥ お気に入り</button>
@@ -325,7 +345,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       setTimeout(poll, 300);
     });
   }
-  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || (filter === 'fav' ? favs.has(o.id) : filter === 'hist' ? histIndex.has(o.id) : filter === 'sub' || filter === 'vid' || filter === 'yt' ? filter === kind(o) : true)).filter(o => !query || norm(o.t).includes(query))
+  function view() { if (filter === 'first') return firstView(); return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !o.firstOnly && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || (filter === 'fav' ? favs.has(o.id) : filter === 'hist' ? histIndex.has(o.id) : filter === 'sub' || filter === 'vid' || filter === 'yt' ? filter === kind(o) : true)).filter(o => !query || norm(o.t).includes(query))
       .map((o, k) => ({...o, k})).sort((a, b) => filter === 'hist' ? histIndex.get(a.id) - histIndex.get(b.id) : sortMode === 'views' ? ((b.views ?? -1) - (a.views ?? -1)) || (a.k - b.k) : (isNew(b) - isNew(a)) || (a.k - b.k)); }
   let histPending = false;
   function render() {
@@ -397,6 +417,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
     openShared();
     await addSubs(fpag);
+    loadFirst();
     // 長い動画・ショート・ライブを外す（YouTube限定のみ）。まずはラボのサーバー（YouTube公式API）で長さを調べる
     const targets = items.filter(o => !o.fromTopic && !o.sub && !o.hide && !INCLUDE_IDS.includes(o.id));
     let apiOk = false;
@@ -729,6 +750,37 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     drawSort(); render();
   });
 
+  // ===== はじめてのKUMA MUSIC（YouTubeの再生リストと連動）=====
+  const FIRST_PLAYLIST = 'PLGMoMogtET_c';
+  const PLAYLIST_API = 'https://kuma-jukebox-api.onrender.com/api/playlist';
+  const firstEl = document.getElementById('first');
+  let firstIds = [];
+  async function loadFirst() {
+    try {
+      const d = await (await fetch(PLAYLIST_API + '?id=' + FIRST_PLAYLIST)).json();
+      firstIds = (d.items || []).map(v => v.id).filter(id => /^[\w-]{11}$/.test(id));
+      // ジュークボックスに入っていない曲（外した動画など）も、このリストでは流せるように足す
+      (d.items || []).forEach(v => {
+        if (/^[\w-]{11}$/.test(v.id) && !items.some(o => o.id === v.id)) items.push({id: v.id, t: v.title, sub: false, firstOnly: true, pub: v.pub || ''});
+      });
+      document.getElementById('firstSub').textContent = firstIds.length ? 'まずはこの' + firstIds.length + '曲から' : 'まずはこの曲たちから';
+      if (filter === 'first') render();
+    } catch (e) {}
+  }
+  function firstView() {
+    return firstIds.map(id => items.findIndex(o => o.id === id)).filter(i => i >= 0)
+      .map(i => ({...items[i], i})).filter(o => !query || norm(o.t).includes(query));
+  }
+  function openFirst(play) {
+    filter = 'first';
+    document.querySelectorAll('.tabs [data-f]').forEach(x => x.setAttribute('aria-selected', false));
+    firstEl.classList.add('on');
+    render();
+    if (play) { const l = view(); if (l.length) playAt(l[0].i); }
+    document.querySelector('.cab').scrollIntoView({block: 'start', behavior: 'smooth'});
+  }
+  document.getElementById('firstPlay').addEventListener('click', () => openFirst(true));
+
   // ===== 検索 =====
   const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');
   let query = '';
@@ -907,8 +959,8 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   document.querySelector('.tabs').addEventListener('click', e => {
     const b = e.target.closest('[data-f]'); if (!b) return;
     filter = b.dataset.f;
-    if (filter === 'sub' && player && playing) player.pauseVideo();
     document.querySelectorAll('.tabs [data-f]').forEach(x => x.setAttribute('aria-selected', x === b));
+    firstEl.classList.remove('on');
     render();
   });
 

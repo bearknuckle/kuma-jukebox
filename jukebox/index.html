@@ -106,6 +106,13 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .firstspot{border:2px solid #1ed76088;color:#9af0bb;background:transparent}
 .first + .tabs{margin-top:14px}
 @media(max-width:600px){.firstbtns{width:100%}.firstplay,.firstspot{flex:1;justify-content:center}}
+.lines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:760px;margin:12px auto 0}
+.line{min-height:58px;border-radius:16px;border:2px solid;background:#2b0d16;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px}
+.line b{font-size:16px;letter-spacing:.06em}.line b[data-n]::after{content:' ' attr(data-n);font-size:11px;letter-spacing:0;opacity:.8}
+.line small{font-size:11px;color:var(--sub);line-height:1.3}
+.line.g{border-color:#5fe0b5;color:#5fe0b5}.line.b{border-color:#6fb6ff;color:#8cc4ff}.line.r{border-color:#ff7a5c;color:#ff8f75}
+.line[aria-pressed=true].g{background:#5fe0b5;color:#12382c}.line[aria-pressed=true].b{background:#6fb6ff;color:#0d2440}.line[aria-pressed=true].r{background:#ff7a5c;color:#3a0f06}
+.line[aria-pressed=true] small{color:inherit;opacity:.8}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
 .qrbg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;z-index:50;padding:20px}
 .qrbg[hidden]{display:none}
@@ -218,6 +225,11 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       <a class="firstspot" href="https://open.spotify.com/playlist/3mmk4OypLfD7lo1MktOP35" target="_blank" rel="noopener">Spotifyで聴く</a>
     </div>
   </section>
+  <div class="lines" role="group" aria-label="ラインごとに聴く">
+    <button class="line g" data-pl="PLVnCA6uyV53w"><b>GREEN</b><small>ロックなど</small></button>
+    <button class="line b" data-pl="PLNWs0aJcmANs"><b>BLUE</b><small>作業BGM</small></button>
+    <button class="line r" data-pl="PLIfidpQ5QlP8"><b>RED</b><small>ファンソング</small></button>
+  </div>
   <div class="tabs" role="tablist">
     <button role="tab" data-f="all" aria-selected="true">すべて</button>
     <button role="tab" data-f="fav" aria-selected="false">♥ お気に入り</button>
@@ -345,7 +357,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       setTimeout(poll, 300);
     });
   }
-  function view() { if (filter === 'first') return firstView(); return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !o.firstOnly && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || (filter === 'fav' ? favs.has(o.id) : filter === 'hist' ? histIndex.has(o.id) : filter === 'sub' || filter === 'vid' || filter === 'yt' ? filter === kind(o) : true)).filter(o => !query || norm(o.t).includes(query))
+  function view() { if (filter === 'first') return firstView(); if (filter.startsWith('pl:')) return plView(filter.slice(3)); return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !o.firstOnly && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || (filter === 'fav' ? favs.has(o.id) : filter === 'hist' ? histIndex.has(o.id) : filter === 'sub' || filter === 'vid' || filter === 'yt' ? filter === kind(o) : true)).filter(o => !query || norm(o.t).includes(query))
       .map((o, k) => ({...o, k})).sort((a, b) => filter === 'hist' ? histIndex.get(a.id) - histIndex.get(b.id) : sortMode === 'views' ? ((b.views ?? -1) - (a.views ?? -1)) || (a.k - b.k) : (isNew(b) - isNew(a)) || (a.k - b.k)); }
   let histPending = false;
   function render() {
@@ -417,7 +429,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     now.textContent = fpag.length ? '好きな曲を選んでください' : 'サブスク配信曲を読み込み中…';
     openShared();
     await addSubs(fpag);
-    loadFirst();
+    loadFirst(); document.querySelectorAll('.line').forEach(b => loadPl(b.dataset.pl));
     // 長い動画・ショート・ライブを外す（YouTube限定のみ）。まずはラボのサーバー（YouTube公式API）で長さを調べる
     const targets = items.filter(o => !o.fromTopic && !o.sub && !o.hide && !INCLUDE_IDS.includes(o.id));
     let apiOk = false;
@@ -775,11 +787,39 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     filter = 'first';
     document.querySelectorAll('.tabs [data-f]').forEach(x => x.setAttribute('aria-selected', false));
     firstEl.classList.add('on');
+    document.querySelectorAll('.line').forEach(x => x.setAttribute('aria-pressed', false));
     render();
     if (play) { const l = view(); if (l.length) playAt(l[0].i); }
     document.querySelector('.cab').scrollIntoView({block: 'start', behavior: 'smooth'});
   }
   document.getElementById('firstPlay').addEventListener('click', () => openFirst(true));
+
+  // ===== GREEN・BLUE・RED（F-Pagの再生リストと連動）=====
+  const plIds = {};
+  async function loadPl(id) {
+    try {
+      const d = await (await fetch(PLAYLIST_API + '?id=' + id)).json();
+      plIds[id] = (d.items || []).map(v => v.id).filter(x => /^[\w-]{11}$/.test(x));
+      (d.items || []).forEach(v => {
+        if (/^[\w-]{11}$/.test(v.id) && !items.some(o => o.id === v.id)) items.push({id: v.id, t: v.title, sub: false, firstOnly: true, pub: v.pub || ''});
+      });
+      const b = document.querySelector('.line[data-pl="' + id + '"] b');
+      if (b && plIds[id].length) b.dataset.n = plIds[id].length + '曲';
+      if (filter === 'pl:' + id) render();
+    } catch (e) {}
+  }
+  function plView(id) {
+    return (plIds[id] || []).map(x => items.findIndex(o => o.id === x)).filter(i => i >= 0)
+      .map(i => ({...items[i], i})).filter(o => !query || norm(o.t).includes(query));
+  }
+  document.querySelector('.lines').addEventListener('click', e => {
+    const b = e.target.closest('.line'); if (!b) return;
+    filter = 'pl:' + b.dataset.pl;
+    document.querySelectorAll('.tabs [data-f]').forEach(x => x.setAttribute('aria-selected', false));
+    firstEl.classList.remove('on');
+    document.querySelectorAll('.line').forEach(x => x.setAttribute('aria-pressed', x === b));
+    render();
+  });
 
   // ===== 検索 =====
   const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');
@@ -961,6 +1001,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     filter = b.dataset.f;
     document.querySelectorAll('.tabs [data-f]').forEach(x => x.setAttribute('aria-selected', x === b));
     firstEl.classList.remove('on');
+    document.querySelectorAll('.line').forEach(x => x.setAttribute('aria-pressed', false));
     render();
   });
 

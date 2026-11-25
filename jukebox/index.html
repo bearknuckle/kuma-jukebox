@@ -113,6 +113,23 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .line.g{border-color:#5fe0b5;color:#5fe0b5}.line.b{border-color:#6fb6ff;color:#8cc4ff}.line.r{border-color:#ff7a5c;color:#ff8f75}
 .line[aria-pressed=true].g{background:#5fe0b5;color:#12382c}.line[aria-pressed=true].b{background:#6fb6ff;color:#0d2440}.line[aria-pressed=true].r{background:#ff7a5c;color:#3a0f06}
 .line[aria-pressed=true] small{color:inherit;opacity:.8}
+.jumpwrap{text-align:center;margin:10px 0 0}
+.jump-services{display:inline-block;padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);color:var(--sub);font-size:13px;font-weight:700;text-decoration:none}
+.jump-services:hover{border-color:#c98b5a}
+html{scroll-behavior:smooth}
+.service-links{max-width:760px;margin:36px auto 0;scroll-margin-top:16px}
+.service-links h2{font-size:19px;margin:0 0 12px;text-align:center}
+.service-links .links{display:grid;gap:14px}
+@media(min-width:900px){.service-links{max-width:1100px}.service-links .links{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.service-links a{display:block;border:2px solid var(--line);border-radius:16px;overflow:hidden;color:var(--ink);text-decoration:none;background:var(--panel)}
+.service-links a:hover{border-color:#c98b5a}
+.service-links img{display:block;width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;background:#000}
+.service-links .svc-meta{display:block;padding:10px 14px 12px;text-align:left}
+.service-links .links a{color:var(--ink);font-size:inherit;margin:0}
+.service-links .links{text-align:left;margin:0}
+.service-links .svc-domain{display:block;color:#b8909a;font-size:12px}
+.service-links .svc-name{display:block;font-size:15px;font-weight:800;margin-top:1px}
+.service-links small{display:block;color:var(--sub);font-size:12px;font-weight:500;margin-top:2px}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
 .qrbg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;z-index:50;padding:20px}
 .qrbg[hidden]{display:none}
@@ -181,6 +198,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
 <div class="wrap">
   <h1><img src="icon.svg" alt="" class="logo">KUMA MUSIC Jukebox</h1>
   <div class="rainbow" aria-hidden="true"><i></i><i></i><i></i></div>
+  <p class="jumpwrap"><a class="jump-services" href="#related-services">関連サービスへ ↓</a></p>
 
   <section class="cab" aria-label="プレーヤー">
     <span class="ear l" aria-hidden="true"></span><span class="ear r" aria-hidden="true"></span>
@@ -251,6 +269,15 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
   <p class="stat" id="stat"></p>
+  <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
+  <nav class="service-links" id="related-services" aria-label="関連サービス">
+    <h2>関連サービス</h2>
+    <div class="links">
+      <a href="https://game-lab-oj9t.onrender.com/"><img src="services/game-lab.jpg" alt="試作ゲームラボ" width="1200" height="630" loading="lazy"><span class="svc-meta"><span class="svc-domain">game-lab-oj9t.onrender.com</span><span class="svc-name">試作ゲームラボ</span><small>試作ゲームを、ブラウザですぐ遊べる</small></span></a>
+      <a href="https://stack-lab-uayz.onrender.com/"><img src="services/playable-lab.jpg" alt="PLAYABLE LAB" width="1200" height="630" loading="lazy"><span class="svc-meta"><span class="svc-domain">stack-lab-uayz.onrender.com</span><span class="svc-name">PLAYABLE LAB</span><small>遊びながらルールを覚える「遊べる説明書」</small></span></a>
+      <a href="https://boardgame-tutorial.onrender.com/"><img src="services/board-game-playground.jpg" alt="BOARD GAME PLAYGROUND" width="1200" height="630" loading="lazy"><span class="svc-meta"><span class="svc-domain">boardgame-tutorial.onrender.com</span><span class="svc-name">BOARD GAME PLAYGROUND</span><small>既存ボードゲームのルール確認・デジタル再現</small></span></a>
+    </div>
+  </nav>
   <div class="lock" id="lock" hidden>
     <div class="lockin" id="lockin">
       <p class="lockclock" id="lockClock"></p>
@@ -271,7 +298,6 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       <button class="qrclose" id="qrClose">閉じる</button>
     </div>
   </div>
-  <p class="links"><a href="https://www.youtube.com/@f-pag" target="_blank" rel="noopener">YouTubeチャンネル（@f-pag）</a></p>
 </div>
 
 <script>

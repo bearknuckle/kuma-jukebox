@@ -68,9 +68,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .tools,.links2{margin-top:8px}.links2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .tools button,.outlink{border:2px solid var(--line);background:var(--panel);color:var(--sub);font-size:13px;text-decoration:none}
 .modes{margin-top:16px}.tools{margin-top:16px}
-.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:760px;margin:28px auto 16px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:760px;margin:28px auto 16px}
 .tabs button{min-height:46px;padding:6px 8px;border-radius:12px;border:2px solid var(--line);background:var(--panel);font-weight:800;font-size:14px;line-height:1.3}
-@media(max-width:600px){.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:900px){.tabs{grid-template-columns:repeat(6,minmax(0,1fr));max-width:1000px}}
 button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .tabs button[aria-selected=true]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:12px;list-style:none;padding:0;margin:0}
@@ -86,6 +86,13 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .search input:focus{outline:none;border-color:#ffd36e;box-shadow:0 0 0 3px #ffd36e44}
 .search input::-webkit-search-cancel-button{display:none}
 .search button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:0;background:#5c2433;color:var(--ink);font-size:20px;line-height:1}
+.grid li{position:relative}
+.card{padding-right:46px}
+.fav{position:absolute;top:6px;right:6px;width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:#c98b5a;font-size:22px;line-height:1;display:grid;place-items:center}
+.fav[aria-pressed=true]{color:#ff7a5c}
+.fav:focus-visible{outline:3px solid var(--mint)}
+.b-new{background:#fff;color:#2b0d16}
+.when{display:block;font-size:12px;color:var(--sub);margin-top:2px}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
 .qrbg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;z-index:50;padding:20px}
 .qrbg[hidden]{display:none}
@@ -190,6 +197,8 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
 
   <div class="tabs" role="tablist">
     <button role="tab" data-f="all" aria-selected="true">すべて</button>
+    <button role="tab" data-f="fav" aria-selected="false">♥ お気に入り</button>
+    <button role="tab" data-f="hist" aria-selected="false">最近聴いた</button>
     <button role="tab" data-f="sub" aria-selected="false">サブスク配信</button>
     <button role="tab" data-f="vid" aria-selected="false">サブスク曲の動画</button>
     <button role="tab" data-f="yt" aria-selected="false">YouTube限定</button>
@@ -308,21 +317,26 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       setTimeout(poll, 300);
     });
   }
-  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || filter === kind(o)).filter(o => !query || norm(o.t).includes(query)); }
+  function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || (filter === 'fav' ? favs.has(o.id) : filter === 'hist' ? histIndex.has(o.id) : filter === 'sub' || filter === 'vid' || filter === 'yt' ? filter === kind(o) : true)).filter(o => !query || norm(o.t).includes(query))
+      .map((o, k) => ({...o, k})).sort((a, b) => filter === 'hist' ? histIndex.get(a.id) - histIndex.get(b.id) : (isNew(b) - isNew(a)) || (a.k - b.k)); }
+  let histPending = false;
   function render() {
     const list = view();
     grid.innerHTML = list.map((o, n) => '<li><button class="card' + (o.i === current ? ' on' : '') + '" data-i="' + o.i + '">' +
       '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + esc(o.id) + '/mqdefault.jpg">' +
-      '<span><span class="num">No.' + String(n + 1).padStart(2, '0') + '</span>' + badge(o) +
-      '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span></span></button></li>').join('');
+      '<span><span class="num">No.' + String(n + 1).padStart(2, '0') + '</span>' + (isNew(o) ? '<span class="badge b-new">NEW</span>' : '') + badge(o) +
+      '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span>' +
+      (filter === 'hist' && histTime.get(o.id) ? '<span class="when">' + esc(ago(histTime.get(o.id))) + '</span>' : '') + '</span></button>' +
+      '<button class="fav" data-fav="' + esc(o.id) + '" aria-pressed="' + favs.has(o.id) + '" aria-label="お気に入り">' + (favs.has(o.id) ? '♥' : '♡') + '</button></li>').join('');
     msg.hidden = list.length > 0;
-    if (!list.length && items.length) msg.textContent = query ? '「' + qInput.value + '」に合う曲はありません' : 'この棚にはまだ曲がありません';
+    if (!list.length && items.length) msg.textContent = query ? '「' + qInput.value + '」に合う曲はありません' : filter === 'fav' ? '曲札の♡を押すと、ここに集まります' : filter === 'hist' ? '聴いた曲がここに並びます' : 'この棚にはまだ曲がありません';
     try { updateOut(); } catch (e) {}
     const st = document.getElementById('stat');
     if (st && items.length) st.textContent = '読み込んだ動画・曲 ' + items.length + '本（表示中 ' + view().length + '本）';
   }
   function playAt(i) {
     if (!items[i]) return;
+    histPending = true;
     try { history.replaceState(null, '', '#' + items[i].id); } catch (e) {}
     if (attract) stopAttract();
     current = i; quickStart = null; djStart = null; djWhoosh = false; djQueued = null; djHush = false; djBreak = false;
@@ -385,7 +399,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
         targets.slice(i, i + 50).forEach(o => {
           const f = d.info[o.id]; if (!f) return;
           if (f.sec > MAX_SECONDS || (f.sec > 0 && f.sec <= 60) || f.live !== 'none') o.hide = true;
-          o.cat = f.cat; o.sec = f.sec;
+          o.cat = f.cat; o.sec = f.sec; if (f.pub) o.pub = f.pub;
         });
       } catch (e) { break; }
     }
@@ -450,6 +464,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       } catch (e) {}
     }
     if (!data) { if (!items.length) msg.textContent = '曲リストを読み込めませんでした。時間をおいて再読み込みしてください'; return; }
+    const pubs = {}; (data.videos || []).forEach(v => { if (v.pub) pubs[v.id] = v.pub; });
     const merge = async list => {
       const ids = [...new Set(list)].filter(id => /^[\w-]{11}$/.test(id) && !items.some(o => o.id === id));
       if (!ids.length) return;
@@ -458,7 +473,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
         const k = norm(tt[id]);
         // サブスク曲の名前が入ったF-Pagの動画は「サブスク曲の動画」の枠へ
         if (k.length >= 2) items.forEach(o => { if (!o.fromTopic && norm(o.t).includes(k)) o.subvid = true; });
-        items.push({id, t: tt[id], sub: true, fromTopic: true});
+        items.push({id, t: tt[id], sub: true, fromTopic: true, pub: pubs[id] || ''});
       });
       render();
       openShared();
@@ -487,6 +502,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
           captionsOff();
           if (attract) { playing = false; document.body.classList.remove('playing'); playBtn.textContent = '▶'; return; }
           playing = e.data === YT.PlayerState.PLAYING;
+          if (playing && histPending && items[current]) { histPending = false; logPlay(items[current].id); }
           clearTimeout(pauseTimer);
           // 一時停止のまま30秒たったら、音なしの動画を流しておく
           if (e.data === YT.PlayerState.PAUSED && ready) pauseTimer = setTimeout(() => {
@@ -567,7 +583,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     if (i < 0) return;
     sharedId = null;
     if (attract) stopAttract();
-    current = i;
+    current = i; histPending = true;
     try { player.cueVideoById(items[i].id); } catch (e) {}
     render(); setNow();
     const card = grid.querySelector('[data-i="' + i + '"]');
@@ -641,6 +657,37 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => unlockBtn.addEventListener(t, holdEnd));
   unlockBtn.addEventListener('contextmenu', e => e.preventDefault());
   lockEl.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
+
+  // ===== お気に入り・最近聴いた・NEW（この端末に保存）=====
+  const store = {
+    get(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  const favs = new Set(store.get('kumaFav', []));
+  let hist = store.get('kumaHist', []);  // [{id, at}] 新しい順、最大100曲
+  let histIndex = new Map(), histTime = new Map();
+  function indexHist() { histIndex = new Map(hist.map((h, n) => [h.id, n])); histTime = new Map(hist.map(h => [h.id, h.at])); }
+  indexHist();
+  function logPlay(id) {
+    hist = [{id, at: Date.now()}].concat(hist.filter(h => h.id !== id)).slice(0, 100);
+    store.set('kumaHist', hist); indexHist();
+  }
+  function ago(t) {
+    const m = Math.floor((Date.now() - t) / 60000);
+    if (m < 1) return 'たったいま'; if (m < 60) return m + '分前';
+    const h = Math.floor(m / 60); if (h < 24) return h + '時間前';
+    return Math.floor(h / 24) + '日前';
+  }
+  const NEW_DAYS = 30;
+  const isNew = o => !!o.pub && (Date.now() - Date.parse(o.pub)) < NEW_DAYS * 86400000;
+  grid.addEventListener('click', e => {
+    const f = e.target.closest('.fav'); if (!f) return;
+    e.stopPropagation();
+    const id = f.dataset.fav;
+    favs.has(id) ? favs.delete(id) : favs.add(id);
+    store.set('kumaFav', [...favs]);
+    render();
+  }, true);
 
   // ===== 検索 =====
   const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');

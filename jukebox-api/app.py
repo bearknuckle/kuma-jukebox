@@ -136,12 +136,13 @@ def yt_api(path, **params):
 def yt_playlist_items(playlist_id, limit=500):
     out, token = [], ""
     while len(out) < limit:
-        d = yt_api("playlistItems", part="snippet", playlistId=playlist_id, maxResults=50, pageToken=token)
+        d = yt_api("playlistItems", part="snippet,contentDetails", playlistId=playlist_id, maxResults=50, pageToken=token)
         for it in d.get("items", []):
             sn = it.get("snippet", {})
             vid = (sn.get("resourceId") or {}).get("videoId")
             if vid and sn.get("title") not in ("Private video", "Deleted video"):
-                out.append({"id": vid, "title": sn.get("title", "")})
+                pub = (it.get("contentDetails") or {}).get("videoPublishedAt") or sn.get("publishedAt", "")
+                out.append({"id": vid, "title": sn.get("title", ""), "pub": pub})
         token = d.get("nextPageToken")
         if not token:
             break
@@ -184,7 +185,8 @@ def fetch_kuma_subs_api(channel, scraped_playlists):
                 for it in d.get("items", []):
                     vid = it.get("id", {}).get("videoId")
                     if vid:
-                        searched.append({"id": vid, "title": (it.get("snippet") or {}).get("title", "")})
+                        sn = it.get("snippet") or {}
+                        searched.append({"id": vid, "title": sn.get("title", ""), "pub": sn.get("publishedAt", "")})
                 token = d.get("nextPageToken")
                 if not token:
                     break
@@ -318,7 +320,8 @@ def yt_info():
                 if len(_info_cache) < 5000:
                     _info_cache[it["id"]] = {"sec": iso_seconds(it.get("contentDetails", {}).get("duration")),
                                              "cat": sn.get("categoryId", ""), "title": sn.get("title", ""),
-                                             "live": sn.get("liveBroadcastContent", "none")}
+                                             "live": sn.get("liveBroadcastContent", "none"),
+                                             "pub": sn.get("publishedAt", "")}
         except Exception:
             app.logger.exception("yt-info failed")
     return jsonify({"info": {i: _info_cache[i] for i in ids if i in _info_cache}, "api": True})

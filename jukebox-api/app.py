@@ -276,20 +276,58 @@ PL_WITH_TITLE = re.compile(r'"playlistId":"((?:PL|OLAK5uy_)[A-Za-z0-9_-]{10,60})
 
 @app.get("/api/kuma-playlists")
 def kuma_playlists():
-    """F-Pagチャンネルの再生リスト（ID・名前）。ジュークボックスで曲だけのリストを使うため"""
+    """F-Pag・KUMA MUSICの再生リスト（ID・名前）。APIキーがあれば公式APIで全部取る"""
     with _kuma_lock:
         if _fpag_cache["data"] is None or time.time() - _fpag_cache["at"] > KUMA_CACHE_SEC:
             found, errors = {}, []
-            try:
-                html = _get("https://www.youtube.com/channel/%s/playlists" % KUMA_FPAG_CHANNEL)
-                for pid, t1, t2 in PL_WITH_TITLE.findall(html):
-                    found.setdefault(pid, t1 or t2)
-            except Exception as ex:
-                errors.append(type(ex).__name__)
+            if yt_key():
+                for ch in (KUMA_FPAG_CHANNEL, KUMA_TOPIC_CHANNEL):
+                    try:
+                        token = ""
+                        for _ in range(10):
+                            d = yt_api("playlists", part="snippet,contentDetails", channelId=ch, maxResults=50, pageToken=token)
+                            for it in d.get("items", []):
+                                found.setdefault(it["id"], {"title": (it.get("snippet") or {}).get("title", ""),
+                                                            "count": (it.get("contentDetails") or {}).get("itemCount"),
+                                                            "channel": ch})
+                            token = d.get("nextPageToken")
+                            if not token:
+                                break
+                    except Exception as ex:
+                        errors.append("api:" + type(ex).__name__)
+            if not found:
+                try:
+                    html = _get("https://www.youtube.com/channel/%s/playlists" % KUMA_FPAG_CHANNEL)
+                    for pid, t1, t2 in PL_WITH_TITLE.findall(html):
+                        found.setdefault(pid, {"title": t1 or t2, "count": None, "channel": KUMA_FPAG_CHANNEL})
+                except Exception as ex:
+                    errors.append(type(ex).__name__)
             _fpag_cache.update(at=time.time(), data={
-                "playlists": [{"id": k, "title": v} for k, v in found.items()][:50], "errors": errors})
+                "playlists": [dict(v, id=k) for k, v in found.items()][:200], "errors": errors})
         data = _fpag_cache["data"]
     return jsonify(data)
+
+
+_plist_cache = {}
+PLAYLIST_OK = re.compile(r"^[A-Za-z0-9_-]{10,80}$")
+
+
+@app.get("/api/playlist")
+def playlist_items():
+    """再生リストの曲を順番どおりに返す（公式API）"""
+    pid = request.args.get("id", "")
+    if not PLAYLIST_OK.match(pid) or not yt_key():
+        return jsonify({"items": [], "api": bool(yt_key())})
+    c = _plist_cache.get(pid)
+    if not c or time.time() - c["at"] > 60 * 60:
+        try:
+            c = {"at": time.time(), "items": yt_playlist_items(pid, 300)}
+            if len(_plist_cache) < 200:
+                _plist_cache[pid] = c
+        except Exception:
+            app.logger.exception("playlist failed")
+            c = {"items": []}
+    return jsonify({"items": c["items"], "api": True})
 
 
 _info_cache = {}

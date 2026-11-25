@@ -311,17 +311,21 @@ def yt_info():
     ids = [i for i in request.args.get("ids", "").split(",") if ONE_VIDEO.match(i)][:50]
     if not yt_key():
         return jsonify({"info": {}, "api": False})
-    todo = [i for i in ids if i not in _info_cache]
+    # 再生回数が古くならないよう、6時間たったら取り直す
+    todo = [i for i in ids if i not in _info_cache or time.time() - _info_cache[i].get("at", 0) > KUMA_CACHE_SEC]
     if todo:
         try:
-            d = yt_api("videos", part="contentDetails,snippet", id=",".join(todo), maxResults=50)
+            d = yt_api("videos", part="contentDetails,snippet,statistics", id=",".join(todo), maxResults=50)
             for it in d.get("items", []):
                 sn = it.get("snippet", {})
-                if len(_info_cache) < 5000:
+                st = it.get("statistics", {})
+                if len(_info_cache) < 5000 or it["id"] in _info_cache:
                     _info_cache[it["id"]] = {"sec": iso_seconds(it.get("contentDetails", {}).get("duration")),
                                              "cat": sn.get("categoryId", ""), "title": sn.get("title", ""),
                                              "live": sn.get("liveBroadcastContent", "none"),
-                                             "pub": sn.get("publishedAt", "")}
+                                             "pub": sn.get("publishedAt", ""),
+                                             "views": int(st["viewCount"]) if st.get("viewCount") else None,
+                                             "at": time.time()}
         except Exception:
             app.logger.exception("yt-info failed")
     return jsonify({"info": {i: _info_cache[i] for i in ids if i in _info_cache}, "api": True})

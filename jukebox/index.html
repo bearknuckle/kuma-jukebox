@@ -326,7 +326,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
       '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + esc(o.id) + '/mqdefault.jpg">' +
       '<span><span class="num">No.' + String(n + 1).padStart(2, '0') + '</span>' + (isNew(o) ? '<span class="badge b-new">NEW</span>' : '') + badge(o) +
       '<span class="ttl">' + esc(o.t || ('Track ' + (o.i + 1))) + '</span>' +
-      (filter === 'hist' && histTime.get(o.id) ? '<span class="when">' + esc(ago(histTime.get(o.id))) + '</span>' : '') + '</span></button>' +
+      (o.views != null || (filter === 'hist' && histTime.get(o.id)) ? '<span class="when">' + (o.views != null ? '▶ ' + esc(fmtViews(o.views)) : '') + (filter === 'hist' && histTime.get(o.id) ? (o.views != null ? '・' : '') + esc(ago(histTime.get(o.id))) : '') + '</span>' : '') + '</span></button>' +
       '<button class="fav" data-fav="' + esc(o.id) + '" aria-pressed="' + favs.has(o.id) + '" aria-label="お気に入り">' + (favs.has(o.id) ? '♥' : '♡') + '</button></li>').join('');
     msg.hidden = list.length > 0;
     if (!list.length && items.length) msg.textContent = query ? '「' + qInput.value + '」に合う曲はありません' : filter === 'fav' ? '曲札の♡を押すと、ここに集まります' : filter === 'hist' ? '聴いた曲がここに並びます' : 'この棚にはまだ曲がありません';
@@ -399,11 +399,13 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
         targets.slice(i, i + 50).forEach(o => {
           const f = d.info[o.id]; if (!f) return;
           if (f.sec > MAX_SECONDS || (f.sec > 0 && f.sec <= 60) || f.live !== 'none') o.hide = true;
-          o.cat = f.cat; o.sec = f.sec; if (f.pub) o.pub = f.pub;
+          o.cat = f.cat; o.sec = f.sec; if (f.pub) o.pub = f.pub; if (f.views != null) o.views = f.views;
         });
       } catch (e) { break; }
     }
     if (apiOk) render();
+    // 再生回数：まだ取れていない曲（サブスク配信曲など）もまとめて取る
+    loadViews();
     // APIが使えないときは、まだ何も再生していない間に、1本ずつプレーヤーに読み込んで長さを調べる
     for (const o of (apiOk ? [] : items.slice())) {
       if (current >= 0) break;
@@ -657,6 +659,26 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => unlockBtn.addEventListener(t, holdEnd));
   unlockBtn.addEventListener('contextmenu', e => e.preventDefault());
   lockEl.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
+
+  // ===== YouTubeの再生回数 =====
+  async function loadViews() {
+    const rest = items.filter(o => o.views == null && !o.hide);
+    for (let i = 0; i < rest.length; i += 50) {
+      try {
+        const part = rest.slice(i, i + 50);
+        const d = await (await fetch(INFO_API + '?ids=' + part.map(o => o.id).join(','))).json();
+        if (!d.api) return;
+        part.forEach(o => { const f = d.info[o.id]; if (f) { if (f.views != null) o.views = f.views; if (f.pub && !o.pub) o.pub = f.pub; } });
+      } catch (e) { return; }
+    }
+    render();
+  }
+  function fmtViews(n) {
+    if (n == null) return '';
+    if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '億回';
+    if (n >= 10000) return (n / 10000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, '') + '万回';
+    return n.toLocaleString('ja-JP') + '回';
+  }
 
   // ===== お気に入り・最近聴いた・NEW（この端末に保存）=====
   const store = {

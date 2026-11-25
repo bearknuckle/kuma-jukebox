@@ -93,6 +93,9 @@ button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .fav:focus-visible{outline:3px solid var(--mint)}
 .b-new{background:#fff;color:#2b0d16}
 .when{display:block;font-size:12px;color:var(--sub);margin-top:2px}
+.sortrow{display:flex;align-items:center;justify-content:center;gap:8px;margin:-4px auto 16px;font-size:13px;color:var(--sub)}
+.sortrow button{min-height:38px;padding:0 14px;border-radius:99px;border:2px solid var(--line);background:var(--panel);font-weight:800;font-size:13px}
+.sortrow button[aria-pressed=true]{background:#c98b5a;border-color:#c98b5a;color:#2b0d16}
 .msg{text-align:center;color:var(--sub);padding:30px 0}
 .qrbg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;z-index:50;padding:20px}
 .qrbg[hidden]{display:none}
@@ -207,6 +210,11 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     <input id="q" type="search" placeholder="曲名で探す" aria-label="曲名で探す" autocomplete="off" enterkeyhint="search">
     <button id="qclear" type="button" aria-label="検索をクリア" hidden>×</button>
   </div>
+  <div class="sortrow" role="group" aria-label="並び順">
+    <span>並び順</span>
+    <button data-sort="new" aria-pressed="true">新しい順</button>
+    <button data-sort="views" aria-pressed="false">再生回数順</button>
+  </div>
   <ul class="grid" id="grid"></ul>
   <p class="msg" id="msg">曲リストを読み込み中…</p>
 
@@ -318,7 +326,7 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     });
   }
   function view() { return items.map((o, i) => ({...o, i})).filter(o => !o.hide && !EXCLUDE_WORDS.some(w => (o.t || '').toUpperCase().includes(w.toUpperCase())) && !EXCLUDE_TITLES.some(t => norm(o.t).startsWith(norm(t))) && !EXCLUDE_EXACT.some(t => exact(o.t) === exact(t))).filter(o => filter === 'all' || (filter === 'fav' ? favs.has(o.id) : filter === 'hist' ? histIndex.has(o.id) : filter === 'sub' || filter === 'vid' || filter === 'yt' ? filter === kind(o) : true)).filter(o => !query || norm(o.t).includes(query))
-      .map((o, k) => ({...o, k})).sort((a, b) => filter === 'hist' ? histIndex.get(a.id) - histIndex.get(b.id) : (isNew(b) - isNew(a)) || (a.k - b.k)); }
+      .map((o, k) => ({...o, k})).sort((a, b) => filter === 'hist' ? histIndex.get(a.id) - histIndex.get(b.id) : sortMode === 'views' ? ((b.views ?? -1) - (a.views ?? -1)) || (a.k - b.k) : (isNew(b) - isNew(a)) || (a.k - b.k)); }
   let histPending = false;
   function render() {
     const list = view();
@@ -710,6 +718,16 @@ h1{display:flex;align-items:center;justify-content:center;gap:12px}
     store.set('kumaFav', [...favs]);
     render();
   }, true);
+
+  // ===== 並び順 =====
+  let sortMode = (() => { try { return localStorage.getItem('kumaSort') || 'new'; } catch (e) { return 'new'; } })();
+  function drawSort() { document.querySelectorAll('[data-sort]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === sortMode)); }
+  drawSort();
+  document.querySelector('.sortrow').addEventListener('click', e => {
+    const b = e.target.closest('[data-sort]'); if (!b) return;
+    sortMode = b.dataset.sort; try { localStorage.setItem('kumaSort', sortMode); } catch (err) {}
+    drawSort(); render();
+  });
 
   // ===== 検索 =====
   const qInput = document.getElementById('q'), qClear = document.getElementById('qclear');

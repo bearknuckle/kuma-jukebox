@@ -47,3 +47,11 @@ def test_iso_seconds():
 def test_yt_info_without_key(monkeypatch):
     monkeypatch.delenv("YOUTUBE_API_KEY", raising=False)
     assert c().get("/api/yt-info?ids=AAAAAAAAAAA").get_json() == {"info": {}, "api": False}
+
+
+def test_merge_subs_never_shrinks():
+    old = {"videos": [{"id": "AAAAAAAAAAA", "title": "a"}, {"id": "BBBBBBBBBBB", "title": "b"}], "playlists": ["P1"]}
+    new = {"videos": [{"id": "CCCCCCCCCCC", "title": "c"}], "playlists": [], "errors": ["x"]}
+    d = m._merge_subs(old, new)
+    assert [v["id"] for v in d["videos"]] == ["CCCCCCCCCCC", "AAAAAAAAAAA", "BBBBBBBBBBB"]
+    assert d["playlists"] == ["P1"]

@@ -257,15 +257,62 @@ def fetch_kuma_subs(channel=None):
             "playlists": playlists, "errors": errors}
 
 
+SUBS_KEY = "kuma:subs"           # 最新の一覧（JSON）
+SUBS_TTL = 24 * 60 * 60          # 検索（APIの消費が大きい）は1日1回まで
+
+
+def _load_subs():
+    """保存しておいた一覧（Key Value）。なければメモリ"""
+    r = store()
+    if r is not None:
+        try:
+            raw = r.get(SUBS_KEY)
+            if raw:
+                return json.loads(raw)
+        except Exception:
+            app.logger.exception("load subs failed")
+    return _kuma_cache["data"] and dict(_kuma_cache["data"], at=_kuma_cache["at"])
+
+
+def _save_subs(data):
+    _kuma_cache.update(at=data["at"], data=data)
+    r = store()
+    if r is not None:
+        try:
+            r.set(SUBS_KEY, json.dumps(data, ensure_ascii=False))
+        except Exception:
+            app.logger.exception("save subs failed")
+
+
+def _merge_subs(old, new):
+    """一度見つかった曲は消さない（APIの上限で検索に失敗しても減らない）"""
+    if not old:
+        return new
+    seen, videos = set(), []
+    for v in (new.get("videos") or []) + (old.get("videos") or []):
+        if v.get("id") and v["id"] not in seen:
+            seen.add(v["id"]); videos.append(v)
+    playlists = _uniq((new.get("playlists") or []) + (old.get("playlists") or []))
+    return dict(new, videos=videos, playlists=playlists)
+
+
 @app.get("/api/kuma-subs")
 def kuma_subs():
     with _kuma_lock:
-        fresh = _kuma_cache["data"] is not None and time.time() - _kuma_cache["at"] < KUMA_CACHE_SEC
-        if not fresh or (request.args.get("refresh") == "1" and time.time() - _kuma_cache["at"] > 60):
-            data = fetch_kuma_subs()
-            if data["videos"] or data["playlists"] or _kuma_cache["data"] is None:
-                _kuma_cache.update(at=time.time(), data=data)
-        data = _kuma_cache["data"]
+        saved = _load_subs()
+        age = time.time() - (saved or {}).get("at", 0)
+        force = request.args.get("refresh") == "1" and age > 10 * 60
+        if not saved or age > SUBS_TTL or force:
+            new = fetch_kuma_subs()
+            data = _merge_subs(saved, new)
+            data["at"] = time.time()
+            data["errors"] = new.get("errors", [])
+            if data.get("videos") or not saved:
+                _save_subs(data)
+            else:
+                data = saved
+        else:
+            data = saved
     return jsonify(data)
 
 

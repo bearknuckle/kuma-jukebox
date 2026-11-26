@@ -302,7 +302,10 @@ def kuma_subs():
         saved = _load_subs()
         age = time.time() - (saved or {}).get("at", 0)
         force = request.args.get("refresh") == "1" and age > 10 * 60
-        if not saved or age > SUBS_TTL or force:
+        # 検索がAPIの上限で失敗していたときは、2時間後にもう一度試す（上限は毎日リセットされる）
+        failed = any("search" in e for e in (saved or {}).get("errors", []))
+        ttl = 2 * 60 * 60 if failed else SUBS_TTL
+        if not saved or age > ttl or force:
             new = fetch_kuma_subs()
             data = _merge_subs(saved, new)
             data["at"] = time.time()

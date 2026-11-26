@@ -504,6 +504,11 @@ def discography():
     return jsonify(saved or data)
 
 
+@app.get("/robots.txt")
+def robots():
+    return app.response_class("User-agent: *\nAllow: /api/\n", mimetype="text/plain")
+
+
 @app.get("/healthz")
 def health():
     return "ok"

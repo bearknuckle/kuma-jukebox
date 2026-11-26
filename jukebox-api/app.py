@@ -419,6 +419,91 @@ def yt_info():
     return jsonify({"info": {i: _info_cache[i] for i in ids if i in _info_cache}, "api": True})
 
 
+# ===== ディスコグラフィー（リリースごとの作品一覧）=====
+DISCO_KEY = "kuma:disco"
+DISCO_TTL = 12 * 60 * 60
+_disco_mem = {"at": 0, "data": None}
+RELEASED = re.compile(r"Released on:\s*(\d{4}-\d{2}-\d{2})")
+
+
+def parse_art_track(desc):
+    """トピックチャンネルの曲の説明文から、アルバム名と発売日を取り出す
+    （Provided to YouTube by … / 曲名 · アーティスト / アルバム名 / ℗ … / Released on: YYYY-MM-DD）"""
+    lines = [l.strip() for l in (desc or "").splitlines()]
+    album, date = "", ""
+    m = RELEASED.search(desc or "")
+    if m:
+        date = m.group(1)
+    for i, l in enumerate(lines):
+        if " · " in l:
+            rest = [x for x in lines[i + 1:] if x]
+            if rest and not rest[0].startswith(("℗", "©", "Released on", "Auto-generated")):
+                album = rest[0]
+            break
+    return album, date
+
+
+def build_discography(videos):
+    info = {}
+    ids = [v["id"] for v in videos if ONE_VIDEO.match(v.get("id", ""))]
+    for i in range(0, len(ids), 50):
+        d = yt_api("videos", part="snippet,contentDetails,statistics", id=",".join(ids[i:i + 50]), maxResults=50)
+        for it in d.get("items", []):
+            sn = it.get("snippet", {})
+            album, date = parse_art_track(sn.get("description", ""))
+            info[it["id"]] = {"title": sn.get("title", ""), "album": album,
+                              "date": date or (sn.get("publishedAt", "") or "")[:10],
+                              "sec": iso_seconds(it.get("contentDetails", {}).get("duration")),
+                              "views": int(it.get("statistics", {}).get("viewCount", 0) or 0)}
+    groups = {}
+    for vid in ids:
+        f = info.get(vid)
+        if not f:
+            continue
+        key = f["album"] or f["title"]
+        g = groups.setdefault(key, {"title": key, "date": f["date"], "tracks": []})
+        g["date"] = min(g["date"], f["date"]) if g["date"] and f["date"] else (g["date"] or f["date"])
+        g["tracks"].append({"id": vid, "title": f["title"], "sec": f["sec"], "views": f["views"]})
+    releases = []
+    for g in groups.values():
+        n = len(g["tracks"])
+        g["type"] = "シングル" if n <= 3 else ("EP" if n <= 6 else "アルバム")
+        g["cover"] = g["tracks"][0]["id"]
+        g["views"] = sum(t["views"] for t in g["tracks"])
+        releases.append(g)
+    releases.sort(key=lambda g: g["date"] or "", reverse=True)
+    return {"releases": releases, "count": len(releases), "tracks": len(info), "at": time.time()}
+
+
+@app.get("/api/discography")
+def discography():
+    r = store()
+    saved = None
+    try:
+        raw = r.get(DISCO_KEY) if r is not None else None
+        saved = json.loads(raw) if raw else _disco_mem["data"]
+    except Exception:
+        saved = _disco_mem["data"]
+    if saved and time.time() - saved.get("at", 0) < DISCO_TTL:
+        return jsonify(saved)
+    if not yt_key():
+        return jsonify(saved or {"releases": [], "count": 0})
+    subs = _load_subs() or {}
+    try:
+        data = build_discography(subs.get("videos") or [])
+    except Exception:
+        app.logger.exception("discography failed")
+        return jsonify(saved or {"releases": [], "count": 0})
+    if data["releases"] and (not saved or data["tracks"] >= saved.get("tracks", 0)):
+        _disco_mem["data"] = data
+        try:
+            r is not None and r.set(DISCO_KEY, json.dumps(data, ensure_ascii=False))
+        except Exception:
+            app.logger.exception("save disco failed")
+        return jsonify(data)
+    return jsonify(saved or data)
+
+
 @app.get("/healthz")
 def health():
     return "ok"
